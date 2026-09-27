@@ -1377,9 +1377,22 @@ function buildZeeland(){
   ribbon(i=>-(SHOULDER+EMB[i]),-SHOULDER,stone,6,0.05);ribbon(SHOULDER,i=>SHOULDER+EMB[i],stone,6,0.05);
   const rt=canvasTex(64,32,(g,w,h)=>{g.fillStyle='#b9bec3';g.fillRect(0,0,w,h);g.fillStyle='#8d9398';g.fillRect(0,10,w,3);g.fillRect(0,20,w,3);},true);vribbon(-9.1,0.15,0.9,M(0xffffff,{map:rt}),4);{const r2=rt.clone();r2.needsUpdate=true;vribbon(9.1,0.15,0.9,M(0xffffff,{map:r2}),4);}
   startLine();gates(TRK);
-  const con=M(0x9c9c96),dark=M(0x2f3336),pm=[],bm=[],gm=[];for(let d=60;d<TRACK_LEN;d+=45){const i=Math.round(d/SPC)%NS;if(P[i].z>80||P[i].x<60||P[i].x>1300)continue;
-    const [x,z]=onTrack(i,-34),h=headingOf(T[i]);pm.push(mtx(x,9,z,h,4,26,7));bm.push(mtx(x,20,z,h,3,2.4,44));gm.push(mtx(x,7,z,h,1,8,40));}
-  inst(new THREE.BoxGeometry(1,1,1),con,pm,null,true);inst(new THREE.BoxGeometry(1,1,1),con,bm,null,true);inst(new THREE.BoxGeometry(1,1,1),dark,gm,null,false);
+  /* Oosterscheldekering: one continuous barrier on its own gently curved line (a Bezier in world coordinates, so the same in both
+     driving directions) on the sea side of the dam. Piers stand at one fixed spacing; the road girder, the upper beam and the gates
+     run from pier centre to pier centre, so every joint lies inside a pier (the piers are wider and higher than what they carry).
+     A landhoofd closes both ends. Piers stay 4 m off the toe of the dike; should the track ever come closer, the line moves out to sea. */
+  {const con=M(0x9c9c96),dark=M(0x2f3336),pm=[],sp=[],gm=[],hm=[],hd=(a,b)=>Math.atan2(b[0]-a[0],b[1]-a[1]);let Q=[];
+   for(let off=0;off<=60;off+=6){const A=[285,-62-off],B=[640,-145-off],C=[980,-180-off],D=[1238,-50-off],L=[];let len=0,pv=null;
+     for(let k=0;k<=400;k++){const t=k/400,u=1-t,a=u*u*u,b=3*u*u*t,c=3*u*t*t,e=t*t*t,p=[a*A[0]+b*B[0]+c*C[0]+e*D[0],a*A[1]+b*B[1]+c*C[1]+e*D[1]];if(pv)len+=Math.hypot(p[0]-pv[0],p[1]-pv[1]);L.push([len,p]);pv=p;}
+     const n=Math.round(len/45);Q=[];for(let k=0,j=0;k<=n;k++){const s=len*k/n;while(j<L.length-2&&L[j+1][0]<s)j++;const [s0,p0]=L[j],[s1,p1]=L[j+1],f=(s-s0)/(s1-s0||1);Q.push([p0[0]+(p1[0]-p0[0])*f,p0[1]+(p1[1]-p0[1])*f]);}
+     const end=k=>{const q=Q[k],o=Q[k?k-1:1],l=Math.hypot(q[0]-o[0],q[1]-o[1]);return [q[0]+(q[0]-o[0])/l*8,q[1]+(q[1]-o[1])/l*8];};
+     if(Q.every(([x,z])=>distToTrack(x,z)-SHOULDER>=9.5)&&[0,n].every(k=>distToTrack(...end(k))-SHOULDER>=14.3))break;}
+   const m=Q.length-1;
+   for(let k=0;k<=m;k++){const [x,z]=Q[k],ry=hd(Q[Math.max(0,k-1)],Q[Math.min(m,k+1)]);pm.push(mtx(x,10.9,z,ry,11,27.8,6));hm.push(mtx(x,26.3,z,ry,4.5,3,5));
+     if(!k)continue;const [x0,z0]=Q[k-1],l=Math.hypot(x-x0,z-z0),r=hd(Q[k-1],Q[k]),mx=(x+x0)/2,mz=(z+z0)/2;sp.push(mtx(mx,23.2,mz,r,10,2.4,l),mtx(mx,18,mz,r,4,3,l));gm.push(mtx(mx,11.95,mz,r,1,9.9,l));}
+   for(const k of [0,m]){const q=Q[k],o=Q[k?k-1:1],ry=hd(o,q),l=Math.hypot(q[0]-o[0],q[1]-o[1]),ux=(q[0]-o[0])/l,uz=(q[1]-o[1])/l;
+     pm.push(mtx(q[0]+ux*8,11.1,q[1]+uz*8,ry,13,28.2,16));box(20,3.2,26,stone,q[0]+ux*8,-0.4,q[1]+uz*8,world).rotation.y=ry;}
+   inst(new THREE.BoxGeometry(1,1,1),con,pm,null,true);inst(new THREE.BoxGeometry(1,1,1),con,sp,null,true);inst(new THREE.BoxGeometry(1,1,1),dark,gm,null,false);inst(new THREE.BoxGeometry(1,1,1),M(0xb4b2aa),hm,null,true);}
   /* a dune reaches 2s from its centre and distToTrack is measured from the dike toe: shrink dunes near the road so the whole
      dune (and its grass) stays 4 m clear of the verge, skip the ones that would get too small. Same rnd() calls as before. */
   const dn=[],gr=[];for(let k=0;k<160;k++){const x=120+rnd()*1200,z=300+rnd()*140;if(distToTrack(x,z)<14)continue;const s=Math.min(4+rnd()*8,(distToTrack(x,z)-SHOULDER-4)/2),d=mtx(x,-s*0.25,z,rnd()*6,s*2,s,s*1.6),g=[];

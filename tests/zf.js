@@ -6,10 +6,18 @@ window.__zfight=(root,opts)=>{opts=opts||{};const faces=[],m4=new THREE.Matrix4(
      faces.push({n,c,u:ax[b].clone(),vv:ax[e].clone(),hu:he[b],hv:he[e],mat,tag});}};
  const addPlane=(M,w,h,mat,tag)=>{M.decompose(v,q,s);const n=new THREE.Vector3(0,0,1).applyQuaternion(q),u=new THREE.Vector3(1,0,0).applyQuaternion(q),vv=new THREE.Vector3(0,1,0).applyQuaternion(q);
    faces.push({n,c:v.clone(),u,vv,hu:w*s.x/2,hv:h*s.y/2,mat,tag,plane:true});if(mat&&mat.side===THREE.DoubleSide)faces.push({n:n.clone().negate(),c:v.clone(),u,vv,hu:w*s.x/2,hv:h*s.y/2,mat,tag,plane:true});};
+ /* the game's inst() clones the geometry, and in three r128 a clone is a plain BufferGeometry (no type, no parameters):
+    with opts.inst a box is recognised by its shape instead (24 vertices, 36 indices, every vertex on a corner of its bounding box) */
+ const bl=new Map(),bb=new THREE.Box3(),bs=new THREE.Vector3(),bc=new THREE.Vector3();
+ const boxLike=g=>{if(bl.has(g))return bl.get(g);let r=null;const pa=g.attributes.position;
+   if(pa&&pa.count===24&&g.index&&g.index.count===36){bb.setFromBufferAttribute(pa);let ok=true;
+     for(let i=0;i<24&&ok;i++)for(const [c,a,b] of [[pa.getX(i),bb.min.x,bb.max.x],[pa.getY(i),bb.min.y,bb.max.y],[pa.getZ(i),bb.min.z,bb.max.z]])if(Math.abs(c-a)>1e-5&&Math.abs(c-b)>1e-5)ok=false;
+     if(ok){bb.getSize(bs);bb.getCenter(bc);r={w:bs.x,h:bs.y,d:bs.z,t:new THREE.Matrix4().makeTranslation(bc.x,bc.y,bc.z)};}}
+   bl.set(g,r);return r;};
  root.updateMatrixWorld(true);
  root.traverse(o=>{if(!o.isMesh||!o.visible)return;let vis=true;o.traverseAncestors(a=>{if(!a.visible)vis=false;});if(!vis)return;const p=o.geometry.parameters||{},t=o.geometry.type;
    const tag=(o.name||t)+'#'+o.id;const mats=Array.isArray(o.material)?o.material[4]:o.material;
-   if(o.isInstancedMesh){for(let k=0;k<o.count;k++){o.getMatrixAt(k,im);m4.multiplyMatrices(o.matrixWorld,im);if(t==='BoxGeometry')addBox(m4,p.width,p.height,p.depth,mats,tag+'['+k+']');else if(t==='PlaneGeometry')addPlane(m4,p.width,p.height,mats,tag+'['+k+']');}}
+   if(o.isInstancedMesh){const bx=t==='BoxGeometry'||!opts.inst?null:boxLike(o.geometry);for(let k=0;k<o.count;k++){o.getMatrixAt(k,im);m4.multiplyMatrices(o.matrixWorld,im);if(t==='BoxGeometry')addBox(m4,p.width,p.height,p.depth,mats,tag+'['+k+']');else if(bx){m4.multiply(bx.t);addBox(m4,bx.w,bx.h,bx.d,mats,tag+'['+k+']');}else if(t==='PlaneGeometry')addPlane(m4,p.width,p.height,mats,tag+'['+k+']');}}
    else if(t==='BoxGeometry')addBox(o.matrixWorld,p.width,p.height,p.depth,mats,tag);else if(t==='PlaneGeometry')addPlane(o.matrixWorld,p.width,p.height,mats,tag);});
  const key=f=>{const n=f.n;return [Math.round(n.x*50),Math.round(n.y*50),Math.round(n.z*50),Math.round(n.dot(f.c)/0.02)].join(',');};
  const H=new Map();for(const f of faces){const k=key(f);if(!H.has(k))H.set(k,[]);H.get(k).push(f);}
