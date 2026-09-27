@@ -51,7 +51,10 @@ JS = r"""(()=>{world.updateMatrixWorld(true);const meshes=[],inst=[];
      only back faces and hits nothing. So also cast a ray straight UP from just above the asphalt through all closed solids,
      both faces counted: an odd number of crossings of one object means the road surface lies inside that object. */
   const CLOSED=['BoxGeometry','CylinderGeometry','SphereGeometry','ConeGeometry','TorusGeometry','OctahedronGeometry','IcosahedronGeometry','DodecahedronGeometry'];
-  const closed=o=>{const g=o.geometry,p=g.parameters||{};if(!CLOSED.includes(g.type)||p.openEnded)return false;
+  /* instanced meshes hold a clone of their geometry, and in three r128 a clone is a plain BufferGeometry: recognise boxes by shape */
+  const boxLike=g=>{const pa=g.attributes.position;if(g.type!=='BufferGeometry'||!pa||pa.count!==24||!g.index||g.index.count!==36)return false;if(!g.boundingBox)g.computeBoundingBox();const b=g.boundingBox;
+    for(let i=0;i<24;i++)for(const [c,lo,hi] of [[pa.getX(i),b.min.x,b.max.x],[pa.getY(i),b.min.y,b.max.y],[pa.getZ(i),b.min.z,b.max.z]])if(Math.abs(c-lo)>1e-5&&Math.abs(c-hi)>1e-5)return false;return true;};
+  const closed=o=>{const g=o.geometry,p=g.parameters||{};if(boxLike(g))return true;if(!CLOSED.includes(g.type)||p.openEnded)return false;
     if(g.type==='SphereGeometry'&&((p.phiLength!==undefined&&p.phiLength<6.28)||(p.thetaLength!==undefined&&p.thetaLength<3.14)))return false;return true;};
   const sides=new Map();for(const o of meshes.concat(inst))for(const m of (Array.isArray(o.material)?o.material:[o.material]))if(m&&!sides.has(m)){sides.set(m,m.side);m.side=THREE.DoubleSide;}
   const solidM=meshes.filter(closed),upV=new THREE.Vector3(0,1,0);
