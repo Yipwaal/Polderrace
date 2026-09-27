@@ -7,6 +7,7 @@ Hooks injected into the game's closure (right before the init line, see ANCHOR):
   window.__ev(code)        -> eval inside the game closure (all game globals reachable)
   window.__step(sec,steer) -> run the simulation `sec` seconds at 120 Hz with gas held;
                               steer=false keeps the wheel straight, otherwise a simple autopilot steers
+                              (and resets to the track after 1.5 s the wrong way, like a player would)
   window.__zfight(root,o)  -> coplanar-face (z-fighting) detector, see zf.js
 """
 import json, os, sys, pathlib, hashlib
@@ -24,9 +25,12 @@ ANCHOR = "loadTrack(settings.track);applyEnv(settings.time,settings.weather);reb
 TRACKS = ['polder', 'dorp', 'circuit', 'afsluitdijk', 'haven', 'veluwe', 'grachten', 'limburg', 'rotterdam', 'zeeland']
 TEST_MARKERS = ['__ev', '__clog', 'mockroom', '__zfight', '__step']
 
+# The autopilot also presses 'Terug op de baan' (resetToTrack) like a player would when the car has faced the wrong way for
+# 1.5 s: after a spin against a wall, edges() lines the car up backwards along the wall and steering alone never turns it round.
 STEP_JS = ("window.__ev=(c)=>eval(c);window.__step=(sec,steer)=>{kb.up=true;for(let i=0;i<Math.round(sec*120);i++){"
            "if(steer!==false){const th=headingOf(T[player.idx]);const df=((th-player.heading+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;"
-           "pad.steer=clamp(-df*3-player.lat*0.15,-1,1);}update(1/120);}kb.up=false;pad.steer=0;};\n")
+           "pad.steer=clamp(-df*3-player.lat*0.15,-1,1);window.__wrong=Math.abs(df)>2.1?(window.__wrong||0)+1/120:0;"
+           "if(window.__wrong>1.5){window.__wrong=0;resetToTrack();}}update(1/120);}kb.up=false;pad.steer=0;};\n")
 
 
 def game_hash():
