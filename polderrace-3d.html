@@ -1318,8 +1318,11 @@ function buildGrachten(){
   for(const sd of [-1,1]){let s=0;while(s<TRACK_LEN){const w=4.6+rnd()*2.4,dep=10+rnd()*3,i=Math.round((s+w/2)/SPC)%NS,lat=sd*(SHOULDER+0.3+dep/2),[x,z]=onTrack(i,lat);
     if(distToTrack(x,z)<Math.abs(lat)-0.6||inCanal(x,z)||placed.some(o=>Math.hypot(o[0]-x,o[1]-z)<(w+o[2])/2+0.05)){s+=3;continue;}
     placed.push([x,z,w]);const hh=10+rnd()*6,ry=headingOf(T[i]),c=pick(cols);hB.push(mtx(x,hh/2,z,ry,dep,hh,w*0.98));hC.push(c);
-    tmpO.position.set(x,hh,z);tmpO.rotation.set(0,ry,Math.PI/4);tmpO.scale.set(w*0.69,w*0.69,dep*0.98);tmpO.updateMatrix();
-    const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(0,ry,0)),q2=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI/4);tmpO.quaternion.copy(q.multiply(q2));tmpO.updateMatrix();gB.push(tmpO.matrix.clone());gC.push(c);s+=w;}}
+    /* gable: a cube turned 45 deg about the house's depth axis, so the point faces the street and it is exactly as wide as its own
+       house (w along the road) and runs back over its depth. It used to turn about the road axis: then it was dep (10-13 m) long
+       along the street, hung 3-4 m over both neighbours and floated in the air next to a lower house or at the end of a row. */
+    tmpO.position.set(x,hh,z);tmpO.scale.set(dep*0.98,w*0.69,w*0.69);
+    const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(0,ry,0)),q2=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI/4);tmpO.quaternion.copy(q.multiply(q2));tmpO.updateMatrix();gB.push(tmpO.matrix.clone());gC.push(c);s+=w;}}
   inst(new THREE.BoxGeometry(1,1,1),fm,hB,hC,true);inst(new THREE.BoxGeometry(1,1,1),M(0xffffff),gB,gC,true);
   const tr=[];for(let d=6;d<TRACK_LEN;d+=17){const i=Math.round(d/SPC)%NS;if(HT[i]>0.1)continue;const s=(d/17|0)%2?1:-1,[x,z]=onTrack(i,s*6.1);if(inCanal(x,z))continue;tr.push(mtx(x,5.4,z,rnd()*6,3.2,3.4,3.2));}
   inst(new THREE.SphereGeometry(1,8,6),M(0x4f7a3a),tr,null,true);
