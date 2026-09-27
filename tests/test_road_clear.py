@@ -5,14 +5,15 @@ CLEAR metres above the road surface. Anything a ray hits that is higher than 12 
 (the road ribbon, kerbs, start line and grime sit below that) is an obstruction: a quay wall through
 the road, a dune on the asphalt, a bridge leg in a lane, a beam across the road, ...
 Structures higher than CLEAR (gantries, checkpoint banners, bridge decks overhead) are allowed.
-The lanes are probed at every track sample (2 m). A second ray goes straight UP from just above the asphalt: when the
-road surface lies inside a closed solid (a pylon leg or pillar taller than CLEAR, where the downward ray starts inside
-the object and sees nothing), that ray crosses the object an odd number of times, and that is an obstruction too.
+The downward rays probe the lanes every 2nd track sample (4 m), with --dicht every sample (2 m, slower, finds thinner things).
+A second ray goes straight UP from just above the asphalt at every sample (2 m): when the road surface lies inside a closed
+solid (a pylon leg or pillar taller than CLEAR, where the downward ray starts inside the object and sees nothing), that ray
+crosses the object an odd number of times, and that is an obstruction too.
 The first 1.5 m of verge next to the asphalt is checked too (cars run wide there), but only for big
 things: anything at least 3 m across that rises more than 0.6 m (a dune, a wall, a building). Posts,
 bollards, benches, planters and flowers there are fine.
 
-usage: python tests/test_road_clear.py [track,track,...] [--rev]
+usage: python tests/test_road_clear.py [track,track,...] [--rev] [--dicht]
 """
 import sys
 from lib import Session, Report, DEFAULT, TRACKS
@@ -21,6 +22,7 @@ CLEAR = 4.6   # free height a car needs above the road
 tracks = [a for a in sys.argv[1:] if not a.startswith('--')]
 tracks = tracks[0].split(',') if tracks else TRACKS
 dirs = ['fwd', 'rev'] if '--rev' in sys.argv else ['fwd']
+DSTEP = 1 if '--dicht' in sys.argv else 2
 
 JS = r"""(()=>{world.updateMatrixWorld(true);const meshes=[],inst=[];
   world.traverse(o=>{if(!(o.isMesh||o.isInstancedMesh)||!o.visible)return;let v=true;o.traverseAncestors(a=>{if(!a.visible)v=false;});if(!v)return;
@@ -40,7 +42,7 @@ JS = r"""(()=>{world.updateMatrixWorld(true);const meshes=[],inst=[];
     const e=w.elements,sx=Math.hypot(e[0],e[1],e[2]),sz=Math.hypot(e[8],e[9],e[10]);return Math.max(bs.x*sx,bs.z*sz);};
   const lats=[];{const lim=ROAD_HALF-0.4;for(let lat=-lim;lat<=lim+1e-6;lat+=lim/3)lats.push([lat,'rijbaan']);
     for(const sg of [-1,1])for(const d of [0.4,0.9,1.4])if(ROAD_HALF+d<SHOULDER)lats.push([sg*(ROAD_HALF+d),'berm']);}
-  for(let i=0;i<NS;i++){for(const [lat,zone] of lats){if(zone==='berm'&&i%4)continue;const [x,z]=onTrack(i,lat),h=hAt(i,lat);
+  for(let i=0;i<NS;i+=%DSTEP%){for(const [lat,zone] of lats){if(zone==='berm'&&i%4)continue;const [x,z]=onTrack(i,lat),h=hAt(i,lat);
       o.set(x,h+CLEAR,z);rc.set(o,dn);rc.far=CLEAR+0.5;const hs=rc.intersectObjects(meshes,false);castInst(rc,x,z,hs);hs.sort((a,b)=>a.distance-b.distance);
       for(const q of hs){const up=q.point.y-h;if(up<=0.12)break;if(zone==='berm'&&(up<0.6||foot(q)<3))continue;const ob=q.object,p=ob.geometry.parameters||{};
         const col=ob.material&&!Array.isArray(ob.material)&&ob.material.color?ob.material.color.getHexString():'';
@@ -63,7 +65,7 @@ JS = r"""(()=>{world.updateMatrixWorld(true);const meshes=[],inst=[];
   for(const [m,sd] of sides)m.side=sd;
   for(const [g,b] of saved)g.boundingSphere=b;
   const groups={};for(const h of hits){const k=h.what;(groups[k]=groups[k]||[]).push(h);}
-  return {n:hits.length,groups:Object.entries(groups).map(([k,l])=>({what:k,n:l.length,iFrom:Math.min(...l.map(h=>h.i)),iTo:Math.max(...l.map(h=>h.i)),maxUp:Math.max(...l.map(h=>h.up)),at:[l[0].x,l[0].z]})).sort((a,b)=>b.n-a.n)};})()""".replace('%CLEAR%', str(CLEAR))
+  return {n:hits.length,groups:Object.entries(groups).map(([k,l])=>({what:k,n:l.length,iFrom:Math.min(...l.map(h=>h.i)),iTo:Math.max(...l.map(h=>h.i)),maxUp:Math.max(...l.map(h=>h.up)),at:[l[0].x,l[0].z]})).sort((a,b)=>b.n-a.n)};})()""".replace('%CLEAR%', str(CLEAR)).replace('%DSTEP%', str(DSTEP))
 
 rep = Report('rijbaan vrij (niets op of laag boven de weg)')
 with Session(DEFAULT, w=400, h=260) as s:
