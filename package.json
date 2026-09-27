@@ -1,0 +1,8 @@
+{
+  "name": "polderrace-3d",
+  "private": true,
+  "description": "Polderrace 3D - browser racegame. npm install haalt alleen three.js r128 op voor de tests (offline).",
+  "devDependencies": {
+    "three": "0.128.0"
+  }
+}
