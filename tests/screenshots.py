@@ -1,7 +1,8 @@
 """Screenshots for a visual review (no pass/fail): tests/.out/screens/
 
   track_<id>_a/b.png   every track, 2 moments in a race (day)
-  spot_<name>.png      fixed viewpoints of known tricky spots (bridges, barrier, canals, dunes)
+  spot_<name>.png      fixed viewpoints of known tricky spots (bridges, barrier, canals, dunes), plus free-camera
+                       overviews: zeeland_kering_boven, rotterdam_pyloon_zij/_dek, grachten_gevels
   podium.png, garage.png, menu_*.png
 
 usage: python tests/screenshots.py [tracks|none]
@@ -37,6 +38,19 @@ with Session(dict(DEFAULT, bots=5), w=900, h=560, prefs={'quality': 'high'}) as 
         i = s.ev(idx)
         s.ev(f"state='racing';resetPlayer((({i})%NS+NS)%NS,{lat});snapCamera();0"); s.step(1.6)
         s.ev("$('lights').hidden=true;$('count').hidden=true;$('msg').hidden=true;0"); s.pg.wait_for_timeout(1200); shot(s, f'spot_{name}.png')
+    # free-camera overviews for structures you cannot judge from behind the car: js returns [eye x,y,z, look-at x,y,z]
+    PYLON = "(()=>{let b=0;for(let i=0;i<NS;i++)if(HT[i]>HT[b])b=i;return b;})()"
+    VIEWS = [('zeeland_kering_boven', 'zeeland', "[760,160,120,760,10,-110]"),
+             ('rotterdam_pyloon_zij', 'rotterdam', f"(()=>{{const i={PYLON},p=P[i],r=R[i],t=T[i],h=HT[i];return [p.x+r.x*75-t.x*50,h+10,p.z+r.z*75-t.z*50,p.x,h+30,p.z];}})()"),
+             ('rotterdam_pyloon_dek', 'rotterdam', f"(()=>{{const i={PYLON},p=P[i],t=T[i],h=HT[i];return [p.x-t.x*55,h+3,p.z-t.z*55,p.x,h+14,p.z];}})()"),
+             ('grachten_gevels', 'grachten', "(()=>{const i=140,p=P[i],t=T[i],r=R[i];return [p.x-r.x*30-t.x*10,45,p.z-r.z*30-t.z*10,p.x+r.x*14+t.x*25,10,p.z+r.z*14+t.z*25];})()")]
+    for name, tr, js in VIEWS:
+        if tracks and tr not in tracks:
+            continue
+        s.ev(f"toMenu(-1);settings.track='{tr}';settings.mode='time';loadTrack('{tr}','fwd');applyEnv('day','dry');startRace();0"); s.step(4.5, False)
+        s.ev(f"state='racing';window.__v=({js});window.__pc=window.__pc||placeCam;placeCam=function(){{camPos.set(__v[0],__v[1],__v[2]);camLook.set(__v[3],__v[4],__v[5]);}};"
+             "$('lights').hidden=true;$('count').hidden=true;$('msg').hidden=true;0")
+        s.pg.wait_for_timeout(1500); shot(s, f'spot_{name}.png'); s.ev("placeCam=window.__pc;0")
     s.ev("toMenu(-1);enterPodium([{name:'Henk',sub:'0:53,4',carId:'muscle',color:'#f36f21'},{name:'Jij',sub:'+0,9 s',carId:'gt',color:'#d62a2a',me:true},{name:'Daan',sub:'+1,1 s',carId:'sedan',color:'#1d4f9e'}],'HAVENRACE');0")
     s.pg.wait_for_timeout(2500); shot(s, 'podium.png'); s.ev('leavePodium();toMenu(-1);0')
     s.ev("homePanel('garage');0"); s.pg.wait_for_timeout(1500); shot(s, 'garage.png')
