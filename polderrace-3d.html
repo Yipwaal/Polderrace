@@ -1298,9 +1298,19 @@ function buildGrachten(){
   const canals=bridges.map(ib=>({p:P[ib],t:T[ib],r:R[ib]}));
   const inCanal=(x,z)=>canals.some(c=>Math.abs((x-c.p.x)*c.t.x+(z-c.p.z)*c.t.z)<13&&Math.abs((x-c.p.x)*c.r.x+(z-c.p.z)*c.r.z)<260);
   const brick=M(0x7a3a2c),water=new THREE.MeshPhongMaterial({color:0x3a5560,specular:0x8fa6bb,shininess:80});
-  for(const c of canals){const g=new THREE.Group();g.position.set(c.p.x,0,c.p.z);g.rotation.y=headingOf(c.t);const w=new THREE.Mesh(new THREE.PlaneGeometry(520,20),water);w.rotation.x=-Math.PI/2;w.position.y=0.05;g.add(w);
-    for(const s of [-1,1])box(520,0.5,0.7,brick,0,0.22,s*10.4,g,false);
-    const hb=[0x2e5d3e,0x7a2a2a,0x1d4f9e,0x3a3e45];for(let k=0;k<5;k++){const x=-220+k*95+rnd()*20;if(Math.abs(x)<18)continue;const s=k%2?1:-1;box(14,1.6,3.6,M(pick(hb)),x,0.8,s*7.2,g);box(9,2.2,3,M(0xe8e4dc),x-1,2.7,s*7.2,g);box(9.4,0.2,3.4,M(0x3a3e45),x-1,3.9,s*7.2,g,false);}
+  /* a canal runs 260 m to both sides of its bridge and can meet another part of the track at street level. There the street dams
+     it: water and quay walls stop 0.6 m short of the pavement and a cross wall closes the canal off. Under its own humpback bridge
+     the canal simply passes (the road is 2 m up there). dams(c) = local x ranges along the canal taken by a street-level road. */
+  const roadDist=(x,z)=>{let b=1e9,bi=0;for(let i=0;i<NS;i++){const p=P[i],q=P[(i+1)%NS],ex=q.x-p.x,ez=q.z-p.z,f=clamp(((x-p.x)*ex+(z-p.z)*ez)/(ex*ex+ez*ez),0,1),dx=x-p.x-ex*f,dz=z-p.z-ez*f,d=dx*dx+dz*dz;if(d<b){b=d;bi=i;}}return [Math.sqrt(b),bi];};
+  const dams=c=>{const out=[];let cur=null;for(let u=-260;u<=260;u+=0.5){let hit=false;
+      for(const v of [-10.75,0,10.75]){const x=c.p.x+c.t.z*u+c.t.x*v,z=c.p.z-c.t.x*u+c.t.z*v;if(distToTrack(x,z)>SHOULDER+4)continue;const [d,i]=roadDist(x,z);if(d<SHOULDER+0.6&&HT[i]<1)hit=true;}
+      if(hit){if(!cur)cur=[u-0.5,u];cur[1]=u+0.5;}else if(cur){out.push(cur);cur=null;}}if(cur)out.push(cur);return out;};
+  for(const c of canals){const g=new THREE.Group();g.position.set(c.p.x,0,c.p.z);g.rotation.y=headingOf(c.t);const dm=dams(c),parts=[];let a=-260;
+    for(const [d0,d1] of dm){if(d0>a)parts.push([a,d0]);a=Math.max(a,d1);}if(a<260)parts.push([a,260]);
+    for(const [a,b] of parts){const w=new THREE.Mesh(new THREE.PlaneGeometry(b-a,20),water);w.rotation.x=-Math.PI/2;w.position.set((a+b)/2,0.05,0);g.add(w);
+      for(const s of [-1,1])box(b-a,0.5,0.7,brick,(a+b)/2,0.22,s*10.4,g,false);if(a>-260)box(0.7,0.5,20.1,brick,a+0.35,0.22,0,g,false);if(b<260)box(0.7,0.5,20.1,brick,b-0.35,0.22,0,g,false);}
+    const hb=[0x2e5d3e,0x7a2a2a,0x1d4f9e,0x3a3e45];for(let k=0;k<5;k++){const x=-220+k*95+rnd()*20;if(Math.abs(x)<18)continue;const s=k%2?1:-1,col=pick(hb);if(dm.some(([d0,d1])=>x+8>d0&&x-8<d1))continue;
+      box(14,1.6,3.6,M(col),x,0.8,s*7.2,g);box(9,2.2,3,M(0xe8e4dc),x-1,2.7,s*7.2,g);box(9.4,0.2,3.4,M(0x3a3e45),x-1,3.9,s*7.2,g,false);}
     world.add(g);}
   const hump=i=>HT[i]>0.05,top=i=>HT[i]>0.35;for(const s of [-1,1]){vribbon(s*SHOULDER,-4,0.2,brick,3,hump);vribbon(s*(SHOULDER-0.01),0.2,1.1,M(0x2b2f36),3,top);}
   const cols=['#7a3a2c','#5a2a22','#8c4a32','#3b3530','#6b5a4a','#9a8f7a','#2f3033'].map(c=>new THREE.Color(c)),fm=M(0xffffff,{map:facadeTex(4),emissive:0x000000,emissiveMap:canvasTex(128,256,(g,w,h)=>{g.fillStyle='#000';g.fillRect(0,0,w,h);const fh=h/4.6;for(let f=0;f<4;f++)for(const x of [14,52,90])if(Math.random()<0.6){g.fillStyle='#ffd890';g.fillRect(x,h-fh*(f+1)-4,24,fh*0.62);}})});
