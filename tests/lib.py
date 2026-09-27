@@ -27,10 +27,11 @@ TEST_MARKERS = ['__ev', '__clog', 'mockroom', '__zfight', '__step']
 
 # The autopilot also presses 'Terug op de baan' (resetToTrack) like a player would when the car has faced the wrong way for
 # 1.5 s: after a spin against a wall, edges() lines the car up backwards along the wall and steering alone never turns it round.
+# window.__resets counts those resets (test_regression reports them).
 STEP_JS = ("window.__ev=(c)=>eval(c);window.__step=(sec,steer)=>{kb.up=true;for(let i=0;i<Math.round(sec*120);i++){"
            "if(steer!==false){const th=headingOf(T[player.idx]);const df=((th-player.heading+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;"
            "pad.steer=clamp(-df*3-player.lat*0.15,-1,1);window.__wrong=Math.abs(df)>2.1?(window.__wrong||0)+1/120:0;"
-           "if(window.__wrong>1.5){window.__wrong=0;resetToTrack();}}update(1/120);}kb.up=false;pad.steer=0;};\n")
+           "if(window.__wrong>1.5){window.__wrong=0;window.__resets=(window.__resets||0)+1;resetToTrack();}}update(1/120);}kb.up=false;pad.steer=0;};\n")
 
 
 def game_hash():

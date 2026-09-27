@@ -19,12 +19,13 @@ with Session(dict(DEFAULT, bots=4), w=500, h=320) as s:
                 e0 = len(s.errs)
                 s.ev(f"toMenu(-1);settings.track='{tr}';settings.dir='{d}';settings.mode='{m}';settings.bots={3 if m == 'elim' else 4};"
                      f"settings.laps=1;saveSettings();loadTrack('{tr}','{d}');0")
-                s.ev('startRace();0')
+                s.ev('startRace();window.__resets=0;0')
                 if m == 'time':
                     s.step(4.5, False); s.step(12); s.ev('timeLeft=0.01;0'); s.step(1)
                 else:
                     s.race_until_over(45 if m == 'elim' else 25)
                 st = s.ev('state'); title = s.ev("$('overTitle')?$('overTitle').textContent:''")
                 new_errs = s.errs[e0:]
-                rep.check(st == 'over' and not new_errs, f'{tr}/{d}/{m}', f"{st} '{title}'" + (f' ERR {new_errs[:2]}' if new_errs else ''))
+                resets = s.ev('window.__resets||0')  # autopilot pressed 'Terug op de baan' after driving the wrong way (see lib.py)
+                rep.check(st == 'over' and not new_errs, f'{tr}/{d}/{m}', f"{st} '{title}'" + (f' ({resets}x teruggezet na achterstevoren rijden)' if resets else '') + (f' ERR {new_errs[:2]}' if new_errs else ''))
 rep.finish()

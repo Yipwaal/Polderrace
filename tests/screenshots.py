@@ -49,7 +49,7 @@ with Session(dict(DEFAULT, bots=5), w=900, h=560, prefs={'quality': 'high'}) as 
             continue
         s.ev(f"toMenu(-1);settings.track='{tr}';settings.mode='time';loadTrack('{tr}','fwd');applyEnv('day','dry');startRace();0"); s.step(4.5, False)
         s.ev(f"state='racing';window.__v=({js});window.__pc=window.__pc||placeCam;placeCam=function(){{camPos.set(__v[0],__v[1],__v[2]);camLook.set(__v[3],__v[4],__v[5]);}};"
-             "$('lights').hidden=true;$('count').hidden=true;$('msg').hidden=true;0")
+             "$('lights').hidden=true;$('count').hidden=true;$('msg').hidden=true;updateCamera(0);renderer.render(scene,camera);0")
         s.pg.wait_for_timeout(1500); shot(s, f'spot_{name}.png'); s.ev("placeCam=window.__pc;0")
     s.ev("toMenu(-1);enterPodium([{name:'Henk',sub:'0:53,4',carId:'muscle',color:'#f36f21'},{name:'Jij',sub:'+0,9 s',carId:'gt',color:'#d62a2a',me:true},{name:'Daan',sub:'+1,1 s',carId:'sedan',color:'#1d4f9e'}],'HAVENRACE');0")
     s.pg.wait_for_timeout(2500); shot(s, 'podium.png'); s.ev('leavePodium();toMenu(-1);0')
