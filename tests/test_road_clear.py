@@ -5,6 +5,9 @@ CLEAR metres above the road surface. Anything a ray hits that is higher than 12 
 (the road ribbon, kerbs, start line and grime sit below that) is an obstruction: a quay wall through
 the road, a dune on the asphalt, a bridge leg in a lane, a beam across the road, ...
 Structures higher than CLEAR (gantries, checkpoint banners, bridge decks overhead) are allowed.
+The lanes are probed at every track sample (2 m). A second ray goes straight UP from just above the asphalt: when the
+road surface lies inside a closed solid (a pylon leg or pillar taller than CLEAR, where the downward ray starts inside
+the object and sees nothing), that ray crosses the object an odd number of times, and that is an obstruction too.
 The first 1.5 m of verge next to the asphalt is checked too (cars run wide there), but only for big
 things: anything at least 3 m across that rises more than 0.6 m (a dune, a wall, a building). Posts,
 bollards, benches, planters and flowers there are fine.
@@ -37,11 +40,27 @@ JS = r"""(()=>{world.updateMatrixWorld(true);const meshes=[],inst=[];
     const e=w.elements,sx=Math.hypot(e[0],e[1],e[2]),sz=Math.hypot(e[8],e[9],e[10]);return Math.max(bs.x*sx,bs.z*sz);};
   const lats=[];{const lim=ROAD_HALF-0.4;for(let lat=-lim;lat<=lim+1e-6;lat+=lim/3)lats.push([lat,'rijbaan']);
     for(const sg of [-1,1])for(const d of [0.4,0.9,1.4])if(ROAD_HALF+d<SHOULDER)lats.push([sg*(ROAD_HALF+d),'berm']);}
-  for(let i=0;i<NS;i+=2){for(const [lat,zone] of lats){if(zone==='berm'&&i%4)continue;const [x,z]=onTrack(i,lat),h=hAt(i,lat);
+  for(let i=0;i<NS;i++){for(const [lat,zone] of lats){if(zone==='berm'&&i%4)continue;const [x,z]=onTrack(i,lat),h=hAt(i,lat);
       o.set(x,h+CLEAR,z);rc.set(o,dn);rc.far=CLEAR+0.5;const hs=rc.intersectObjects(meshes,false);castInst(rc,x,z,hs);hs.sort((a,b)=>a.distance-b.distance);
       for(const q of hs){const up=q.point.y-h;if(up<=0.12)break;if(zone==='berm'&&(up<0.6||foot(q)<3))continue;const ob=q.object,p=ob.geometry.parameters||{};
         const col=ob.material&&!Array.isArray(ob.material)&&ob.material.color?ob.material.color.getHexString():'';
         hits.push({i,lat:+lat.toFixed(1),up:+up.toFixed(2),what:zone+': '+(ob.isInstancedMesh?'inst ':'')+ob.geometry.type.replace('Geometry','')+(p.width?' '+[p.width,p.height,p.depth].map(v=>v===undefined?'':+(+v).toFixed(2)).join('x'):'')+' #'+col,x:+x.toFixed(0),z:+z.toFixed(0)});break;}}}
+  /* blind spot of the rays above: a ray that STARTS inside a solid (a pylon leg, a pillar, a thick wall taller than CLEAR) sees
+     only back faces and hits nothing. So also cast a ray straight UP from just above the asphalt through all closed solids,
+     both faces counted: an odd number of crossings of one object means the road surface lies inside that object. */
+  const CLOSED=['BoxGeometry','CylinderGeometry','SphereGeometry','ConeGeometry','TorusGeometry','OctahedronGeometry','IcosahedronGeometry','DodecahedronGeometry'];
+  const closed=o=>{const g=o.geometry,p=g.parameters||{};if(!CLOSED.includes(g.type)||p.openEnded)return false;
+    if(g.type==='SphereGeometry'&&((p.phiLength!==undefined&&p.phiLength<6.28)||(p.thetaLength!==undefined&&p.thetaLength<3.14)))return false;return true;};
+  const sides=new Map();for(const o of meshes.concat(inst))for(const m of (Array.isArray(o.material)?o.material:[o.material]))if(m&&!sides.has(m)){sides.set(m,m.side);m.side=THREE.DoubleSide;}
+  const solidM=meshes.filter(closed),upV=new THREE.Vector3(0,1,0);
+  for(let i=0;i<NS;i++){for(const [lat,zone] of lats){if(zone!=='rijbaan')continue;const [x,z]=onTrack(i,lat),h=hAt(i,lat);
+      o.set(x,h+0.13,z);rc.set(o,upV);rc.far=400;const hs=rc.intersectObjects(solidM,false);castInst(rc,x,z,hs);const cnt=new Map();
+      for(const q of hs){if(!closed(q.object))continue;const k=q.object.id+':'+(q.instanceId===undefined?'':q.instanceId),l=cnt.get(k)||[];
+        if(!l.some(d=>Math.abs(d-q.distance)<1e-3))l.push(q.distance);cnt.set(k,l);}
+      for(const [k,l] of cnt){if(l.length%2===0)continue;const q=hs.find(q=>q.object.id+':'+(q.instanceId===undefined?'':q.instanceId)===k),ob=q.object,p=ob.geometry.parameters||{};
+        const col=ob.material&&!Array.isArray(ob.material)&&ob.material.color?ob.material.color.getHexString():'';
+        hits.push({i,lat:+lat.toFixed(1),up:+(Math.min(...l)+0.13).toFixed(2),what:zone+' (weg ligt binnenin): '+(ob.isInstancedMesh?'inst ':'')+ob.geometry.type.replace('Geometry','')+(p.width?' '+[p.width,p.height,p.depth].map(v=>v===undefined?'':+(+v).toFixed(2)).join('x'):'')+' #'+col,x:+x.toFixed(0),z:+z.toFixed(0)});break;}}}
+  for(const [m,sd] of sides)m.side=sd;
   for(const [g,b] of saved)g.boundingSphere=b;
   const groups={};for(const h of hits){const k=h.what;(groups[k]=groups[k]||[]).push(h);}
   return {n:hits.length,groups:Object.entries(groups).map(([k,l])=>({what:k,n:l.length,iFrom:Math.min(...l.map(h=>h.i)),iTo:Math.max(...l.map(h=>h.i)),maxUp:Math.max(...l.map(h=>h.up)),at:[l[0].x,l[0].z]})).sort((a,b)=>b.n-a.n)};})()""".replace('%CLEAR%', str(CLEAR))
