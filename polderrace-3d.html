@@ -1365,9 +1365,15 @@ function buildRotterdam(){
   /* Erasmusbrug pylon: the two legs stand in the river beside the deck (outside the railing), rise straight up to 16 m above
      the road, are tied by a cross beam there and only then lean in to one mast. The stays fan out from the mast to the deck edges. */
   {let ib=0;for(let i=0;i<NS;i++)if(HT[i]>HT[ib])ib=i;const g=new THREE.Group(),wht=M(0xf2f4f5),h=HT[ib],lx=SHOULDER+3,kn=h+16,mt=h+44;place(g,ib,0,0);g.position.y=0;
-   for(const s of [-1,1]){box(2.4,kn+2,2.8,wht,s*lx,(kn-2)/2,0,g);const dx=lx-1.2,dy=mt-kn,a=box(2.2,Math.hypot(dx,dy)+2.4,2.4,wht,s*(lx+1.2)/2,(kn+mt)/2,0,g);a.rotation.z=s*Math.atan2(dx,dy);}
+   /* each arm runs from the top of its leg (lx,kn) to x=1 under the mast; it reaches 0.4 m into the leg and 1.2 m into the mast,
+      so its cross-section at the knee is exactly the top of the leg and no corner sticks out of the leg or the mast */
+   for(const s of [-1,1]){box(2.4,kn+2,2.8,wht,s*lx,(kn-2)/2,0,g);const dx=lx-1,dy=mt-kn,L=Math.hypot(dx,dy),ux=-s*dx/L,uy=dy/L;
+     const a=box(2.2,L+1.6,2.4,wht,(s*lx-ux*0.4+s+ux*1.2)/2,(kn-uy*0.4+mt+uy*1.2)/2,0,g);a.rotation.z=s*Math.atan2(dx,dy);}
    box(lx*2,2.2,2,wht,0,kn-1.4,0,g);box(lx*2,1.8,2,wht,0,h-3.8,0,g,false);box(3.2,40,3.2,wht,0,mt+18,0,g);world.add(g);
-   for(let k=-12;k<=12;k++){if(!k)continue;const j=(ib+k*6+NS)%NS;for(const s of [-1,1]){const [ax,az]=onTrack(ib,s*1.7),[x,z]=onTrack(j,s*(SHOULDER+0.15));wire([new THREE.Vector3(ax,mt+12+Math.abs(k)*2,az),new THREE.Vector3(x,HT[j]+0.05,z)],cables);}}}
+   /* on the curved approaches a stay to a far anchor cuts the corner over the inner lanes: only build stays that stay 8 m above the lanes */
+   for(let k=-12;k<=12;k++){if(!k)continue;const j=(ib+k*6+NS)%NS;for(const s of [-1,1]){const [ax,az]=onTrack(ib,s*1.7),[bx,bz]=onTrack(j,s*(SHOULDER+0.15)),A=new THREE.Vector3(ax,mt+12+Math.abs(k)*2,az),B=new THREE.Vector3(bx,HT[j]+0.05,bz);let low=false;
+     for(let q=1;q<120&&!low;q++){const f=q/120,x=ax+(bx-ax)*f,z=az+(bz-az)*f;let bi=ib,bd=1e9;for(let m=-80;m<=80;m++){const i=(ib+m+NS)%NS,ex=x-P[i].x,ez=z-P[i].z,d=ex*ex+ez*ez;if(d<bd){bd=d;bi=i;}}
+       if(Math.abs((x-P[bi].x)*R[bi].x+(z-P[bi].z)*R[bi].z)<=ROAD_HALF&&A.y+(B.y-A.y)*f-HT[bi]<8)low=true;}if(!low)wire([A,B],cables);}}}
   {let best=-1,bi=0;for(let i=0;i<NS;i++)if(!land(i)&&P[i].x<200&&HT[i]>best){best=HT[i];bi=i;}const red=M(0xc8302a);
    for(const off of [-20,20]){const j=(bi+Math.round(off/SPC)+NS)%NS,g=new THREE.Group();for(const s of [-1,1])box(1.6,26,1.6,red,s*11,HT[j]+10,0,g);box(24,2,1.8,red,0,HT[j]+22,0,g);place(g,j,0,0);g.position.y=0;}}
   const tw=[],tc=[],twm=M(0xffffff,{map:facadeTex(10),emissive:0x000000,emissiveMap:canvasTex(128,256,(g,w,h)=>{g.fillStyle='#000';g.fillRect(0,0,w,h);const fh=h/10.6;for(let f=0;f<10;f++)for(const x of [14,52,90])if(Math.random()<0.55){g.fillStyle='#ffe0a0';g.fillRect(x,h-fh*(f+1)-4,24,fh*0.62);}})});winMats.push(twm);
