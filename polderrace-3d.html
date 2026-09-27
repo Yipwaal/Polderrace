@@ -2246,8 +2246,11 @@ function styleExtras(m,u,rim){
   if(!paint.length)return;const vol=o=>{const p=o.geometry.parameters;return p.width*p.height*p.depth;},body=paint.reduce((a,b)=>vol(b)>vol(a)?b:a),bp=body.geometry.parameters;
   const topOf=o=>o.position.y+o.geometry.parameters.height/2;let roof=paint.reduce((a,b)=>topOf(b)>topOf(a)?b:a);
   if(u.num>0){const t=canvasTex(128,128,(g)=>{g.fillStyle='#f7f7f2';g.beginPath();g.arc(64,64,60,0,Math.PI*2);g.fill();g.fillStyle='#161a22';g.font=`800 78px ${FONT}`;g.textAlign='center';g.textBaseline='middle';g.fillText(String(u.num),64,70);});
-    const dm=new THREE.MeshLambertMaterial({map:t,transparent:true,polygonOffset:true,polygonOffsetFactor:-2}),sz=Math.min(0.7,bp.height*0.9);
-    for(const s of [-1,1]){const d=new THREE.Mesh(new THREE.PlaneGeometry(sz,sz),dm);d.position.set(body.position.x+s*(bp.width/2+0.006),body.position.y,body.position.z-bp.depth*0.1);d.rotation.y=s*Math.PI/2;m.g.add(d);}
+    const dm=new THREE.MeshLambertMaterial({map:t,transparent:true,polygonOffset:true,polygonOffsetFactor:-2}),sz=Math.min(0.7,bp.height*0.9),zc=body.position.z-bp.depth*0.1;
+    /* the side stickers go 1 cm outside the widest body panel behind them: the darker sill/skirt boxes stick out 1 cm past the body */
+    let ox=bp.width/2;const bb=new THREE.Box3();m.g.children.forEach(o=>{const p=o.isMesh&&o.geometry.parameters;if(!p||!(p.width>=1.2))return;if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();o.updateMatrix();bb.copy(o.geometry.boundingBox).applyMatrix4(o.matrix);
+      if(bb.max.y>body.position.y-sz/2&&bb.min.y<body.position.y+sz/2&&bb.max.z>zc-sz/2&&bb.min.z<zc+sz/2)ox=Math.max(ox,bb.max.x-body.position.x,body.position.x-bb.min.x);});
+    for(const s of [-1,1]){const d=new THREE.Mesh(new THREE.PlaneGeometry(sz,sz),dm);d.position.set(body.position.x+s*(ox+0.01),body.position.y,zc);d.rotation.y=s*Math.PI/2;m.g.add(d);}
     const rp=roof.geometry.parameters,d=new THREE.Mesh(new THREE.PlaneGeometry(Math.min(0.7,rp.width*0.6),Math.min(0.7,rp.width*0.6)),dm);d.rotation.x=-Math.PI/2;d.position.set(roof.position.x,topOf(roof)+0.03,roof.position.z);d.renderOrder=2;m.g.add(d);}
   const blkM=M(0x1b1d22),cf=new THREE.MeshPhongMaterial({color:0x22262b,specular:0x555555,shininess:60});
   /* every model declares where a wing belongs (wingY/wingZ) and which meshes are its factory spoiler; a tuned wing replaces that spoiler instead of stacking on it */
@@ -2255,7 +2258,7 @@ function styleExtras(m,u,rim){
   const wy=m.wingY!==undefined?m.wingY:topOf(body),wz=m.wingZ!==undefined?m.wingZ:body.position.z-bp.depth/2+0.25,ww=Math.min(2.08,m.wid*0.98);
   if(u.wing==='duck'){const d=new THREE.Mesh(new THREE.BoxGeometry(ww*0.9,0.06,0.4),PM(col));d.position.set(0,wy+0.09,wz+0.05);d.rotation.x=-0.34;d.castShadow=true;m.g.add(d);
     for(const sx of [-1,1])box(0.05,0.16,0.4,PM(col),sx*ww*0.45,wy+0.1,wz+0.05,m.g,false);}
-  if(u.wing==='gt'){for(const x of [-0.3,0.3]){const s=box(0.06,0.34,0.24,blkM,x*ww,wy+0.17,wz+0.14,m.g);s.rotation.x=0.35;}
+  if(u.wing==='gt'){for(const x of [-0.28,0.28]){const s=box(0.06,0.34,0.24,blkM,x*ww,wy+0.17,wz+0.14,m.g);s.rotation.x=0.35;} /* 0.28: clear of the roadster's rear humps */
     const pl=box(ww,0.05,0.42,cf,0,wy+0.36,wz-0.02,m.g);pl.rotation.x=-0.16;const gf=box(ww*0.98,0.02,0.1,cf,0,wy+0.41,wz-0.22,m.g,false);gf.rotation.x=-0.5;
     for(const x of [-1,1])box(0.03,0.26,0.5,blkM,x*ww/2,wy+0.4,wz-0.02,m.g,false);}
   /* exhaust (classes B and A only): the stock tips make way for a sport, twin or centre-exit set */
