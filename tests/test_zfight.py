@@ -65,8 +65,8 @@ with Session(DEFAULT, w=400, h=260) as s:
         rep.check(not r, 'alle getunede varianten (spoiler, velgen, uitlaat, striping, nummer)', '; '.join(r[:6]))
         # exhaust tips poke out under the rear bumper (Yip: 'te hoog'): tip centre no higher than the bumper's lower edge 10 cm in from the tail
         # (+3 cm, or 28 cm on a very low car), on a car with a diffuser just on top of its fins; never scraping the road
-        r = s.ev("""(()=>{const out=[];for(const t of Object.keys(CARS)){const K=carKit(t),sets=[['af fabriek',K.G.exh]];
-            if(CARS[t].cls!=='S')for(const k of Object.keys(EXHAUSTS))if(k!=='std')sets.push([k,tuneParts(K,k).chrome]);
+        r = s.ev("""(()=>{const out=[];for(const t of Object.keys(CARS).concat(['city'])){const K=carKit(t),sets=[['af fabriek',K.G.exh]];
+            if(CARS[t]&&CARS[t].cls!=='S')for(const k of Object.keys(EXHAUSTS))if(k!=='std')sets.push([k,tuneParts(K,k).chrome]);
             for(const [k,g] of sets){if(!g){out.push(t+'/'+k+': geen uitlaat');continue;}g.computeBoundingBox();const b=g.boundingBox,r=(b.max.y-b.min.y)/2,cy=(b.max.y+b.min.y)/2,
               lim=K.diff?K.bot(K.zR+0.24)+0.03+r+0.04:Math.max(K.bot(K.zR+0.1)+0.03,0.28);
               if(cy>lim+1e-3)out.push(t+'/'+k+': midden '+cy.toFixed(2)+' m > '+lim.toFixed(2));if(b.min.y<0.1)out.push(t+'/'+k+': onderkant '+b.min.y.toFixed(2)+' m');
