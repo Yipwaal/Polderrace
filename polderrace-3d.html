@@ -1807,10 +1807,13 @@ function dressStd(K,D,o){const on=K.on,S=K.S,C=S.cab;K.topRects=K.topRects||[];K
     const rim=new THREE.RingGeometry(0.84,1,16,1);rim.rotateY(Math.PI);rim.scale(0.1,0.062,1);rim.translate(sx*(x+0.16),y,o.mz-0.06);D.paint.geo(rim);rim.dispose();}} /* painted rim closes the open back */
   for(const z of o.handles||[])Sd(D.trim,z-0.07,z+0.07,o.hy-0.018,o.hy+0.018,0.02,2,1);
   if(o.sill)Sd(D.trim,S.wz[1]+K.ra+0.04,S.wz[0]-K.ra-0.04,o.sill[0],o.sill[1],0.02,8,1);
-  /* exhausts: short open pipes with a dark inside, under the rear bumper */
-  const ez=K.zR;for(const x of o.exh||[]){const y=o.exhY||0.3,zb=K.endZ(x,y,false);const z=(zb===null?ez:zb)-0.05,
-    t=new THREE.CylinderGeometry(o.exR||0.045,o.exR||0.045,0.24,14,1,true);t.rotateX(Math.PI/2);t.translate(x,y,z+0.07);D.exh.geo(t);t.dispose();
-    const c=new THREE.CircleGeometry((o.exR||0.045)*0.92,12);c.rotateY(Math.PI);c.translate(x,y,z+0.02);D.exhD.geo(c);c.dispose();} /* own set: hidden with the pipes */
+  /* exhausts: short open pipes with a dark inside. They leave the rear bumper just above its lower edge (clear of the plate), like the tuned tips,
+     instead of hanging half inside the body under it; the muscle car's go through the black valance under the chrome bumper */
+  for(const x of o.exh||[]){const r=o.exR||0.045,T=TUNE_FIT[S.type];let y=T&&T.exY?T.exY:Math.max(o.exhY||0.3,K.bot(K.zR+0.03)+r+0.035);
+    if(o.plateR!==undefined&&Math.abs(x)<0.26+r)y=Math.min(y,o.plateR-0.06-r-0.02);
+    const zs=[[x-r,y],[x,y],[x+r,y],[x,y-r],[x,y+r]].map(([q,h])=>K.endZ(q,h,false)).filter(q=>q!==null),zb=zs.length?Math.min(...zs):K.zR; /* rearmost skin round the rim */
+    const t=new THREE.CylinderGeometry(r,r,0.24,14,1,true);t.rotateX(Math.PI/2);t.translate(x,y,zb+0.06);D.exh.geo(t);t.dispose();
+    const c=new THREE.CircleGeometry(r*0.92,12);c.rotateY(Math.PI);c.translate(x,y,zb-0.02);D.exhD.geo(c);c.dispose();} /* own set: hidden with the pipes */
   if(o.extra)o.extra(K,D,h);
   return h;}
 /* stock spoilers: a lip on the boot, or a wing on two posts; they go into the wingP/wingT sets so a tuned wing can hide them */
@@ -1933,13 +1936,13 @@ const CAR_SPECS={
         diffuser(K,D);
         {const z=-2.02,y0=K.topY(z,0.45);for(const s of [-1,1])D.wingT.box(0.06,0.44,0.16,s*0.45,y0+0.2,z+0.04,0.3);
           D.wingT.box(2.06,0.05,0.5,0,y0+0.44,z-0.06,-0.14);for(const s of [-1,1])D.wingT.box(0.03,0.26,0.6,s*1.045,y0+0.42,z-0.08);}}});}},
-  longtail:{len:5.3,wid:2.05,r:0.36,w:0.36,wz:[1.6,-1.35],zF:2.5,zR:-2.83,off:-0.2,taper:[0.24,0.2],fb:[0.22,0.2],shoulder:-0.02,exh:[-0.3,0.3],exhY:0.5,exR:0.06,
+  longtail:{len:5.3,wid:2.05,r:0.36,w:0.36,wz:[1.6,-1.35],zF:2.5,zR:-2.83,off:-0.2,taper:[0.24,0.2],fb:[0.22,0.2],shoulder:-0.02,exh:[-0.3,0.3],exhY:0.39,exR:0.06,
     top:[[2.5,0.4],[2.46,0.47],[2.2,0.53],[1.6,0.6],[0.9,0.68],[0.3,0.74],[-0.6,0.78],[-1.5,0.8],[-2.6,0.76],[-2.8,0.68],[-2.83,0.6]],
     bot:[[2.5,0.24],[2.3,0.16],[2.0,0.15],[-2.3,0.15],[-2.65,0.19],[-2.83,0.3]],
     cab:{z0:1.34,z1:-0.5,roof:[[1.34,0.68],[0.9,0.92],[0.5,1.07],[0.05,1.1],[-0.25,1.0],[-0.5,0.79]],ws:0.42,rw:-0.22,sg:[-0.15,1.16],inset:0.22,tumble:0.22},
     wing:{z:-2.5},
     dress(K,D){dressStd(K,D,{hl:[{x:[0.52,0.86],z:[2.0,2.28]}],grille:[{x:[-0.3,0.3],y:[0.22,0.34]},{x:[0.4,0.92],y:[0.22,0.34]}],
-      tl:[{x:[0.35,0.88],y:[0.44,0.54]}],rtrim:[{x:[-0.92,0.92],y:[0.22,0.4]}],plateR:0.62,mz:1.1,my:0.8,sill:[0.2,0.3],exh:[-0.3,0.3],exhY:0.5,exR:0.06,
+      tl:[{x:[0.35,0.88],y:[0.44,0.54]}],rtrim:[{x:[-0.92,0.92],y:[0.22,0.4]}],plateR:0.62,mz:1.1,my:0.8,sill:[0.2,0.3],exh:[-0.3,0.3],exhY:0.39,exR:0.06,
       extra(K,D,h){/* roof snorkel, fins along the tail, low wing between them, diffuser */
         {const y=K.cabY(-0.1,0);D.trim.box(0.3,0.16,0.8,0,y+0.04,-0.45,0.06);D.trim.box(0.24,0.1,0.02,0,y+0.08,-0.06);noNum(K,[-0.15,0.15,-0.85,-0.05]);}
         for(const s of [-1,1]){const y=K.topY(-2.0,0.78)-0.04;finPlate(D.paint,[[-1.3,y],[-1.3,y+0.02],[-2.7,y+0.3],[-2.8,y+0.3],[-2.8,y]],s*0.8,0.05);}
