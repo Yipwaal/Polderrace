@@ -1019,8 +1019,9 @@ function buildDorp(){
      for(let b=0;b<2+Math.floor(rnd()*3);b++){const o=b*0.7-0.7,px=x+T[i].x*o,pz=z+T[i].z*o,yaw=h+Math.PI/2;fr.push(mtx(px,0.7,pz,yaw,1.1,0.08,0.08));
        for(const w of [-0.5,0.5])wh.push(mtx(px+Math.cos(yaw)*w,0.4,pz-Math.sin(yaw)*w,yaw));}}
    for(let t=0;t<3;t++){const i=Math.round(NS*(0.15+t*0.3))%NS;if(HT[i]>0.05)continue;const sd=t%2?1:-1;
-     for(let k=0;k<4;k++){const o=k*3-4.5,[x,z]=onTrack(i,sd*7.2);const px=x+T[i].x*o,pz=z+T[i].z*o;tb.push(mtx(px,0.95,pz,0,1));um.push(mtx(px,2.35,pz,0,1));uc.push(ucol[t]);
-       for(const c of [-0.7,0.7])ch.push(mtx(px+T[i].x*c,0.45,pz+T[i].z*c,0,1));}}
+     /* every table sits at its own spot along the pavement: laid out along a straight tangent, the outer parasols drifted over the road in the chicane */
+     for(let k=0;k<4;k++){const j=(i+Math.round((k*3-4.5)/SPC)+NS)%NS,[px,pz]=onTrack(j,sd*7.2);tb.push(mtx(px,0.95,pz,0,1));um.push(mtx(px,2.35,pz,0,1));uc.push(ucol[t]);
+       for(const c of [-0.7,0.7])ch.push(mtx(px+T[j].x*c,0.45,pz+T[j].z*c,0,1));}}
    inst(new THREE.BoxGeometry(1,1,1),M(0x2b2f36),fr,null,false);inst(new THREE.TorusGeometry(0.33,0.04,5,12),M(0x1b1b1b),wh,null,false);
    inst(new THREE.CylinderGeometry(0.55,0.55,0.06,10),M(0xe8e4dc),tb,null,true);inst(new THREE.ConeGeometry(1.4,0.7,8),M(0xffffff),um,uc,true);inst(new THREE.BoxGeometry(0.45,0.9,0.45),M(0x3a3e45),ch,null,false);}
   {const mask=canvasTex(128,128,(g,w,h)=>{g.fillStyle='#000';g.fillRect(0,0,w,h);[[18,18,1],[74,18,0.55],[18,64,0.8],[74,64,1]].forEach(([x,y,a])=>{g.fillStyle=`rgba(255,210,130,${a})`;g.fillRect(x,y,36,30);});});
