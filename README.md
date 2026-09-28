@@ -2,8 +2,9 @@
 
 Arcade-racegame in de browser: 10 Nederlandse banen, kampioenschap, carrière, garage, 2 spelers en online.
 Het hele spel zit in **`polderrace-3d.html`**. Zolang we in de HTML-fase zitten, levert Claude Code elke
-wijziging op als een nieuwe versie van dit ene bestand (zoals in de chat); pas als jij erom vraagt, wordt er een echt spel van gemaakt. Open het in Chrome om te spelen; online spelen werkt alleen via de
-artifact-link op claude.ai.
+wijziging op als een nieuwe versie van dit ene bestand (zoals in de chat); pas als jij erom vraagt, wordt er een echt spel van gemaakt. Open het in Chrome om te spelen. Online spelen
+kan overal via "Spelen via host" (uitnodigingscodes, rechtstreeks tussen de browsers); de lobby met open games werkt
+alleen via de artifact-link op claude.ai.
 
 ## Wat zit er in deze map?
 
@@ -67,6 +68,7 @@ blijft hangen. Je kunt de reviewer ook zelf aanroepen met `/qa`.
 | `python tests/test_camera_terrain.py` | camera nooit in de heuvels (ook 2 spelers) | 3 min |
 | `python tests/test_championship.py` | heel kampioenschap + Polder Cup via echte klikken | 8 min |
 | `python tests/test_multiplayer.py` | online met 3 spelers (gesimuleerd) | 2 min |
+| `python tests/test_p2p.py` | online via host: 3 spelers met echte WebRTC en uitnodigingscodes | 2 min |
 | `python tests/test_memory.py` | geen geheugenlekken | 3 min |
 | `python tests/screenshots.py [banen]` | screenshots om zelf te bekijken → `tests/.out/screens/` | 3 min |
 | `python tests/run_all.py [--fast]` | alles (parallel), met samenvatting | 30 min (fast: 10) |

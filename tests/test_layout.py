@@ -25,8 +25,10 @@ VIEWS = [("home:play", "homePanel('play')"), ("home:career", "homePanel('career'
          ("instellingen:algemeen", "homePanel('settings')"), ("instellingen:toetsen", "homePanel('settings');document.querySelector('#setTabs [data-v=keys]').click()"),
          ("instellingen:controller", "homePanel('settings');document.querySelector('#setTabs [data-v=pad]').click()"),
          ("menu:modus", "document.querySelector('#setTabs [data-v=general]').click();homePanel('main');menuFlow='quick';showMenu(2)"),
-         ("menu:auto", "showMenu(0)"), ("menu:baan", "showMenu(1)"), ("menu:kampioenschap", "menuFlow='champ';showMenu(3)")]
-BTN = {"menu:modus": "#nextBtn", "menu:auto": "#nextBtn", "menu:baan": "#nextBtn", "menu:kampioenschap": "#nextBtn", "home:career": "#careerGo",
+         ("menu:auto", "showMenu(0)"), ("menu:baan", "showMenu(1)"), ("menu:kampioenschap", "menuFlow='champ';showMenu(3)"),
+         # online via host: the host's game panel with the invite card, then the guest's join box
+         ("online:host", "menuFlow='quick';homePanel('net');p2pHostGame()"), ("online:meedoen", "netLeave();homePanel('net');if(!p2pJoinOpen)$('p2pJoin').click()")]
+BTN = {"online:host": "#netStart", "online:meedoen": "#p2pAnswerMake", "menu:modus": "#nextBtn", "menu:auto": "#nextBtn", "menu:baan": "#nextBtn", "menu:kampioenschap": "#nextBtn", "home:career": "#careerGo",
        "garage:look": "#homeGarage [data-homeback]", "instellingen:toetsen": "#homeSettings [data-homeback]"}
 
 rep = Report('menu-layout op 6 schermformaten')

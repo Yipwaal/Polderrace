@@ -29,6 +29,7 @@ else:
         ['test_camera_terrain.py'],
         ['test_championship.py'],
         ['test_multiplayer.py'],
+        ['test_p2p.py'],
         ['test_memory.py'],
     ]
 

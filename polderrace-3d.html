@@ -22,7 +22,7 @@ body{height:100%;margin:0;background:var(--page);color:var(--sign-ink);font-fami
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 button{font-family:inherit}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #fff;outline-offset:3px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #fff;outline-offset:3px}
 #game{position:relative;width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #c,#fx{display:block;width:100%;height:100%}
 #fx{position:absolute;inset:0;pointer-events:none}
@@ -295,7 +295,15 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
 .ctrls td{padding:8px;border-bottom:1px solid rgba(247,247,242,.08);vertical-align:top}
 .ctrls tr:last-child td{border-bottom:0}
 .subh{margin:0}
-.codebox{width:100%;font:12px/1.3 monospace;background:rgba(0,0,0,.25);color:inherit;border:0;border-radius:12px;padding:8px;resize:vertical}
+.codebox{display:block;width:100%;min-width:0;height:78px;min-height:52px;font:13px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:rgba(0,0,0,.25);color:inherit;border:0;border-radius:12px;padding:10px 12px;resize:vertical;overflow-wrap:anywhere;word-break:break-all}
+.codebox::placeholder{color:var(--lab)}
+/* online via host: invite / answer code cards */
+.codepanel{gap:10px;background:var(--card);border-radius:16px;padding:14px}
+.codepanel .codepanel{background:none;padding:0}
+.codelab{font:800 14px/1.3 var(--font)}
+.codemsg{margin:0;font:700 14px/1.45 var(--font);color:var(--sub)}.codemsg.bad{color:#ffd0cc}
+#netRoomLobby:not([hidden])+#p2pLobby{border-top:1px solid var(--line);padding-top:16px}
+.ghost[aria-expanded="true"]{background:var(--sign-ink);color:var(--sign)}
 /* ---------- pause & results ---------- */
 #pause .board{max-width:400px;box-shadow:var(--shadow);gap:18px}
 #pause .board.wide{max-width:540px}
@@ -348,7 +356,7 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
   #menu .step:not([hidden]){flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-right:-10px;padding-right:10px}
   #home:not(.main){padding-top:20px;padding-bottom:20px;overflow:hidden}
   #home:not(.main) .board{height:100%;min-height:0;max-height:100%;overflow:hidden}
-  #home:not(.main) .board>.panel:not([hidden]),#home:not(.main) #netBox{min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-right:-10px;padding-right:10px}
+  #home:not(.main) .board>.panel:not([hidden]){min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-right:-10px;padding-right:10px}
   #home:not(.main) .panel>.nav{position:sticky;bottom:0;z-index:2;background:var(--sign);padding-top:12px;margin-top:auto}
   /* inside a scrolling panel nothing may shrink: sub-panels (lakkleur, jouw auto, tabs) keep their natural height and the panel scrolls instead */
   #home:not(.main) .board>.panel:not([hidden]) .panel,#home:not(.main) #netBox{flex:0 0 auto;min-height:auto}
@@ -364,6 +372,7 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
   #over h2{font-size:32px}
   .tile{min-height:0}
   .upg{grid-template-columns:1fr auto;gap:10px 12px}.upg .pips{grid-column:1}.upg .buy{grid-row:1/3}
+  .codebox{font-size:16px} /* 16px: phones do not zoom in when the field gets focus */
 }
 @media (max-width:560px){
   .grid2,#tracks,.achs,.ccards{grid-template-columns:1fr}
@@ -452,7 +461,7 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
           <button id="hQuick" class="cupcard"><span class="cupletter"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span><span class="cupbody"><strong>Snel racen</strong><small id="quickInfo"></small></span></button>
           <button id="hCareer" class="cupcard"><span class="cupletter"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20L8 4h8l4 16M12 7v2M12 12v2M12 17v2"/></svg></span><span class="cupbody"><strong>Carrière</strong><small id="careerHomeInfo"></small></span></button>
           <button id="hChamp" class="cupcard"><span class="cupletter"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0zM8 5H5a3 3 0 0 0 3 4M16 5h3a3 3 0 0 1-3 4M12 12v4M8 20h8M10 16h4v4"/></svg></span><span class="cupbody"><strong>Kampioenschap</strong><small id="champHomeInfo"></small></span></button>
-          <button id="hNet" class="cupcard"><span class="cupletter"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><span class="cupbody"><strong>Online</strong><small>Tot 8 spelers via de spellink</small></span></button>
+          <button id="hNet" class="cupcard"><span class="cupletter"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><span class="cupbody"><strong>Online</strong><small id="hNetSub">Tot 8 spelers met een uitnodigingscode</small></span></button>
         </div>
         <div class="btnrow nav"><button class="ghost" data-homeback>Terug</button></div>
       </div>
@@ -464,11 +473,40 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
       </div>
       <div id="homeNet" class="panel" hidden><div id="netBox" class="panel">
         <h2>Online spelen</h2>
-        <div id="netUnavailable"><p class="note">Online spelen werkt alleen als je het spel via de link op claude.ai opent en ingelogd bent. Wie mee wil doen, heeft ook toegang tot de spellink nodig.</p></div>
-        <div id="netMain" class="panel" hidden>
+        <div id="netMain" class="panel">
           <div class="opts"><div class="opt"><span class="optl">Jouw naam</span><input id="netNick" class="numin" style="width:180px;text-align:left" maxlength="20" aria-label="Jouw naam"></div></div>
-          <div id="netLobby" class="panel"><span class="eyebrow">Open games</span><div id="netList" class="cups"></div><p style="margin:0"><button id="netCreate" class="cta">Nieuwe game maken</button></p></div>
+          <div id="netLobby" class="panel">
+            <div id="netRoomLobby" class="panel" hidden><span class="eyebrow">Open games</span><div id="netList" class="cups"></div><p style="margin:0"><button id="netCreate" class="cta">Nieuwe game maken</button></p></div>
+            <div id="p2pLobby" class="panel"><span class="eyebrow">Spelen via host (met code)</span>
+              <p class="note small">Eén speler is de host en maakt voor elke andere speler een uitnodiging. Stuur die code door, bijvoorbeeld via WhatsApp; je krijgt een antwoordcode terug. Op hetzelfde wifi-netwerk werkt dit altijd, via internet meestal. Op sommige strenge netwerken (mobiele hotspot, school of werk) lukt verbinden niet.</p>
+              <div class="btnrow"><button id="p2pHost" class="cta">Game hosten</button><button id="p2pJoin" class="ghost lite" aria-expanded="false">Meedoen met code</button></div>
+              <div id="p2pJoinBox" class="panel codepanel" hidden>
+                <label class="codelab" for="p2pInviteIn">1. Plak hier de uitnodiging van de host</label>
+                <textarea id="p2pInviteIn" class="codebox" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="PR1I…"></textarea>
+                <div class="btnrow"><button id="p2pAnswerMake" class="cta">Antwoordcode maken</button></div>
+                <div id="p2pAnswerBox" class="panel codepanel" hidden>
+                  <label class="codelab" for="p2pAnswerOut">2. Stuur deze antwoordcode terug naar de host</label>
+                  <textarea id="p2pAnswerOut" class="codebox" rows="3" readonly spellcheck="false"></textarea>
+                  <div class="btnrow"><button class="cta" data-copy="p2pAnswerOut">Kopieer</button><button class="ghost lite" data-share="p2pAnswerOut" hidden>Delen</button></div>
+                </div>
+                <p id="p2pJoinMsg" class="codemsg" role="status" hidden></p>
+              </div>
+            </div>
+          </div>
           <div id="netGame" class="panel" hidden><span class="eyebrow">Spelers</span><div id="netPlayers" class="achs"></div>
+            <div id="p2pInvite" class="panel" hidden><span class="eyebrow">Spelers uitnodigen</span>
+              <p class="note small">Maak voor elke speler een eigen uitnodiging. Stuur de code door en plak de antwoordcode die terugkomt.</p>
+              <div id="p2pInviteBox" class="panel codepanel" hidden>
+                <label class="codelab" for="p2pInviteOut">1. Stuur deze uitnodiging naar één speler</label>
+                <textarea id="p2pInviteOut" class="codebox" rows="3" readonly spellcheck="false"></textarea>
+                <div class="btnrow"><button class="ghost lite" data-copy="p2pInviteOut">Kopieer</button><button class="ghost lite" data-share="p2pInviteOut" hidden>Delen</button></div>
+                <label class="codelab" for="p2pAnswerIn">2. Plak hier de antwoordcode</label>
+                <textarea id="p2pAnswerIn" class="codebox" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="PR1A…"></textarea>
+                <div class="btnrow"><button id="p2pConnect" class="cta">Verbinden</button></div>
+                <p id="p2pInviteMsg" class="codemsg" role="status" hidden></p>
+              </div>
+              <div class="btnrow"><button id="p2pInviteMake" class="ghost lite">Nieuwe uitnodiging</button></div>
+            </div>
             <div id="netHostCtl" class="opts"><div class="opt"><span class="optl">Baan</span><select id="netTrack" class="numin" style="width:200px"></select></div>
               <div class="opt"><span class="optl">Ronden</span><input id="netLaps" class="numin" type="number" min="1" max="5"></div>
               <div class="opt"><span class="optl">Bots</span><input id="netBots" class="numin" type="number" min="0" max="5"></div>
@@ -2799,7 +2837,11 @@ function splitHud(){
   asP2(()=>drawGauge(G2));drawMinimap2();if(msg2Until&&clock>msg2Until){$('msg2').hidden=true;msg2Until=0;}
 }
 /* ================= online multiplayer via the artifact room (lobby + named game rooms) ================= */
+/* Two transports behind the same room interface (presence, peers, onPeers, leave), so the game logic below serves both:
+   - the claude.ai artifact room (roomNS): lobby with open games; only exists when the game runs as artifact on claude.ai;
+   - "spelen via host": WebRTC peer-to-peer (p2pHostRoom / p2pGuestRoom, further down), works everywhere, codes by copy/paste. */
 let roomNS=null,net=null,lobbyUnsub=null;
+let p2pJoinOpen=false,p2pPend=null,p2pBusy=false,p2pShown=null; /* online via host: join box open, guest waiting for the host, busy, invite on screen */
 if(!prefs.nick)prefs.nick='Racer '+(100+Math.floor(Math.random()*900));
 (async()=>{try{if(window.claude&&window.claude.use)roomNS=await window.claude.use('room');}catch(e){roomNS=null;}
   if(roomNS){lobbyUnsub=roomNS.onPeers(()=>{if(homeView==='net')refreshNetPanel();});}refreshNetPanel();})();
@@ -2807,16 +2849,18 @@ const myPeer=r=>{const m=r.peers().find(p=>p.sameTab);return m?m.peer:null;};
 function lobbies(){if(!roomNS)return [];return roomNS.peers().filter(p=>p.presence&&p.presence.lobby&&p.presence.lobby.open&&!p.sameTab).map(p=>({...p.presence.lobby,peer:p.peer}));}
 async function netCreate(){if(!roomNS)return;const id='g'+Date.now().toString(36)+Math.floor(Math.random()*1e4);await netEnter(id,true);}
 async function netJoinGame(id){if(!roomNS)return;await netEnter(id,false);}
-async function netEnter(id,host){
-  if(net)await netLeave();netStatus('Verbinden…');
-  try{const game=await roomNS.join('pr-'+id);net={game,id,host,inRace:false,remotes:new Map(),lastSend:0,raceId:0,kicks:[],kickSeq:0,seen:{},botDefs:null,order:[]};}
-  catch(e){netStatus('Meedoen lukte niet ('+(e&&e.code||'fout')+').');return;}
+async function netEnter(id,host,room){ /* room: a connected p2p room (online via host); without it the claude.ai game room is joined */
+  if(net)await netLeave();netStatus('Verbinden…');let game=room||null;
+  if(!game){try{game=await roomNS.join('pr-'+id);}catch(e){netStatus('Meedoen lukte niet ('+(e&&e.code||'fout')+').');return;}}
+  net={game,id,host,p2p:!!room,inRace:false,remotes:new Map(),lastSend:0,raceId:0,kicks:[],kickSeq:0,seen:{},botDefs:null,order:[]};
   net.game.presence({nick:prefs.nick,car:settings.car,color:settings.color,host,st:null,b:null,k:[],race:null});
   net.game.onPeers(()=>{netSyncRemotes();if(homeView==='net')refreshNetPanel();});
-  if(host)netAdvertise();else roomNS.presence({lobby:null,in:id});netStatus(host?'Game aangemaakt. Anderen zien hem nu in hun lijst.':'Je zit in de game. Wacht tot de host start.');refreshNetPanel();
+  if(net.p2p)netStatus(host?'Je bent de host. Nodig spelers uit met een code.':'Je zit in de game van '+(room.hostNick||'de host')+'. Wacht tot de host start.');
+  else{if(host)netAdvertise();else roomNS.presence({lobby:null,in:id});netStatus(host?'Game aangemaakt. Anderen zien hem nu in hun lijst.':'Je zit in de game. Wacht tot de host start.');}
+  refreshNetPanel();
 }
-function netAdvertise(){if(!net||!net.host)return;roomNS.presence({lobby:{id:net.id,name:prefs.nick+'s game',track:TRACKS[settings.track].name+(settings.dir==='rev'?' (omgekeerd)':''),n:1+net.remotes.size,max:8,open:!net.inRace}});}
-async function netLeave(){if(!net)return;const g=net.game;for(const r of net.remotes.values())if(r.car){scene.remove(r.car.g);disposeObj(r.car.g);}net=null;try{await g.leave();}catch(e){}if(roomNS)roomNS.presence({lobby:null,in:null});refreshNetPanel();}
+function netAdvertise(){if(!net||!net.host||net.p2p)return;roomNS.presence({lobby:{id:net.id,name:prefs.nick+'s game',track:TRACKS[settings.track].name+(settings.dir==='rev'?' (omgekeerd)':''),n:1+net.remotes.size,max:8,open:!net.inRace}});}
+async function netLeave(){if(!net)return;const g=net.game,p2p=net.p2p;for(const r of net.remotes.values())if(r.car){scene.remove(r.car.g);disposeObj(r.car.g);}net=null;try{await g.leave();}catch(e){}if(roomNS&&!p2p)roomNS.presence({lobby:null,in:null});refreshNetPanel();}
 function netSyncRemotes(){if(!net)return;const ps=net.game.peers(),seen=new Set();
   for(const p of ps){if(p.sameTab)continue;const pr=p.presence||{};if(!pr.nick)continue;seen.add(p.peer);let r=net.remotes.get(p.peer);
     if(!r){r={peer:p.peer,car:null,carId:null,st:null,prev:null,t:0,lap:0,done:false,ft:0,upd:0};net.remotes.set(p.peer,r);}
@@ -2834,7 +2878,7 @@ function netKick(i,x,z,s){net.kicks.push({q:++net.kickSeq,i,x:+x.toFixed(3),z:+z
 function netTick(){
   if(!net)return;const now=performance.now(),ps=net.game.peers();
   for(const p of ps){if(p.sameTab)continue;const pr=p.presence||{},r=net.remotes.get(p.peer);if(!r)continue;
-    if(!net.host&&pr.host&&pr.race&&pr.race.id!==net.raceId){net.raceId=pr.race.id;netBegin(pr.race);}
+    if(!net.host&&pr.host&&pr.race&&pr.race.id!==net.raceId){net.raceId=pr.race.id;if(!Array.isArray(pr.race.order)||pr.race.order.includes(myPeer(net.game)))netBegin(pr.race);} /* joined later: wait for the next race */
     if(pr.st&&p.updatedAt!==r.upd){r.upd=p.updatedAt;r.prev=r.st;r.st=pr.st;r.t=now;r.lap=pr.st[6];if(pr.st[7]&&!r.done){r.done=true;r.ft=pr.st[8];}}
     if(!net.host&&pr.host&&net.inRace&&Array.isArray(pr.b))pr.b.forEach((q,i)=>{const b=bots[i];if(!b)return;b.s=q[0];b.lat=q[1];b.speed=q[2];b.lap=q[3];b.yawOff=q[4];b.finished=!!q[5];b.finishTime=q[6]||0;});
     if(net.host&&Array.isArray(pr.k)){const last=net.seen[p.peer]||0;for(const kq of pr.k)if(kq.q>last){const b=bots[kq.i];if(b)kickOther(b,kq.x,kq.z,kq.s);net.seen[p.peer]=kq.q;}}}
@@ -2853,17 +2897,165 @@ function netCollide(){if(!net||!net.inRace)return;
     player.speed=vx*fx+vz*fz;player.slide.x=vx-fx*player.speed;player.slide.z=vz-fz*player.speed;player.spin=clamp((player.spin||0)+yawKick(im.sA,GRIP*gripFactor()),-6,6);hitFx(im.j,true);}}
 function netStatus(t){const e=$('netStatus');if(e)e.textContent=t;}
 function refreshNetPanel(){const box=$('netBox');if(!box)return;
-  $('netUnavailable').hidden=!!roomNS;$('netMain').hidden=!roomNS;if(!roomNS)return;if(document.activeElement!==$('netNick'))$('netNick').value=prefs.nick;
+  $('hNetSub').textContent=roomNS?'Tot 8 spelers via de spellink of een code':'Tot 8 spelers met een uitnodigingscode';
+  if(document.activeElement!==$('netNick'))$('netNick').value=prefs.nick;
   $('netLobby').hidden=!!net;$('netGame').hidden=!net;
-  if(!net){const l=$('netList');l.innerHTML='';const ls=lobbies();if(!ls.length)l.innerHTML='<p class="note">Nog geen open games. Maak er zelf een aan.</p>';
+  if(!net){$('netRoomLobby').hidden=!roomNS;if(roomNS)$('p2pHost').className='ghost lite';p2pLobbyUi();if(!roomNS)return;const l=$('netList');l.innerHTML='';const ls=lobbies();if(!ls.length)l.innerHTML='<p class="note">Nog geen open games. Maak er zelf een aan.</p>';
     for(const g of ls){const b=document.createElement('button');b.className='cupcard';b.innerHTML=`<span class="cupbody"><strong></strong><small></small></span><em>Meedoen</em>`;b.querySelector('strong').textContent=String(g.name||'Game').slice(0,40);
       b.querySelector('small').textContent=(g.track||'')+' · '+(g.n||1)+' van '+(g.max||8)+' spelers';b.addEventListener('click',()=>netJoinGame(String(g.id)));l.appendChild(b);}return;}
   const pl=$('netPlayers');pl.innerHTML='';const add=(name,car,host,me)=>{const d=document.createElement('div');d.className='ach got';d.innerHTML='<i></i><span><b></b><small></small></span><em></em>';
     d.querySelector('i').textContent=host?'★':'';d.querySelector('b').textContent=name+(me?' (jij)':'');d.querySelector('small').textContent=CARS[car]?CARS[car].name:'';pl.appendChild(d);};
   add(prefs.nick,settings.car,net.host,true);for(const r of net.remotes.values())add(r.name,r.carId,r.host,false);
-  $('netHostCtl').hidden=!net.host;$('netTrack').value=settings.track;$('netLaps').value=settings.laps;$('netBots').value=Math.min(5,settings.bots);}
+  $('netHostCtl').hidden=!net.host;$('p2pInvite').hidden=!(net.p2p&&net.host);$('netTrack').value=settings.track;$('netLaps').value=settings.laps;$('netBots').value=Math.min(5,settings.bots);}
 
 function netCarDone(){menuFlow='quick';showMenu(-1);homePanel('net');if(net)net.game.presence({car:settings.car,color:settings.color});refreshNetPanel();}
+/* ----- online via host: WebRTC peer-to-peer, works everywhere (also as local file or on GitHub Pages) ----- */
+/* Star topology: the host keeps one RTCPeerConnection + DataChannel per guest, holds the presence of everyone and relays
+   every change to the other guests; guests only talk to the host. Ids: host 'h', guests 'g1','g2',... (given out by the host).
+   Signalling by hand, without trickle ICE: invite code (offer + guest id) -> answer code. Code = 'PR1' + kind (I invite,
+   A answer) + format (Z deflate-raw, B plain) + base64url(JSON {id,n,s:sdp}). Channel messages (JSON): {t:'p',id,p} presence
+   patch, {t:'all',you,peers} snapshot for a new guest, {t:'bye',id} peer left, {t:'end'} host closed the game, {t:'full'}. */
+const P2P_ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'}]},P2P_MAX=8,P2P_BAD='Deze code is beschadigd of niet compleet. Kopieer hem opnieuw, helemaal.';
+let p2pT=0;const p2pStamp=()=>{const t=Date.now();p2pT=t>p2pT?t:p2pT+1;return p2pT;}; /* updatedAt: strictly increasing, so netTick sees every change */
+const p2pB64=u=>{let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
+const p2pUnB64=t=>{const s=atob(t.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((t.length+3)%4)),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u;};
+const p2pPipe=async(u,tr)=>new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(tr)).arrayBuffer());
+async function p2pEncode(kind,obj){let u=new TextEncoder().encode(JSON.stringify(obj)),f='B';
+  if(typeof CompressionStream==='function')try{u=await p2pPipe(u,new CompressionStream('deflate-raw'));f='Z';}catch(e){u=new TextEncoder().encode(JSON.stringify(obj));f='B';}
+  return 'PR1'+kind+f+p2pB64(u);}
+async function p2pDecode(text,kind){ /* friendly Dutch errors for empty, foreign, swapped or mangled codes; surrounding chat text is ignored */
+  const t=String(text||'').replace(/\s+/g,''),m=/PR1([IA])([ZB])([A-Za-z0-9_-]+)/.exec(t);
+  if(!t)throw new Error(kind==='I'?'Plak eerst de uitnodiging van de host.':'Plak eerst de antwoordcode.');
+  if(!m)throw new Error('Dit is geen Polderrace-code. Kopieer de hele code en probeer het opnieuw.');
+  if(m[1]!==kind)throw new Error(kind==='I'?'Dit is een antwoordcode. Hier hoort de uitnodiging van de host.':'Dit is een uitnodiging. Hier hoort de antwoordcode die je terugkrijgt.');
+  if(m[2]==='Z'&&typeof DecompressionStream!=='function')throw new Error('Je browser kan deze code niet openen. Probeer een nieuwere browser.');
+  let o;try{let u=p2pUnB64(m[3]);if(m[2]==='Z')u=await p2pPipe(u,new DecompressionStream('deflate-raw'));o=JSON.parse(new TextDecoder().decode(u));}catch(e){throw new Error(P2P_BAD);}
+  if(!o||typeof o.id!=='string'||!/^g\d{1,4}$/.test(o.id)||typeof o.s!=='string')throw new Error(P2P_BAD);
+  o.s=p2pUnpack(o.s);if(!/^v=0\r\n/.test(o.s))throw new Error(P2P_BAD);
+  return o;}
+/* shorter codes: TCP candidates are dropped, and fixed SDP lines become '~' + index (lossless: other lines stay as they are) */
+const P2P_LINES=['v=0','s=-','t=0 0','a=group:BUNDLE 0','a=extmap-allow-mixed','a=msid-semantic: WMS','a=ice-options:trickle','a=setup:actpass','a=setup:active','a=setup:passive',
+  'a=mid:0','a=sctp-port:5000','a=max-message-size:262144','a=max-message-size:1073741823','c=IN IP4 0.0.0.0','m=application 9 UDP/DTLS/SCTP webrtc-datachannel'];
+const p2pPack=sdp=>sdp.split('\r\n').filter(l=>!/^a=candidate:\S+ \d+ tcp /i.test(l)).map(l=>{const i=P2P_LINES.indexOf(l);return i<0?l:'~'+i.toString(36);}).join('\n');
+const p2pUnpack=t=>t.split('\n').map(l=>l[0]==='~'?P2P_LINES[parseInt(l.slice(1),36)]||'':l).join('\r\n');
+function p2pGather(pc,ms){ /* non-trickle: wait until ICE gathering is done, at most ms (an unreachable STUN server must not hang it) */
+  return new Promise(res=>{if(pc.iceGatheringState==='complete')return res();let t=0;
+    const fin=()=>{clearTimeout(t);pc.removeEventListener('icegatheringstatechange',chk);res();},chk=()=>{if(pc.iceGatheringState==='complete')fin();};
+    t=setTimeout(fin,ms||3500);pc.addEventListener('icegatheringstatechange',chk);});}
+const p2pSend=(dc,m)=>{if(dc&&dc.readyState==='open')try{dc.send(typeof m==='string'?m:JSON.stringify(m));}catch(e){}};
+function p2pWatch(pc,dc,lost){ /* lost() once when an open link is gone: channel closed, connection failed, or disconnected for 8 s */
+  let done=false,t=0;const end=()=>{if(done)return;done=true;clearTimeout(t);lost();};dc.addEventListener('close',end);
+  pc.addEventListener('connectionstatechange',()=>{const s=pc.connectionState;clearTimeout(t);
+    if(s==='failed'||s==='closed')end();else if(s==='disconnected')t=setTimeout(()=>{if(pc.connectionState!=='connected')end();},8000);});}
+function p2pBase(me){ /* presence bookkeeping shared by host and guest: the room interface the game uses */
+  const R={me,mine:{},at:p2pStamp(),others:new Map(),subs:new Set(),closed:false,ft:0};
+  R.merge=(o,p)=>{const n={...o};for(const k in p){if(p[k]==null)delete n[k];else n[k]=p[k];}return n;};
+  R.fire=()=>{if(!R.ft)R.ft=setTimeout(()=>{R.ft=0;if(R.closed)return;const ps=R.peers();for(const f of [...R.subs])f({peers:ps});},30);}; /* a burst of changes -> one onPeers call */
+  R.peers=()=>[{peer:me,sameTab:true,presence:R.mine,updatedAt:R.at}].concat([...R.others].map(([peer,o])=>({peer,sameTab:false,presence:o.p,updatedAt:o.at})));
+  R.onPeers=f=>{R.subs.add(f);setTimeout(()=>{if(!R.closed&&R.subs.has(f))f({peers:R.peers()});},0);return()=>{R.subs.delete(f);};};
+  R.setMine=p=>{R.mine=R.merge(R.mine,p);R.at=p2pStamp();R.fire();};
+  R.upsert=(id,p)=>{const o=R.others.get(id)||{p:{},at:0};o.p=R.merge(o.p,p);o.at=p2pStamp();R.others.set(id,o);R.fire();};
+  R.drop=id=>{if(R.others.delete(id))R.fire();};
+  return R;}
+function p2pHostRoom(){
+  const R=p2pBase('h'),links=new Map(),pending=new Map();let seq=0;R.onLink=null;
+  const relay=(m,skip)=>{const s=JSON.stringify(m);for(const [id,l] of links)if(id!==skip)p2pSend(l.dc,s);};
+  const drop=id=>{const l=links.get(id);if(!l)return;links.delete(id);try{l.pc.close();}catch(e){}R.drop(id);relay({t:'bye',id});if(R.onLink)R.onLink('gone',id);};
+  R.presence=async p=>{if(R.closed)return;R.setMine(p);relay({t:'p',id:'h',p});};
+  R.invite=async nick=>{ /* -> {id,code}: a new pending connection for one guest */
+    if(R.closed)throw new Error('Deze game is gesloten.');
+    if(links.size+1>=P2P_MAX)throw new Error('De game zit vol: maximaal '+P2P_MAX+' spelers.');
+    const id='g'+(++seq),pc=new RTCPeerConnection(P2P_ICE),dc=pc.createDataChannel('pr',{negotiated:true,id:0}),l={pc,dc};
+    pending.set(id,l);if(pending.size>8){const [oid,ol]=pending.entries().next().value;pending.delete(oid);try{ol.pc.close();}catch(e){}} /* old unanswered invites expire */
+    dc.onopen=()=>{if(pending.get(id)!==l)return;pending.delete(id);
+      if(R.closed||links.size+1>=P2P_MAX){p2pSend(dc,{t:R.closed?'end':'full'});setTimeout(()=>{try{pc.close();}catch(e){}},500);return;}
+      links.set(id,l);const peers={h:R.mine};for(const [k,o] of R.others)peers[k]=o.p;p2pSend(dc,{t:'all',you:id,peers});
+      R.upsert(id,{});p2pWatch(pc,dc,()=>drop(id));if(R.onLink)R.onLink('open',id);};
+    dc.onmessage=e=>{if(links.get(id)!==l)return;let m;try{m=JSON.parse(e.data);}catch(_){return;}if(!m)return;
+      if(m.t==='p'&&m.p&&typeof m.p==='object'){const p=m.p;if('host' in p)p.host=false;R.upsert(id,p);relay({t:'p',id,p},id);} /* only the host is host */
+      else if(m.t==='bye')drop(id);};
+    await pc.setLocalDescription(await pc.createOffer());await p2pGather(pc);
+    if(pending.get(id)!==l)throw new Error('Deze uitnodiging is verlopen. Maak een nieuwe.');
+    return {id,code:await p2pEncode('I',{id,n:String(nick||'').slice(0,20),s:p2pPack(pc.localDescription.sdp)})};};
+  R.accept=async text=>{ /* the answer code of a guest -> that guest's id; the channel opens a moment later (onLink 'open') */
+    const o=await p2pDecode(text,'A'),l=pending.get(o.id);
+    if(!l)throw new Error(links.has(o.id)?'Deze speler zit al in de game.':'Deze antwoordcode hoort niet bij een open uitnodiging van deze game. Maak een nieuwe uitnodiging.');
+    if(l.pc.signalingState!=='have-local-offer')throw new Error('Deze antwoordcode is al geplakt. Even geduld…');
+    try{await l.pc.setRemoteDescription({type:'answer',sdp:o.s});}catch(e){throw new Error(P2P_BAD);}
+    setTimeout(()=>{if(pending.get(o.id)===l&&!R.closed&&R.onLink)R.onLink('slow',o.id);},20000);
+    return o.id;};
+  R.leave=async()=>{if(R.closed)return;relay({t:'end'});R.closed=true;clearTimeout(R.ft);const ls=[...links.values(),...pending.values()];links.clear();pending.clear();R.others.clear();
+    for(const l of ls)try{l.dc.close();}catch(e){}setTimeout(()=>{for(const l of ls)try{l.pc.close();}catch(e){}},400);};
+  return R;}
+async function p2pGuestRoom(text){ /* invite code -> room with .answer (code for the host) and .ready (resolves once the host has let us in) */
+  const o=await p2pDecode(text,'I');
+  const R=p2pBase(o.id),pc=new RTCPeerConnection(P2P_ICE),dc=pc.createDataChannel('pr',{negotiated:true,id:0});let ok,ko,ready=false;
+  R.hostNick=String(o.n||'').slice(0,20)||'de host';R.onClose=null;R.onHint=null;R.ready=new Promise((a,b)=>{ok=a;ko=b;});R.ready.catch(()=>{});
+  const shut=()=>{R.closed=true;clearTimeout(R.ft);R.others.clear();try{dc.close();}catch(e){}setTimeout(()=>{try{pc.close();}catch(e){}},400);};
+  const end=why=>{if(R.closed)return;shut();
+    if(!ready)ko(new Error(why==='full'?'De game zit vol: maximaal '+P2P_MAX+' spelers.':why==='end'?'De host heeft de game gesloten.':'De verbinding met de host is weggevallen.'));else if(R.onClose)R.onClose(why);};
+  dc.onopen=()=>{p2pSend(dc,{t:'p',p:R.mine});p2pWatch(pc,dc,()=>end('lost'));};
+  dc.onmessage=e=>{let m;try{m=JSON.parse(e.data);}catch(_){return;}if(!m||R.closed)return;
+    if(m.t==='all'&&m.peers&&typeof m.peers==='object'){R.others.clear();for(const k in m.peers)if(k!==R.me)R.others.set(k,{p:m.peers[k]||{},at:p2pStamp()});R.fire();if(!ready){ready=true;ok(R);}}
+    else if(m.t==='p'&&m.id&&m.id!==R.me&&m.p&&typeof m.p==='object')R.upsert(String(m.id),m.p);
+    else if(m.t==='bye'&&m.id)R.drop(String(m.id));
+    else if(m.t==='end'||m.t==='full')end(m.t);};
+  pc.addEventListener('connectionstatechange',()=>{if(!ready&&pc.connectionState==='failed'&&R.onHint)R.onHint();});
+  R.presence=async p=>{if(R.closed)return;R.setMine(p);p2pSend(dc,{t:'p',p});};
+  R.leave=async()=>{if(R.closed)return;p2pSend(dc,{t:'bye'});shut();if(!ready)ko(new Error('Geannuleerd.'));};
+  try{await pc.setRemoteDescription({type:'offer',sdp:o.s});const a=await pc.createAnswer();
+    /* DTLS server role for the guest: the host starts the handshake once it has pasted our answer. As DTLS client the guest would start
+       right away (the host already answers ICE checks) and give up after about 3.5 minutes, too soon for a slow chat round trip. */
+    try{await pc.setLocalDescription({type:'answer',sdp:a.sdp.replace(/a=setup:active/g,'a=setup:passive')});}catch(e){await pc.setLocalDescription(a);}}
+  catch(e){try{pc.close();}catch(_){}throw new Error('Deze uitnodiging klopt niet. Vraag de host om een nieuwe.');}
+  await p2pGather(pc);R.answer=await p2pEncode('A',{id:o.id,s:p2pPack(pc.localDescription.sdp)});return R;}
+/* menu side of online via host (its state lives at the top of this section: refreshNetPanel can run before this point) */
+function p2pSay(id,t,bad){const e=$(id);e.textContent=t||'';e.hidden=!t;e.classList.toggle('bad',!!bad);} /* feedback inside the code cards, where the player is looking */
+function p2pOk(id){if(typeof RTCPeerConnection==='function')return true;const t='Je browser kan niet rechtstreeks verbinden (WebRTC ontbreekt). Probeer een andere browser.';if(id)p2pSay(id,t,true);else netStatus(t);return false;}
+function p2pLobbyUi(){$('p2pJoinBox').hidden=!p2pJoinOpen;$('p2pJoin').setAttribute('aria-expanded',String(p2pJoinOpen));if(!roomNS)$('p2pHost').className=p2pJoinOpen?'ghost lite':'cta';
+  const ao=$('p2pAnswerOut'),av=p2pPend?p2pPend.answer:'';$('p2pAnswerBox').hidden=!p2pPend;if(ao.value!==av)ao.value=av;$('p2pAnswerMake').className=p2pPend?'ghost lite':'cta'; /* runs on every lobby update: keep a selection intact */
+  $('p2pInviteBox').hidden=true;$('p2pInviteOut').value='';$('p2pAnswerIn').value='';p2pSay('p2pInviteMsg','');p2pShown=null;}
+function p2pCancelJoin(){if(p2pPend){const r=p2pPend;p2pPend=null;r.leave();}}
+async function p2pHostGame(){if(net||p2pBusy||!p2pOk())return;p2pCancelJoin();p2pJoinOpen=false;p2pSay('p2pJoinMsg','');const room=p2pHostRoom();await netEnter('host',true,room);
+  if(!net||net.game!==room)return;room.onLink=p2pLinkEvent;p2pNewInvite();}
+async function p2pNewInvite(){if(!net||!net.p2p||!net.host||p2pBusy)return;const room=net.game;p2pBusy=true;$('p2pInviteMake').disabled=true;
+  $('p2pInviteBox').hidden=false;$('p2pInviteOut').value='';$('p2pAnswerIn').value='';p2pSay('p2pInviteMsg','Uitnodiging maken… (een paar seconden)');
+  try{const r=await room.invite(prefs.nick);if(!net||net.game!==room)return;p2pShown=r.id;$('p2pInviteOut').value=r.code;p2pSay('p2pInviteMsg','');}
+  catch(e){if(net&&net.game===room){$('p2pInviteBox').hidden=true;p2pShown=null;netStatus(e.message||'Uitnodiging maken lukte niet.');}}
+  finally{p2pBusy=false;$('p2pInviteMake').disabled=false;}}
+async function p2pConnect(){if(!net||!net.p2p||!net.host||p2pBusy)return;const room=net.game,ta=$('p2pAnswerIn');p2pBusy=true;
+  try{await room.accept(ta.value);ta.value='';p2pSay('p2pInviteMsg','Verbinden met de nieuwe speler…');}catch(e){p2pSay('p2pInviteMsg',e.message||P2P_BAD,true);}finally{p2pBusy=false;}}
+function p2pLinkEvent(ev,id){if(!net||!net.p2p||!net.host)return;
+  if(ev==='open'){if(p2pShown===id){p2pShown=null;$('p2pInviteBox').hidden=true;$('p2pInviteOut').value='';}p2pSay('p2pInviteMsg','');netStatus('Er doet een speler mee! Nog iemand? Maak een nieuwe uitnodiging.');}
+  else if(ev==='gone'){const r=net.remotes.get(id),t=(r&&r.name||'Een speler')+' heeft de game verlaten.';netStatus(t);if(state!=='menu')showToast(t);}
+  else if(ev==='slow'){const t='Nog geen verbinding met de nieuwe speler. Lukt het niet, probeer dan allebei hetzelfde wifi-netwerk. Via een hotspot of een school- of werknetwerk lukt verbinden soms niet.';
+    if(!$('p2pInviteBox').hidden)p2pSay('p2pInviteMsg',t,true);else netStatus(t);}}
+async function p2pMakeAnswer(){const txt=$('p2pInviteIn').value.trim();if(net||p2pBusy||(p2pPend&&p2pPend.invite===txt)||!p2pOk('p2pJoinMsg'))return;
+  p2pCancelJoin();p2pLobbyUi();p2pBusy=true;$('p2pAnswerMake').disabled=true;netStatus('');p2pSay('p2pJoinMsg','Antwoordcode maken… (een paar seconden)');let R;
+  try{R=await p2pGuestRoom(txt);}catch(e){p2pSay('p2pJoinMsg',e.message||P2P_BAD,true);return;}finally{p2pBusy=false;$('p2pAnswerMake').disabled=false;}
+  if(net){R.leave();return;}R.invite=txt;p2pPend=R;p2pLobbyUi();
+  p2pSay('p2pJoinMsg','Stuur de antwoordcode terug naar '+R.hostNick+'. Zodra die hem plakt, zit je in de game. Laat dit scherm zolang open.');
+  R.onHint=()=>{if(p2pPend===R)p2pSay('p2pJoinMsg','Nog geen verbinding. Heeft '+R.hostNick+' je antwoordcode al geplakt? Lukt het niet, probeer dan allebei hetzelfde wifi-netwerk.',true);};
+  R.ready.then(async()=>{if(p2pPend!==R)return;p2pPend=null;p2pJoinOpen=false;$('p2pInviteIn').value='';p2pSay('p2pJoinMsg','');R.onClose=why=>p2pLost(R,why);await netEnter('p2p',false,R);},
+    e=>{if(p2pPend!==R)return;p2pPend=null;p2pSay('p2pJoinMsg',e.message,true);if(homeView==='net')refreshNetPanel();});}
+async function p2pLost(room,why){if(!net||net.game!==room)return;await netLeave();const t=why==='end'?'De host heeft de game gesloten.':'De verbinding met de host is weggevallen.';
+  netStatus(t+' Je bent uit de game.');if(state!=='menu')showToast(t);}
+async function p2pCopy(btn){const ta=$(btn.dataset.copy),v=ta.value;if(!/^PR1/.test(v))return;let ok=false;
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(v);ok=true;}}catch(e){}
+  if(!ok){ta.focus();ta.select();ta.setSelectionRange(0,v.length);try{ok=document.execCommand('copy');}catch(e){}}
+  btn.textContent=ok?'Gekopieerd!':'Geselecteerd: kopieer zelf';clearTimeout(btn._t);btn._t=setTimeout(()=>{btn.textContent='Kopieer';},2200);}
+async function p2pShare(btn){const v=$(btn.dataset.share).value;if(!/^PR1/.test(v))return;const inv=v.startsWith('PR1I');
+  try{await navigator.share({text:(inv?'Doe mee met mijn Polderrace-game! Kies Online › Meedoen met code en plak deze uitnodiging:':'Mijn antwoordcode voor Polderrace:')+'\n'+v});}
+  catch(e){if(!(e&&e.name==='AbortError'))p2pCopy(btn.parentNode.querySelector('[data-copy]'));}}
+$('p2pHost').addEventListener('click',()=>p2pHostGame());
+$('p2pJoin').addEventListener('click',()=>{p2pJoinOpen=!p2pJoinOpen;p2pLobbyUi();if(p2pJoinOpen&&!p2pPend)$('p2pInviteIn').focus({preventScroll:true});});
+$('p2pAnswerMake').addEventListener('click',()=>p2pMakeAnswer());$('p2pInviteIn').addEventListener('paste',()=>setTimeout(p2pMakeAnswer,0));
+$('p2pInviteMake').addEventListener('click',()=>p2pNewInvite());
+$('p2pConnect').addEventListener('click',()=>p2pConnect());$('p2pAnswerIn').addEventListener('paste',()=>setTimeout(p2pConnect,0));
+document.querySelectorAll('#netBox [data-copy]').forEach(b=>b.addEventListener('click',()=>p2pCopy(b)));
+document.querySelectorAll('#netBox [data-share]').forEach(b=>{b.hidden=!navigator.share;b.addEventListener('click',()=>p2pShare(b));});
+document.querySelectorAll('#netBox textarea[readonly]').forEach(t=>t.addEventListener('focus',()=>t.select()));
+addEventListener('pagehide',()=>{if(net&&net.p2p)net.game.leave();if(p2pPend)p2pPend.leave();}); /* tell the others right away instead of letting them time out */
 /* ================= key binding UI ================= */
 const KEYNAME={Space:'Spatie',ShiftLeft:'L-Shift',ShiftRight:'R-Shift',ControlLeft:'L-Ctrl',ControlRight:'R-Ctrl',AltLeft:'L-Alt',AltRight:'R-Alt',ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→',Enter:'Enter',Tab:'Tab',PageUp:'Page Up',PageDown:'Page Down',Comma:',',Period:'.',Slash:'/',Semicolon:';',Quote:"'",BracketLeft:'[',BracketRight:']',Backslash:'\\',Minus:'-',Equal:'='};
 const keyLabel=c=>KEYNAME[c]||(c.startsWith('Key')?c.slice(3):c.startsWith('Digit')?c.slice(5):c.startsWith('Numpad')?'Num '+c.slice(6):c);
