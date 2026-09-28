@@ -36,3 +36,27 @@ window.__zfight=(root,opts)=>{opts=opts||{};const faces=[],m4=new THREE.Matrix4(
          if(Math.abs(dx*S.a[0].x+dy*S.a[0].y+dz*S.a[0].z)<S.he[0]-0.002&&Math.abs(dx*S.a[1].x+dy*S.a[1].y+dz*S.a[1].z)<S.he[1]-0.002&&Math.abs(dx*S.a[2].x+dy*S.a[2].y+dz*S.a[2].z)<S.he[2]-0.002){hidden=true;break;}}
        if(hidden)continue;}hits.push({same:sameLook,ca:f.mat&&f.mat.color?f.mat.color.getHexString():'',cb:g.mat&&g.mat.color?g.mat.color.getHexString():'',a:f.tag,b:g.tag,area:+area.toFixed(3),at:[+f.c.x.toFixed(1),+f.c.y.toFixed(2),+f.c.z.toFixed(1)]});}}}
  hits.sort((x,y)=>y.area-x.area);return {boxes:nb,faces:faces.length,hits:hits.length,top:hits.slice(0,opts.top||12)};};0
+/* triangle version for curved/merged geometry (the lofted car bodies, lathed tyres, merged detail sets): every triangle of every visible mesh
+   becomes a face; two faces flicker when they point the same way, lie within 4 mm of one plane, overlap by more than 5 mm in that plane and
+   belong to different materials (the same material on both sides shades identically, so that cannot be seen) */
+window.__zfTris=(root,opts)=>{opts=opts||{};const F=[],a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),e1=new THREE.Vector3(),e2=new THREE.Vector3();
+ root.updateMatrixWorld(true);
+ root.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||!o.visible)return;let vis=true;o.traverseAncestors(q=>{if(!q.visible)vis=false;});if(!vis)return;
+   const g=o.geometry,pa=g.attributes.position;if(!pa)return;const idx=g.index,nt=(idx?idx.count:pa.count)/3,mats=Array.isArray(o.material)?o.material:null;
+   const groups=g.groups&&g.groups.length?g.groups:[{start:0,count:nt*3,materialIndex:0}],flip=o.matrixWorld.determinant()<0; /* mirrored: three draws the other winding as front */
+   for(const gr of groups){const mat=mats?mats[gr.materialIndex]:o.material;if(!mat||mat.transparent||mat.visible===false)continue;
+     for(let t=gr.start/3;t<(gr.start+gr.count)/3;t++){const i0=idx?idx.getX(3*t):3*t,i1=idx?idx.getX(3*t+1):3*t+1,i2=idx?idx.getX(3*t+2):3*t+2;
+       a.fromBufferAttribute(pa,i0).applyMatrix4(o.matrixWorld);b.fromBufferAttribute(pa,i1).applyMatrix4(o.matrixWorld);c.fromBufferAttribute(pa,i2).applyMatrix4(o.matrixWorld);
+       e1.subVectors(b,a);e2.subVectors(c,a);const n=new THREE.Vector3().crossVectors(e1,e2),ar=n.length()/2;if(flip)n.negate();if(ar<1e-5)continue;n.normalize();
+       F.push({n,p:[a.clone(),b.clone(),c.clone()],c:a.clone().add(b).add(c).divideScalar(3),mat,tag:o.id+'/'+gr.materialIndex,area:ar});}}});
+ const H=new Map(),key=(n,d)=>[Math.round(n.x*20),Math.round(n.y*20),Math.round(n.z*20),d].join(',');
+ for(const f of F){const d=Math.round(f.n.dot(f.c)/0.01);f.d=d;const k=key(f.n,d);if(!H.has(k))H.set(k,[]);H.get(k).push(f);}
+ const axes=(f,g)=>{const r=[];for(const P of [f.p,g.p])for(let i=0;i<P.length;i++)r.push(new THREE.Vector3().subVectors(P[(i+1)%P.length],P[i]).cross(f.n).normalize());return r;};
+ const hits=[];
+ for(const f of F){for(const dd of [-1,0,1]){const L=H.get(key(f.n,f.d+dd));if(!L)continue;for(const g of L){if(g===f||g.tag===f.tag||(dd===0&&g.tag<f.tag))continue;
+     if(f.mat===g.mat||(f.mat.color&&g.mat.color&&f.mat.color.equals(g.mat.color)&&f.mat.type===g.mat.type&&!f.mat.map&&!g.mat.map))continue;
+     if(f.n.dot(g.n)<0.999||Math.abs(f.n.dot(g.c)-f.n.dot(f.c))>0.004)continue;
+     let sep=false,ovMin=1e9;for(const A of axes(f,g)){let a0=1e9,a1=-1e9,b0=1e9,b1=-1e9;for(const p of f.p){const v=p.dot(A);a0=Math.min(a0,v);a1=Math.max(a1,v);}for(const p of g.p){const v=p.dot(A);b0=Math.min(b0,v);b1=Math.max(b1,v);}
+       const ov=Math.min(a1,b1)-Math.max(a0,b0);if(ov<=0.005){sep=true;break;}ovMin=Math.min(ovMin,ov);}
+     if(sep)continue;hits.push({ca:f.mat.color?f.mat.color.getHexString():'',cb:g.mat.color?g.mat.color.getHexString():'',a:f.tag,b:g.tag,ov:+ovMin.toFixed(3),at:[+f.c.x.toFixed(2),+f.c.y.toFixed(2),+f.c.z.toFixed(2)]});}}}
+ return {tris:F.length,hits:hits.length,top:hits.slice(0,opts.top||8)};};0

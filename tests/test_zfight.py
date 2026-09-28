@@ -6,6 +6,7 @@ A hit list shows: count, area, the two colours, the two objects (size @ world po
 Fix a hit by moving one face >= 2 cm (the renderer uses a logarithmic depth buffer, polygonOffset does NOT work).
 The repeated objects the game draws with inst() (houses, piers, fences, sheep, ...) are checked too: their geometry is a
 clone, which three r128 turns into a plain BufferGeometry, so zf.js recognises boxes by their shape. --geen-inst skips them.
+The cars are lofted skins plus merged detail sets (not boxes), so they are also checked triangle by triangle (__zfTris in zf.js).
 
 usage: python tests/test_zfight.py [tracks|none] [--no-cars] [--geen-inst] [--fwd]   (--fwd: only the forward direction)
 """
@@ -49,14 +50,16 @@ with Session(DEFAULT, w=400, h=260) as s:
     if '--no-cars' not in sys.argv:
         r = s.ev("""(()=>{const out=[];const types=Object.keys(CARS).concat(['truck','van','tractor','traffic-hatch']);
           for(const t of types){const m=t==='truck'?makeTruck():t==='van'?makeVan():t==='tractor'?makeTractor():t==='traffic-hatch'?buildHatchTraffic(0x2f6db3):buildCar(t,new THREE.Color(0xd62a2a));
-            const G=new THREE.Group();G.add(m.g);const z=__zfight(G,{top:5,visibleOnly:true});if(z.hits)out.push(t+': '+z.hits+' '+z.top.slice(0,2).map(h=>h.ca+'/'+h.cb+'@'+h.at.join(',')).join(' | '));disposeObj(m.g);}
+            const G=new THREE.Group();G.add(m.g);const z=__zfight(G,{top:5,visibleOnly:true});if(z.hits)out.push(t+': '+z.hits+' '+z.top.slice(0,2).map(h=>h.ca+'/'+h.cb+'@'+h.at.join(',')).join(' | '));
+            const q=__zfTris(G,{top:2});if(q.hits)out.push(t+' (driehoeken): '+q.hits+' '+q.top.map(h=>h.ca+'/'+h.cb+'@'+h.at.join(',')).join(' | '));disposeObj(m.g);}
           return out;})()""")
         rep.check(not r, 'alle automodellen + verkeer', '; '.join(r))
         r = s.ev("""(()=>{const out=[];const wings=Object.keys(WINGS),rims=Object.keys(RIMSTYLES),ex=Object.keys(EXHAUSTS),st=Object.keys(STRIPES);
-          for(const t of Object.keys(CARS))for(let v=0;v<4;v++){const u=carUp(t),keep=JSON.stringify(u);
+          for(const t of Object.keys(CARS))for(let v=0;v<5;v++){const u=carUp(t),keep=JSON.stringify(u);
             Object.assign(u,{wing:wings[v%wings.length],rimStyle:rims[v%rims.length],exhaust:ex[v%ex.length],stripe:st[(v+1)%st.length],num:v?27:0});
             const m=buildCar(t,new THREE.Color(settings.color));styleCar(m,t);const G=new THREE.Group();G.add(m.g);const z=__zfight(G,{top:3,visibleOnly:true});
             if(z.hits)out.push(t+'/'+u.wing+'/'+u.rimStyle+'/'+u.exhaust+': '+z.hits+' '+z.top.slice(0,2).map(h=>h.ca+'/'+h.cb+'@'+h.at.join(',')).join(' | '));
+            const q=__zfTris(G,{top:2});if(q.hits)out.push(t+'/'+u.wing+'/'+u.rimStyle+'/'+u.stripe+' (driehoeken): '+q.hits+' '+q.top.map(h=>h.ca+'/'+h.cb+'@'+h.at.join(',')).join(' | '));
             Object.assign(u,JSON.parse(keep));disposeObj(m.g);}
           return out;})()""")
         rep.check(not r, 'alle getunede varianten (spoiler, velgen, uitlaat, striping, nummer)', '; '.join(r[:6]))
