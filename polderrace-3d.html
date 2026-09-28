@@ -139,6 +139,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .seg{display:flex;background:var(--well);border-radius:999px;padding:5px;gap:2px;flex-wrap:wrap}
 .seg button{font:800 14px/1 var(--font);color:var(--sign-ink);background:transparent;border:0;padding:9px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
 .seg button[aria-checked="true"]{background:var(--detour);color:var(--ink);font-weight:900}
+.seg button:disabled{opacity:.4;cursor:default}
 /* the focus ring (menus focus the chosen option on open) sits inside the pill, so the dark rim around it stays even */
 .seg button:focus-visible,.stepper button:focus-visible{outline:3px solid #fff;outline-offset:-3px}
 .seg button[aria-checked="true"]:focus-visible{outline-color:var(--ink)}
@@ -601,6 +602,7 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
           <button data-v="B"><b>B</b>Compact</button><button data-v="A"><b>A</b>GT</button><button data-v="S"><b>S</b>Super</button>
         </div>
         <div id="cars" class="grid2" role="radiogroup" aria-label="Auto"></div>
+        <p id="carsNote" class="note small" hidden>Je kiest uit je eigen auto's. Meer auto's koop je in de garage.</p>
         <div id="colors" class="colors well" role="radiogroup" aria-label="Kleur"><span class="lab">Kleur</span></div>
       </div>
       <div class="step" data-step="1" hidden>
@@ -2351,6 +2353,7 @@ const activeBots=()=>bots.filter(b=>!b.out);
 function startRace(){
   if(!(state==='menu'||(state==='over'&&overReady)))return;
   initAudio();if(actx&&actx.state==='suspended')actx.resume();leaveGarageScene();leavePodium();
+  if(!(champ&&champ.active))ensureOwnedCars();
   mode=champ&&champ.active?'champ':settings.mode;split=mode==='split';if(split)mode='race';if(!split&&p2)splitTeardown();
   if(mode==='race'&&settings.bots<1&&!split)mode='time';if(mode==='elim'&&settings.bots<2)settings.bots=2;
   raceMode=mode==='race'||mode==='elim'||mode==='champ';
@@ -2645,6 +2648,7 @@ function styleExtras(m,u,rim){
     const t=tuneParts(K,u.exhaust);add(t.chrome,u.exhaust==='center'?darkChrome:chromeMat);add(t.dark,trimMat);}}
 }
 function openGarage(){
+  if(owns(settings.car))garageCar=settings.car; /* Terug leaves you in the last car you own that you looked at (or just bought) */
   const cls=CARS[settings.car].cls;syncRadios($('garClass'),cls);$('garCredits').textContent=fmtCr(garage.credits);
   $('garCars').querySelectorAll('[role=radio]').forEach(b=>{const id=b.dataset.v;b.hidden=CARS[id].cls!==cls;
     b.innerHTML=`<strong><span></span>${id===settings.car&&owns(id)?'<small class="badge">in gebruik</small>':''}</strong>`+(owns(id)?`<span>${carStatsLine(id)}</span>`:`<span class="lock">${LOCK_SVG}${fmtCr(CAR_PRICE[id]||0)}</span>`);
@@ -2832,6 +2836,13 @@ const CUPS=[
 if(!garage.owned){garage.owned={hatch:true};for(const id in garage.cars){const u=garage.cars[id];if(u.eng||u.turbo||u.tyre||u.brake)garage.owned[id]=true;}saveGarage();}
 if(!garage.career)garage.career={cups:{}};if(!garage.ach)garage.ach={};if(!garage.wins)garage.wins={};
 const owns=id=>!!garage.owned[id];
+/* you only race cars you own: the last one you drove in that class, else another one of that class, else any car you own */
+function ownedCar(id){if(CARS[id]&&owns(id))return id;const cls=CARS[id]?CARS[id].cls:'B',lb=settings.lastByClass||{};if(lb[cls]&&owns(lb[cls]))return lb[cls];
+  return carsOf(cls).find(owns)||['B','A','S'].map(c=>lb[c]).find(c=>c&&owns(c))||Object.keys(CARS).find(owns)||'hatch';}
+function ensureOwnedCars(){const a=ownedCar(settings.car),b=ownedCar(settings.p2car);if(a===settings.car&&b===settings.p2car)return false;
+  settings.car=a;settings.p2car=b;saveSettings();if(car)previewEdit();return true;}
+/* a new player (the default car is the GT) or an old save can hold a car that is not bought yet */
+{const a=ownedCar(settings.car),b=ownedCar(settings.p2car);if(a!==settings.car||b!==settings.p2car){settings.car=a;settings.p2car=b;saveSettings();}}
 const cupUnlocked=c=>!c.need||((garage.career.cups[c.need]||{}).best||99)<=3;
 function careerRun(){let r=null;try{r=JSON.parse(store.get('polderrace3d-career-run','null'));}catch(e){}return r&&!r.done?r:null;}
 function buyCar(id){const p=CAR_PRICE[id]||0;if(owns(id)||garage.credits<p)return false;garage.credits-=p;garage.owned[id]=true;saveGarage();tone(880,0.12,'triangle',0.12);tone(1320,0.2,'triangle',0.12,0.1);
@@ -3176,7 +3187,7 @@ let menuStep=0,menuFlow='quick';
 function radio(container,items,sel,onPick){
   container.querySelectorAll('[role=radio]').forEach(b=>b.remove());
   items.forEach(it=>{const b=it.el;b.setAttribute('role','radio');b.dataset.v=it.v;b.addEventListener('click',()=>onPick(it.v));container.appendChild(b);});
-  container.addEventListener('keydown',e=>{const opts=[...container.querySelectorAll('[role=radio]')].filter(b=>!b.hidden);const i=opts.indexOf(document.activeElement);if(i<0)return;
+  container.addEventListener('keydown',e=>{const opts=[...container.querySelectorAll('[role=radio]')].filter(b=>!b.hidden&&!b.disabled);const i=opts.indexOf(document.activeElement);if(i<0)return;
     let j=i;if(e.key==='ArrowRight'||e.key==='ArrowDown')j=(i+1)%opts.length;else if(e.key==='ArrowLeft'||e.key==='ArrowUp')j=(i-1+opts.length)%opts.length;else return;
     e.preventDefault();e.stopPropagation();onPick(opts[j].dataset.v);opts[j].focus();});
 }
@@ -3192,7 +3203,7 @@ function carCardHtml(id){const c=CARS[id];
   return `<strong><span>${c.name}</span>${isTuned(id)?'<small class="tuned">getuned</small>':''}</strong>`+carStatsHtml(id);}
 function buildMenuDom(){
   radio($('cars'),Object.keys(CARS).map(id=>{const b=document.createElement('button');b.className='card';b.innerHTML=carCardHtml(id);return {v:id,el:b};}),settings.car,pickCar);
-  radio($('classSeg'),segItems('classSeg'),CARS[settings.car].cls,v=>{if(CARS[edCar()].cls!==v)pickCar(editP===2?carsOf(v)[0]:((settings.lastByClass||{})[v]||carsOf(v)[0]));});
+  radio($('classSeg'),segItems('classSeg'),CARS[settings.car].cls,v=>{if(CARS[edCar()].cls!==v)pickClass(v);});
   $('pTab1').addEventListener('click',()=>setEditP(1));$('pTab2').addEventListener('click',()=>setEditP(2));
   radio($('colors'),COLORS.map((c,k)=>{const b=document.createElement('button');b.className='sw';b.style.background=c;b.setAttribute('aria-label',COLOR_NAMES[k]);return {v:c,el:b};}),settings.color,
     v=>{if(editP===2)settings.p2color=v;else settings.color=v;saveSettings();previewEdit();refreshMenu();});
@@ -3225,8 +3236,10 @@ function refreshCarCards(){$('cars').querySelectorAll('.card').forEach(b=>b.inne
 let editP=1;const edCar=()=>editP===2?settings.p2car:settings.car,edCol=()=>editP===2?settings.p2color:settings.color;
 function previewEdit(){if(editP===2)rebuildPlayerCar(settings.p2car,settings.p2color);else rebuildPlayerCar();}
 function setEditP(n){editP=n;$('pTab1').setAttribute('aria-pressed',n===1);$('pTab2').setAttribute('aria-pressed',n===2);previewEdit();refreshMenu();}
-function pickCar(v){if(!CARS[v])return;if(editP===2){settings.p2car=v;saveSettings();previewEdit();refreshMenu();return;}settings.car=v;settings.lastByClass=Object.assign({},settings.lastByClass,{[CARS[v].cls]:v});saveSettings();rebuildPlayerCar();refreshMenu();
+function pickCar(v){if(!CARS[v])return;if(editP===2){settings.p2car=v;saveSettings();previewEdit();refreshMenu();return;}settings.car=v;if(owns(v))settings.lastByClass=Object.assign({},settings.lastByClass,{[CARS[v].cls]:v});saveSettings();rebuildPlayerCar();refreshMenu();
   if(menuStep===0){const f=document.activeElement;if(!f||f.hidden||!$('menu').contains(f))$('cars').querySelector('[aria-checked="true"]').focus({preventScroll:true});}}
+/* car step: another class gives the car you last drove there (player 1), else the first one you own; classes without an own car are switched off */
+function pickClass(v){const ids=carsOf(v).filter(owns);if(!ids.length)return;const lb=(settings.lastByClass||{})[v];pickCar(editP!==2&&lb&&owns(lb)?lb:ids[0]);}
 function flowSteps(){return menuFlow==='champ'?(champInProgress()?[3]:[0,3]):menuFlow==='net'?[0]:[2,0,1];} /* a championship under way keeps its car */
 function refreshMenu(){
   const steps=flowSteps();
@@ -3235,7 +3248,9 @@ function refreshMenu(){
   document.querySelectorAll('.steps li').forEach(li=>{const s=+li.dataset.s,idx=steps.indexOf(s);li.hidden=idx<0;li.classList.toggle('done',idx>=0&&idx<steps.indexOf(menuStep));
     if(s===menuStep)li.setAttribute('aria-current','step');else li.removeAttribute('aria-current');});
   $('pTabs').hidden=!(menuFlow==='quick'&&settings.mode==='split');if($('pTabs').hidden&&editP===2){editP=1;rebuildPlayerCar();}
-  const cls=CARS[edCar()].cls;$('cars').querySelectorAll('.card').forEach(b=>b.hidden=CARS[b.dataset.v].cls!==cls);syncRadios($('classSeg'),cls);
+  const cls=CARS[edCar()].cls;$('cars').querySelectorAll('.card').forEach(b=>b.hidden=CARS[b.dataset.v].cls!==cls||!owns(b.dataset.v));syncRadios($('classSeg'),cls);
+  $('classSeg').querySelectorAll('[role=radio]').forEach(b=>{const any=carsOf(b.dataset.v).some(owns);b.disabled=!any;b.title=any?'':'Nog geen auto in bezit: koop er een in de garage';});
+  $('carsNote').hidden=Object.keys(CARS).every(owns);
   syncRadios($('cars'),edCar());syncRadios($('colors'),edCol());syncRadios($('tracks'),TRACK_ID);syncRadios($('dirSeg'),settings.dir);syncRadios($('diff'),settings.diff);syncRadios($('champDiff'),settings.diff);
   syncRadios($('gridSeg'),settings.grid);syncRadios($('modeSeg'),settings.mode);
   if($('timeSeg')){syncRadios($('timeSeg'),settings.time);syncRadios($('weatherSeg'),settings.weather);}
@@ -3273,6 +3288,7 @@ function menuScene(){
   syncCar(0);
 }
 function showMenu(step){if(editP===2&&step!==0){editP=1;$('pTab1').setAttribute('aria-pressed',true);$('pTab2').setAttribute('aria-pressed',false);rebuildPlayerCar();}menuStep=step;
+  if(step===0)ensureOwnedCars();
   if(step<0){menuScene();$('menu').hidden=true;$('home').hidden=false;homePanel('main');return;}
   if(step===3&&champInProgress()){settings.car=champ.car;settings.color=champ.color;rebuildPlayerCar();}
   menuScene();$('home').hidden=true;if(step===0)refreshCarCards();refreshMenu();$('menu').hidden=false;
@@ -3287,7 +3303,11 @@ function resumeInfo(){
   const m=settings.mode,nb=settings.bots,L=settings.laps;
   return {title:TRACKS[settings.track].name+(settings.dir==='rev'?' · omgekeerd':''),sub:MODE_NAMES[m]+' · '+CARS[settings.car].name+(m==='race'||m==='elim'||m==='split'?' · '+nb+' '+(nb===1?'bot':'bots'):'')+(m==='race'||m==='ghost'||m==='split'?' · '+L+' '+(L===1?'ronde':'ronden'):''),cta:'Snel racen',go:()=>$('hQuick').click()};
 }
-function homePanel(v){homeView=v;if(v==='main'&&car)rebuildPlayerCar();['Main','Play','Records','Settings','Garage','Career','Ach','Net'].forEach(n=>{const el=$('home'+n);if(el)el.hidden=v!==n.toLowerCase();});
+function homePanel(v){const from=homeView;homeView=v;
+  /* browsing the garage can show cars you have not bought: leaving it puts you back in the car you came in with (or another one you own) */
+  if(v==='garage'&&from!=='garage')garageCar=settings.car;
+  if(from==='garage'&&v!=='garage'&&!owns(settings.car)){settings.car=owns(garageCar)?garageCar:ownedCar(settings.car);saveSettings();if(car&&v!=='main')rebuildPlayerCar();}
+  if(v==='main'&&car)rebuildPlayerCar();['Main','Play','Records','Settings','Garage','Career','Ach','Net'].forEach(n=>{const el=$('home'+n);if(el)el.hidden=v!==n.toLowerCase();});
   $('home').classList.toggle('main',v==='main');$('home').querySelector('.board').classList.toggle('wide',v==='ach');
   if(v==='main'){const ri=resumeInfo();$('playTitle').textContent=ri.title;$('playSub').textContent=ri.sub;$('hResume').textContent=ri.cta;$('hResume').onclick=ri.go;$('hResume').hidden=!ri.resume;
     const id=settings.car;$('garTitle').textContent=CARS[id].name;$('garSub').textContent='Klasse '+CARS[id].cls+' · '+(isTuned(id)?'getuned':'af fabriek')+' · '+fmtCr(garage.credits);$('garBars').innerHTML=carStatsHtml(id);
@@ -3326,7 +3346,7 @@ function applyPrefs(){const q=prefs.quality,dp=window.devicePixelRatio||1;render
   muted=!prefs.sound;$('sndOn').hidden=muted;$('sndOff').hidden=!muted;$('muteBtn').setAttribute('aria-label',muted?'Geluid aan':'Geluid uit');}
 document.querySelectorAll('.tog').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.pref;prefs[k]=!prefs[k];savePrefs();applyPrefs();syncToggles();}));
 const HOME_PARENT={career:'play',net:'play'}; /* panels opened from "Spelen" go back there; the rest back to the home screen */
-let garageFrom=null; /* the career screen can open the garage to buy a car: Terug returns there */
+let garageFrom=null,garageCar=null; /* the career screen can open the garage to buy a car: Terug returns there. garageCar: the car you entered the garage with */
 function homeBack(){const from=homeView,to=from==='garage'&&garageFrom?garageFrom:HOME_PARENT[from]||'main';garageFrom=null;homePanel(to);const b=to==='play'&&$({career:'hCareer',net:'hNet'}[from]);if(b)b.focus({preventScroll:true});}
 document.querySelectorAll('[data-homeback]').forEach(b=>b.addEventListener('click',()=>{if(pauseSettingsOpen()){closePauseSettings();return;}homeBack();}));
 $('hStart').addEventListener('click',()=>{menuFlow='quick';leaveChampMode();showMenu(2);});
@@ -3355,12 +3375,12 @@ function menuBack(){if(menuStep<0){if(homeView!=='main')homeBack();return;}if(me
   const fl=menuFlow;showMenu(-1);homePanel('play');$(fl==='champ'?'hChamp':'hStart').focus({preventScroll:true});}
 function menuCycle(d){
   if(menuStep<0)return;
-  if(menuStep===0){const ids=carsOf(CARS[settings.car].cls);pickCar(ids[(ids.indexOf(settings.car)+d+ids.length)%ids.length]);return;}
+  if(menuStep===0){const ids=carsOf(CARS[edCar()].cls).filter(owns);if(ids.length)pickCar(ids[(ids.indexOf(edCar())+d+ids.length)%ids.length]);return;}
   else if(menuStep===1){const ids=Object.keys(TRACKS);const v=ids[(ids.indexOf(TRACK_ID)+d+ids.length)%ids.length];settings.track=v;saveSettings();loadTrack(v);applyEnv(settings.time,settings.weather);menuScene();}
   else if(menuStep===2){const ms=['race','elim','time','ghost','split'];settings.mode=ms[(ms.indexOf(settings.mode)+d+5)%5];saveSettings();menuScene();}
   refreshMenu();
 }
-function classCycle(d){if(menuStep!==0)return;const cl=['B','A','S'];const c=cl[(cl.indexOf(CARS[settings.car].cls)+d+3)%3];pickCar((settings.lastByClass||{})[c]||carsOf(c)[0]);}
+function classCycle(d){if(menuStep!==0)return;const cl=['B','A','S'].filter(c=>carsOf(c).some(owns));if(cl.length<2)return;pickClass(cl[(cl.indexOf(CARS[edCar()].cls)+d+cl.length)%cl.length]);}
 
 /* ================= physics ================= */
 function locatePlayer(){

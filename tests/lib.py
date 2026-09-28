@@ -23,6 +23,7 @@ OUT.mkdir(exist_ok=True)
 # The init line of the game. Test hooks are inserted right before it, so it must stay unique and unchanged.
 ANCHOR = "loadTrack(settings.track);applyEnv(settings.time,settings.weather);rebuildPlayerCar();"
 TRACKS = ['polder', 'dorp', 'circuit', 'afsluitdijk', 'haven', 'veluwe', 'grachten', 'limburg', 'rotterdam', 'zeeland']
+CAR_IDS = ['hatch', 'rally', 'coupe', 'roadster', 'gt', 'muscle', 'fastback', 'sedan', 'super', 'hyper', 'longtail', 'proto']
 TEST_MARKERS = ['__ev', '__clog', 'mockroom', '__zfight', '__step']
 
 # The autopilot also presses 'Terug op de baan' (resetToTrack) like a player would when the car has faced the wrong way for
@@ -68,6 +69,10 @@ class Session:
         self.b = self.p.chromium.launch(args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] + list(args or []))
         self.ctx = self.b.new_context(viewport={'width': w, 'height': h})
         init = extra_init
+        # the game only lets you race cars you own; tests drive any car, so the test garage owns them all
+        # (a test that wants another garage sets 'polderrace3d-garage' itself in extra_init)
+        init += ("if(!localStorage.getItem('polderrace3d-garage'))localStorage.setItem('polderrace3d-garage',JSON.stringify({owned:%s}));"
+                 % json.dumps({c: True for c in CAR_IDS}))
         if settings:
             init += "localStorage.setItem('polderrace3d-settings',JSON.stringify(%s));" % json.dumps(settings)
         prefs = dict({'quality': 'low'}, **(prefs or {}))
