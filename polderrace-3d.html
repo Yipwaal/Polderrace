@@ -538,7 +538,7 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
           <div id="garCars" class="ccards" role="radiogroup" aria-label="Auto"></div>
           <p id="garStats" class="note" hidden></p>
           <div id="garUpg" class="upgs"></div>
-          <p class="note small">Geld verdien je met races, tijdritten en het kampioenschap. Hoger niveau en betere plek levert meer op. Sleep naast het paneel om de auto rond te draaien.</p>
+          <p class="note small">Geld verdien je met races, tijdritten en de carrière. Hoger niveau en betere plek levert meer op. Je tegenstanders tunen mee: upgrades geven je een voorsprong, maar winnen moet je nog steeds zelf. Sleep naast het paneel om de auto rond te draaien.</p>
         </div>
         <div id="garLook" class="panel" hidden>
           <div class="panel" style="flex:0;gap:10px"><span class="eyebrow">Lakkleur</span><div class="paintrow"><div id="paintSeg" class="colors well" role="radiogroup" aria-label="Lakkleur"></div><label class="picklab">Eigen kleur <input type="color" id="paintPick" aria-label="Eigen kleur"></label></div></div>
@@ -2221,11 +2221,16 @@ let bots=[];
 function clearBots(){for(const b of bots){scene.remove(b.m.g);disposeObj(b.m.g);}bots=[];}
 function makeBotDefs(n){const types=carsOf(CARS[settings.car].cls).sort(()=>Math.random()-0.5),cols=COLORS.filter(c=>c!==settings.color);
   return Array.from({length:n},(_,k)=>({name:BOT_NAMES[k],type:types[k%types.length],color:cols[k%cols.length]}));}
+/* rivals tune too: the bots get most of the edge your upgrades give over the stock car (RIVAL_TUNE), so a tuned car makes a race
+   a bit easier instead of a walkover. Split screen: both players' average; online: none (the others' garages are not known) */
+const RIVAL_TUNE=0.8;
+function rivalBoost(){const r={vmax:1,acc:1,grip:1,brake:1};if(net&&net.inRace)return r;const ids=split&&settings.p2car?[settings.car,settings.p2car]:[settings.car];
+  for(const k in r){let m=0;for(const id of ids)m+=effStats(id)[k]/CARS[id][k]/ids.length;r[k]=1+(m-1)*RIVAL_TUNE;}return r;}
 function setupBots(n,defs){
-  clearBots();const d=DIFF[settings.diff];defs=defs||makeBotDefs(n);
+  clearBots();const d=DIFF[settings.diff],rb=rivalBoost();defs=defs||makeBotDefs(n);
   for(let k=0;k<defs.length;k++){const type=defs[k].type,col=defs[k].color,m=buildCar(type,new THREE.Color(col)),cd=CARS[type];scene.add(m.g);
     bots.push({m,name:defs[k].name,type,color:col,out:false,outAt:0,elimPos:0,s:0,lat:0,lineLat:(Math.random()-.5)*2.2,speed:0,cur:0,
-      vmax:cd.vmax/3.6*d.speed*(1-d.jit*0.7+Math.random()*d.jit),acc:cd.acc*ACC_K*d.acc*(1-d.jit*0.5+Math.random()*d.jit),aLat:d.aLat*cd.grip*(1-d.jit+Math.random()*d.jit*1.2),brk:d.brake*BRK_K,
+      vmax:cd.vmax/3.6*d.speed*rb.vmax*(1-d.jit*0.7+Math.random()*d.jit),acc:cd.acc*ACC_K*d.acc*rb.acc*(1-d.jit*0.5+Math.random()*d.jit),aLat:d.aLat*cd.grip*rb.grip*(1-d.jit+Math.random()*d.jit*1.2),brk:d.brake*BRK_K*rb.brake,
       lap:0,finished:false,finishTime:0,bestLap:0,lapStart:0,passT:0,passLat:0,latV:0,mass:CARS[type].mass,lp:0,yawK:0,vx:0,vz:0});}
 }
 function gridSlot(k){const row=Math.floor(k/2),col=k%2;return {s:(S_START-9-row*9+TRACK_LEN)%TRACK_LEN,lat:(col?1:-1)*Math.min(3.2,ROAD_HALF-2.2)};}

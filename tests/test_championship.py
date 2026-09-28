@@ -2,6 +2,8 @@
 career Polder Cup (3 races). Every race must end in results + podium, standings must advance, the
 championship must be marked done, and credits must be paid.
 First: you can only race cars you own (car step, player 2, class buttons, keys, garage browsing, quick race).
+Last: balance. Fully upgraded, your car used to be ~8 % faster than the bots (13 s in 3 laps: every race a walkover); the rivals now
+tune along (RIVAL_TUNE), so a bot with your upgraded car's stats wins by only a small margin.
 """
 from lib import Session, Report, DEFAULT, NEW_GARAGE
 
@@ -68,4 +70,15 @@ with Session(dict(DEFAULT, car='hatch', diff='easy'), w=640, h=400) as s:
     rep.check(s.ev('garage.credits') > cr0, 'geld verdiend in de cup', f"{cr0} -> {s.ev('garage.credits')}")
     rep.check(bool(s.ev("garage.career.cups.B")), 'cup-resultaat opgeslagen', str(s.ev("JSON.stringify(garage.career.cups)")))
     rep.check(not s.errs, 'geen JS-fouten', str(s.errs[:3]))
+# balance: a bot-only race (3 laps, compare best laps: one incident does not count) in which one bot drives with the stats of your fully upgraded GT; the other five are rivals as the game sets them up
+BAL = """(k=>{toMenu(-1);const u=carUp('gt');u.eng=u.turbo=u.tyre=u.brake=3;settings.car='gt';settings.diff='hard';settings.laps=3;loadTrack('circuit','fwd');applyEnv('day','dry');startRace();
+  setupBots(0,Array.from({length:6},(_,i)=>({name:BOT_NAMES[i],type:'gt',color:COLORS[i]})));placeGrid();
+  const me=bots[k],c=CARS.gt,e=effStats('gt'),rb=typeof rivalBoost==='function'?rivalBoost():{vmax:1,acc:1,grip:1,brake:1};me.vmax*=e.vmax/c.vmax/rb.vmax;me.acc*=e.acc/c.acc/rb.acc;me.aLat*=e.grip/c.grip/rb.grip;me.brk*=e.brake/c.brake/rb.brake;
+  for(let i=0;i<120*400&&!bots.every(b=>b.finished);i++){player.lat=80;update(1/120);}
+  const oth=bots.filter(b=>b!==me).map(b=>b.bestLap).sort((a,b)=>a-b);return (oth[0]-me.bestLap)/me.bestLap*100;})"""
+with Session(dict(DEFAULT, car='gt', track='circuit', bots=6, diff='hard', laps=3), w=640, h=400) as s:
+    edge = [round(s.ev(BAL + f"({k})"), 1) for k in range(3)]
+    avg = sum(edge) / len(edge)
+    rep.check(avg < 3 and max(edge) < 4.5, 'volle upgrades: kleine voorsprong op de rivalen, geen wandelrace (gem < 3 %)', f'voorsprong snelste ronde in %: {edge}')
+    rep.check(not s.errs, 'geen JS-fouten (balans)', str(s.errs[:3]))
 rep.finish()
