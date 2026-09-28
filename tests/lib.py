@@ -23,7 +23,7 @@ OUT.mkdir(exist_ok=True)
 # The init line of the game. Test hooks are inserted right before it, so it must stay unique and unchanged.
 ANCHOR = "loadTrack(settings.track);applyEnv(settings.time,settings.weather);rebuildPlayerCar();"
 TRACKS = ['polder', 'dorp', 'circuit', 'afsluitdijk', 'haven', 'veluwe', 'grachten', 'limburg', 'rotterdam', 'zeeland']
-CAR_IDS = ['hatch', 'rally', 'coupe', 'roadster', 'gt', 'muscle', 'fastback', 'sedan', 'super', 'hyper', 'longtail', 'proto']
+CAR_IDS = ['hatch', 'rally', 'coupe', 'roadster', 'mini', 'retro', 'gt', 'muscle', 'fastback', 'sedan', 'wagon', 'evo', 'super', 'hyper', 'longtail', 'proto', 'v12', 'speedster']
 # a new player's garage (only the hot hatch): pass as extra_init to test what the game offers before you buy cars
 NEW_GARAGE = "localStorage.setItem('polderrace3d-garage',JSON.stringify({owned:{hatch:true}}));"
 TEST_MARKERS = ['__ev', '__clog', 'mockroom', '__zfight', '__step']

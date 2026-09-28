@@ -1580,14 +1580,20 @@ const CARS={
   rally:{name:'Rallyhatch',cls:'B',vmax:205,acc:16,grip:1.22,brake:34,mass:0.95},
   coupe:{name:'Mini-coupé',cls:'B',vmax:226,acc:14.2,grip:1.12,brake:32,mass:0.85},
   roadster:{name:'Roadster',cls:'B',vmax:219,acc:14.8,grip:1.2,brake:33,mass:0.8},
+  mini:{name:'Cityflitser',cls:'B',vmax:208,acc:15.6,grip:1.24,brake:34,mass:0.78},
+  retro:{name:'Retro-coupé',cls:'B',vmax:223,acc:14.6,grip:1.15,brake:32,mass:0.82},
   gt:{name:'GT-coupé',cls:'A',vmax:250,acc:15.5,grip:1.0,brake:30,mass:1.0},
   muscle:{name:'Muscle car',cls:'A',vmax:265,acc:18,grip:0.85,brake:27,mass:1.2},
   fastback:{name:'Fastback',cls:'A',vmax:258,acc:17,grip:0.93,brake:29,mass:1.1},
   sedan:{name:'Sportsedan',cls:'A',vmax:246,acc:16,grip:1.04,brake:31,mass:1.15},
+  wagon:{name:'Sportwagon',cls:'A',vmax:254,acc:16.8,grip:0.98,brake:30,mass:1.22},
+  evo:{name:'Turbo-sedan',cls:'A',vmax:243,acc:17.4,grip:1.08,brake:32,mass:1.05},
   super:{name:'Supercar',cls:'S',vmax:305,acc:19.5,grip:0.95,brake:34,mass:1.0},
   hyper:{name:'Hypercar',cls:'S',vmax:322,acc:20.5,grip:0.9,brake:35,mass:1.05},
   longtail:{name:'Longtail',cls:'S',vmax:314,acc:19,grip:0.96,brake:34,mass:1.0},
-  proto:{name:'Prototype',cls:'S',vmax:296,acc:19.2,grip:1.1,brake:37,mass:0.9}
+  proto:{name:'Prototype',cls:'S',vmax:296,acc:19.2,grip:1.1,brake:37,mass:0.9},
+  v12:{name:'Gran Turismo',cls:'S',vmax:318,acc:19.6,grip:0.91,brake:33,mass:1.12},
+  speedster:{name:'Speedster',cls:'S',vmax:301,acc:20,grip:1.02,brake:35,mass:0.92}
 };
 const carsOf=cls=>Object.keys(CARS).filter(k=>CARS[k].cls===cls);
 const COLORS=['#f36f21','#d62a2a','#f2c200','#1d4f9e','#2f8f5b','#f2f2ee','#1b1b1b'];
@@ -1968,6 +1974,77 @@ const CAR_SPECS={
         {const z=-2.28,y0=0.98;for(const s of [-1,1])finPlate(D.wingT,[[z+0.26,0.84],[z+0.26,y0+0.16],[z-0.34,y0+0.24],[z-0.34,0.8]],s*1.035,0.03);
           D.wingT.box(2.04,0.05,0.5,0,y0+0.1,z,-0.12);D.wingT.box(2.02,0.04,0.16,0,y0+0.18,z-0.3,-0.5);for(const s of [-1,1])D.wingT.box(0.04,0.36,0.14,s*0.3,y0-0.12,z+0.05);}
         D.trim.box(1.4,0.03,0.18,0,0.15,2.27);D.deco.color(0xf7f7f2);h.Sd(D.deco,-0.7,0.9,0.36,0.46,0.02,8,1);}});}},
+  /* ---- class B: a boxy city car with round lamps, a 60s rear-engined coupe with frog-eye lamps on the wings ---- */
+  mini:{len:3.75,wid:1.86,hitR:0.3,r:0.33,w:0.25,wz:[1.24,-1.2],taper:[0.1,0.06],fb:[0.04,0.04],shoulder:-0.02,exh:[0.42],
+    top:[[1.875,0.64],[1.848,0.77],[1.74,0.84],[1.3,0.88],[0.8,0.92],[0,0.93],[-1.5,0.94],[-1.8,0.93],[-1.86,0.88],[-1.875,0.8]],
+    bot:[[1.875,0.36],[1.76,0.28],[1.5,0.25],[-1.5,0.25],[-1.76,0.28],[-1.875,0.37]],
+    cab:{z0:0.78,z1:-1.8,roof:[[0.78,0.92],[0.48,1.1],[0.2,1.33],[-0.1,1.41],[-1.1,1.42],[-1.42,1.39],[-1.62,1.31],[-1.76,1.12],[-1.8,0.94]],ws:0.02,rw:-1.42,sg:[-1.45,0.72],bp:[-0.5,-0.38],inset:0.1,tumble:0.14,rc:0.1,crown:0.03},
+    wing:{z:-1.58,roof:true},
+    dress(K,D){dressStd(K,D,{grille:[{x:[-0.36,0.36],y:[0.64,0.74]},{x:[-0.6,0.6],y:[0.34,0.48]}],plateF:0.55,
+      tl:[{x:[0.62,0.86],y:[0.64,0.9]}],rtrim:[{x:[-0.82,0.82],y:[0.3,0.4]}],plateR:0.55,mz:0.62,my:0.98,handles:[-0.25],hy:0.86,sill:[0.3,0.37],exh:[0.42],
+      extra(K,D,h){/* round headlamps with a chrome ring, amber indicators, a roof lip */
+        for(const x of [0.6]){const s=K.on.front(x,0.7);if(!s)continue;const ring=new THREE.CylinderGeometry(0.115,0.115,0.05,18),c=new THREE.CylinderGeometry(0.095,0.095,0.05,18);ring.rotateX(Math.PI/2);c.rotateX(Math.PI/2);
+          for(const sx of [1,-1]){const g=ring.clone();g.translate(sx*x,0.7,s[0].z+0.0);D.chrome.geo(g);g.dispose();const l=c.clone();l.translate(sx*x,0.7,s[0].z+0.02);D.lamp.geo(l);l.dispose();}ring.dispose();c.dispose();}
+        D.deco.color(LAMP_AMBER);h.F(D.deco,0.62,0.78,0.52,0.57,0.02,2,1);
+        postWingRoof(K,D,-1.56,1.4);}});}},
+  retro:{len:4.1,wid:1.8,hitR:0.4,r:0.33,w:0.24,wz:[1.22,-1.18],taper:[0.22,0.12],fb:[0.1,0.1],shoulder:-0.02,exh:[-0.36,0.36],
+    top:[[2.05,0.5],[2.0,0.61],[1.8,0.7],[1.4,0.78],[0.9,0.82],[0.5,0.84],[-0.9,0.86],[-1.6,0.83],[-1.92,0.74],[-2.05,0.6]],
+    bot:[[2.05,0.3],[1.9,0.23],[1.6,0.21],[-1.6,0.21],[-1.9,0.24],[-2.05,0.32]],
+    cab:{z0:0.52,z1:-1.5,roof:[[0.52,0.84],[0.24,1.03],[-0.05,1.18],[-0.4,1.23],[-0.75,1.19],[-1.1,1.06],[-1.5,0.87]],ws:-0.12,rw:-0.72,sg:[-0.95,0.46],inset:0.11,tumble:0.2,rc:0.1,crown:0.03},
+    wing:{z:-1.85},
+    dress(K,D){dressStd(K,D,{grille:[{x:[-0.42,0.42],y:[0.28,0.38]}],plateF:0.44,
+      tl:[{x:[0.36,0.78],y:[0.6,0.66]}],rtrim:[{x:[-0.8,0.8],y:[0.26,0.36]}],plateR:0.48,mz:0.36,my:0.94,handles:[-0.3],hy:0.78,sill:[0.25,0.32],exh:[-0.36,0.36],
+      extra(K,D,h){/* frog-eye lamps on top of the wings, engine-lid louvres, chrome bumper strips, a small ducktail */
+        for(const sx of [1,-1])discPatch(D.lamp,(x,z)=>K.on.top(sx*0.6-x,z),1.72,0.11,0.022,3,20);
+        for(let k=0;k<5;k++)h.Tp(D.trim,-0.36,0.36,-1.66+k*0.1,-1.62+k*0.1,0.02,3,1);
+        h.F(D.chrome,-0.86,0.86,0.42,0.47,0.02,8,1);h.R(D.chrome,-0.86,0.86,0.4,0.45,0.02,8,1);
+        lipSpoiler(K,D,-1.88,1.2);}});}},
+  /* ---- class A: a fast estate with roof rails, a boxy turbo rally sedan with a big wing ---- */
+  wagon:{len:4.95,wid:1.98,hitR:0.38,r:0.37,w:0.31,wz:[1.55,-1.5],taper:[0.14,0.08],fb:[0.06,0.06],exh:[-0.66,-0.52,0.52,0.66],exR:0.04,
+    top:[[2.475,0.7],[2.44,0.83],[2.25,0.91],[1.45,0.96],[0.95,0.98],[-1.0,1.0],[-2.2,1.02],[-2.42,0.98],[-2.475,0.88]],
+    bot:[[2.475,0.34],[2.33,0.26],[2.05,0.24],[-2.05,0.24],[-2.33,0.27],[-2.475,0.36]],
+    cab:{z0:0.97,z1:-2.4,roof:[[0.97,0.98],[0.45,1.25],[0.1,1.42],[-0.25,1.46],[-1.6,1.46],[-2.05,1.43],[-2.3,1.3],[-2.4,1.03]],ws:0.02,rw:-2.02,sg:[-2.15,0.86],bp:[-0.3,-0.18],inset:0.12,tumble:0.18,rail:true},
+    wing:{z:-2.1,roof:true},
+    dress(K,D){dressStd(K,D,{hl:[{x:[0.44,0.84],y:[0.7,0.8]}],grille:[{x:[-0.4,0.4],y:[0.62,0.8]},{x:[-0.72,0.72],y:[0.32,0.5]}],plateF:0.56,
+      tl:[{x:[0.56,0.9],y:[0.8,0.96]}],rtrim:[{x:[-0.86,0.86],y:[0.3,0.42]}],plateR:0.62,mz:0.78,my:1.03,handles:[0.35,-0.55],hy:0.9,sill:[0.29,0.36],exh:[-0.66,-0.52,0.52,0.66],exR:0.04,
+      extra(K,D,h){D.deco.color(LAMP_AMBER);h.F(D.deco,0.7,0.84,0.52,0.56,0.02,2,1);h.Sd(D.trim,1.72,1.98,0.62,0.7,0.02,3,1);
+        postWingRoof(K,D,-2.08,1.56);}});}},
+  evo:{len:4.5,wid:1.9,hitR:0.36,r:0.36,w:0.3,wz:[1.35,-1.3],taper:[0.12,0.08],fb:[0.08,0.08],exh:[0.52],exR:0.055,
+    top:[[2.25,0.66],[2.21,0.8],[2.05,0.88],[1.3,0.93],[0.85,0.96],[-1.0,0.98],[-1.8,1.0],[-2.18,0.99],[-2.25,0.9]],
+    bot:[[2.25,0.36],[2.1,0.27],[1.85,0.25],[-1.85,0.25],[-2.1,0.28],[-2.25,0.38]],
+    cab:{z0:0.85,z1:-1.7,roof:[[0.85,0.96],[0.4,1.2],[0.05,1.4],[-0.3,1.44],[-0.95,1.43],[-1.25,1.36],[-1.55,1.14],[-1.7,0.99]],ws:-0.05,rw:-1.15,sg:[-1.3,0.75],bp:[-0.4,-0.28],inset:0.12,tumble:0.18,rail:false},
+    wing:{z:-2.0},
+    dress(K,D){dressStd(K,D,{hl:[{x:[0.46,0.84],y:[0.7,0.8]}],grille:[{x:[-0.36,0.36],y:[0.68,0.8]},{x:[-0.74,0.74],y:[0.32,0.58]}],plateF:0.62,
+      tl:[{x:[0.5,0.88],y:[0.82,0.93]}],rtrim:[{x:[-0.85,0.85],y:[0.32,0.42]}],plateR:0.62,mz:0.66,my:1.03,handles:[0.3,-0.5],hy:0.88,sill:[0.31,0.38],exh:[0.52],exR:0.055,
+      extra(K,D,h){/* bonnet scoop and vents, fog lamps in the bumper, a tall wing on posts */
+        {const z=1.0,y=K.topY(z,0);D.trim.box(0.5,0.08,0.44,0,y+0.02,z,0.05);}h.Tp(D.trim,0.3,0.56,1.3,1.6,0.02,3,2);
+        for(const x of [0.6]){const s=K.on.front(x,0.42);if(!s)continue;const c=new THREE.CylinderGeometry(0.06,0.06,0.05,14);c.rotateX(Math.PI/2);for(const sx of [1,-1]){const g=c.clone();g.translate(sx*x,0.42,s[0].z+0.0);D.lamp.geo(g);g.dispose();}c.dispose();}
+        postWing(K,D,-2.0,1.7,0.24,0.32,false,true);}});}},
+  /* ---- class S: a front-engined V12 grand tourer, an open speedster without a roof ---- */
+  v12:{len:4.75,wid:2.02,hitR:0.42,r:0.37,w:0.34,wz:[1.5,-1.42],taper:[0.2,0.12],fb:[0.16,0.18],shoulder:-0.02,exh:[-0.62,-0.48,0.48,0.62],exR:0.045,
+    top:[[2.375,0.5],[2.34,0.6],[2.15,0.66],[1.5,0.72],[0.6,0.78],[-0.3,0.82],[-1.6,0.86],[-2.2,0.84],[-2.34,0.76],[-2.375,0.66]],
+    bot:[[2.375,0.26],[2.2,0.17],[1.9,0.16],[-1.9,0.16],[-2.2,0.2],[-2.375,0.3]],
+    cab:{z0:0.05,z1:-1.95,roof:[[0.05,0.8],[-0.25,0.99],[-0.55,1.13],[-0.9,1.17],[-1.25,1.11],[-1.6,0.97],[-1.95,0.87]],ws:-0.6,rw:-1.14,sg:[-1.3,-0.02],inset:0.16,tumble:0.2},
+    wing:{z:-2.2},
+    dress(K,D){dressStd(K,D,{hl:[{x:[0.55,0.9],z:[1.86,2.12]}],grille:[{x:[-0.56,0.56],y:[0.26,0.42]}],
+      tl:[{x:[0.55,0.92],y:[0.66,0.74]}],rtrim:[{x:[-0.92,0.92],y:[0.24,0.42]}],plateR:0.53,mz:-0.06,my:0.92,handles:[-0.72],hy:0.78,sill:[0.22,0.3],exh:[-0.62,-0.48,0.48,0.62],exR:0.045,
+      extra(K,D,h){/* long bonnet with vents, side gills behind the front wheels, diffuser, a small lip */
+        for(let k=0;k<4;k++)h.Tp(D.trim,0.42,0.66,0.7+k*0.14,0.76+k*0.14,0.02,3,1);
+        h.Sd(D.trim,0.72,1.0,0.42,0.6,0.02,3,2);
+        diffuser(K,D);lipSpoiler(K,D,-2.14,1.3);}});}},
+  speedster:{len:4.6,wid:2.0,hitR:0.42,r:0.36,w:0.34,wz:[1.45,-1.45],taper:[0.24,0.1],fb:[0.22,0.18],shoulder:-0.02,exh:[-0.3,0.3],exR:0.06,
+    top:[[2.3,0.42],[2.26,0.5],[2.0,0.56],[1.4,0.62],[0.8,0.7],[0.2,0.76],[-0.6,0.8],[-1.6,0.84],[-2.18,0.82],[-2.3,0.72]],
+    bot:[[2.3,0.25],[2.12,0.16],[1.8,0.15],[-1.8,0.15],[-2.12,0.19],[-2.3,0.29]],
+    wing:{z:-2.0},zcuts:[0.3,-0.75],
+    dress(K,D){dressStd(K,D,{hl:[{x:[0.52,0.86],z:[1.8,2.06]}],grille:[{x:[0.36,0.9],y:[0.25,0.38]},{x:[-0.26,0.26],y:[0.25,0.37]}],
+      tl:[{x:[0.4,0.92],y:[0.66,0.72]}],rtrim:[{x:[-0.92,0.92],y:[0.24,0.44]}],plateR:0.52,mz:0.24,my:0.88,sill:[0.22,0.3],exh:[-0.3,0.3],exR:0.06,
+      extra(K,D,h){/* open cockpit: dark tub, two seats with humps behind them, a low wraparound visor instead of a windscreen */
+        h.Tp(D.trim,-0.7,0.7,-0.75,0.3,0.02,6,6);
+        for(const x of [-0.36,0.36]){const y=K.topY(-0.4,x);D.trim.box(0.44,0.3,0.13,x,y+0.08,-0.6,-0.18);D.trim.box(0.26,0.12,0.09,x,y+0.29,-0.65,-0.18);
+          const f=K.topY(-1.1,x);const hump=new THREE.SphereGeometry(1,12,8,0,Math.PI*2,0,Math.PI/2);hump.scale(0.2,0.16,0.5);hump.translate(x,f,-1.12);D.paint.geo(hump);hump.dispose();}
+        {const z=0.36,y=K.topY(z,0);noNum(K,[-0.75,0.75,z-0.24,z+0.08]);D.glass.box(1.36,0.14,0.03,0,y+0.07,z-0.06,-0.9);D.trim.box(1.4,0.035,0.05,0,y+0.14,z-0.12,-0.9);}
+        {const t=new THREE.TorusGeometry(0.15,0.022,6,16);t.rotateX(-0.45);t.translate(0.36,K.topY(0.02,0.36)+0.13,0.02);D.trim.geo(t);t.dispose();}
+        diffuser(K,D);postWing(K,D,-1.98,1.76,0.2,0.32);}});}},
   city:{len:4.1,wid:1.9,hitR:0.32,r:0.34,w:0.24,wz:[1.3,-1.28],taper:[0.14,0.08],shoulder:-0.03,exh:[0.5],rim:'steel',
     top:[[2.02,0.66],[1.985,0.8],[1.85,0.9],[1.4,0.96],[0.75,1.03],[0,1.06],[-1.5,1.08],[-1.9,1.08],[-2.0,1.02],[-2.03,0.92]],
     bot:[[2.02,0.38],[1.88,0.29],[1.6,0.26],[-1.6,0.26],[-1.9,0.3],[-2.03,0.4]],
@@ -1999,7 +2076,9 @@ const TUNE_FIT={hatch:{roof:true,z:-1.5,h:0.1,span:1.5,chord:0.42},rally:{roof:t
   coupe:{z:-1.87,h:0.26,span:1.6,chord:0.34},roadster:{z:-1.8,h:0.26,span:1.58,chord:0.36},gt:{z:-2.05,h:0.3,span:1.76,chord:0.36},
   muscle:{z:-2.2,h:0.28,span:1.8,chord:0.4},fastback:{z:-2.24,h:0.28,span:1.78,chord:0.38},sedan:{z:-2.2,h:0.26,span:1.7,chord:0.38},
   super:{z:-1.98,h:0.3,span:1.8,chord:0.38},hyper:{z:-2.02,h:0.38,span:1.84,chord:0.42},longtail:{z:-2.5,h:0.24,span:1.5,chord:0.4},
-  proto:{z:-2.25,h:0.42,span:1.92,chord:0.44,duckGap:0.035}};
+  proto:{z:-2.25,h:0.42,span:1.92,chord:0.44,duckGap:0.035},
+  mini:{roof:true,z:-1.54,h:0.1,span:1.46,chord:0.4},retro:{z:-1.84,h:0.26,span:1.5,chord:0.34},wagon:{roof:true,z:-2.1,h:0.1,span:1.62,chord:0.42},
+  evo:{z:-2.0,h:0.3,span:1.72,chord:0.38},v12:{z:-2.14,h:0.3,span:1.82,chord:0.38},speedster:{z:-1.98,h:0.3,span:1.8,chord:0.38}};
 /* airfoil outline [[z,y],...] with the leading edge at (zLE,yLE), chord towards -z; camber bulges down (downforce), aoa lifts the trailing edge */
 function airfoil(zLE,yLE,c,th,camber,aoa){const up=[],lo=[],ca=Math.cos(aoa),sa=Math.sin(aoa);
   for(let k=0;k<=14;k++){const t=(1-Math.cos(k/14*Math.PI))/2,yt=5*th*c*(0.2969*Math.sqrt(t)-0.126*t-0.3516*t*t+0.2843*t*t*t-0.1036*t*t*t*t),yc=-camber*c*4*t*(1-t),s=t*c;
@@ -2034,7 +2113,7 @@ function tuneParts(K,kind){K.tune=K.tune||{};if(K.tune[kind])return K.tune[kind]
       const lip=new THREE.TorusGeometry(r-0.004,0.006,6,16);lip.translate(x,ty,zb-0.045);ch.geo(lip);lip.dispose();
       const d=new THREE.CircleGeometry(r*0.9,14);d.rotateY(Math.PI);d.translate(x,ty,zb-0.01);dk.geo(d);d.dispose();}}
   const o={cf:cf.build(),trim:tr.build(),paint:pt.build(),chrome:ch.build(),dark:dk.build()};for(const k in o)if(o[k])SHARED.add(o[k]);K.tune[kind]=o;return o;}
-function postWingRoof(K,D){const z=-1.66,y=K.cabY(-1.6,0);D.wingP.box(1.5,0.05,0.34,0,y+0.03,z-0.06,-0.1);for(const s of [-1,1])D.wingP.box(0.04,0.1,0.34,s*0.74,y-0.005,z-0.06);}
+function postWingRoof(K,D,z=-1.66,span=1.5){const y=K.cabY(z+0.06,0);D.wingP.box(span,0.05,0.34,0,y+0.03,z-0.06,-0.1);for(const s of [-1,1])D.wingP.box(0.04,0.1,0.34,s*(span/2-0.01),y-0.005,z-0.06);}
 const KITS=new Map();
 function carKit(type){if(KITS.has(type))return KITS.get(type);const s=CAR_SPECS[type]||CAR_SPECS.gt,S=Object.assign({zF:s.len/2,zR:-s.len/2,type},s);S.W=S.wid/2-0.005;if(S.wx===undefined)S.wx=S.W-S.w/2-0.012;
   const K=makeKit(S),D={};for(const k of ['paint','trim','lamp','tail','chrome','plate','deco','glass','wingP','wingT','exh','exhD','stripe'])D[k]=Acc();
@@ -2834,7 +2913,7 @@ function podiumUpdate(dt){if(!inPodium)return;podiumT+=dt;
   sun.position.copy(PPOS).addScaledVector(SUN_DIR,60);sun.target.position.copy(PPOS);
 }
 /* ================= career & achievements ================= */
-const CAR_PRICE={hatch:0,coupe:1500,rally:1800,roadster:2200,sedan:5500,gt:6000,fastback:7000,muscle:7500,super:16000,proto:18000,longtail:20000,hyper:22000};
+const CAR_PRICE={hatch:0,mini:1200,coupe:1500,rally:1800,roadster:2200,retro:2600,sedan:5500,gt:6000,wagon:6500,fastback:7000,muscle:7500,evo:8000,super:16000,proto:18000,speedster:19000,longtail:20000,hyper:22000,v12:24000};
 const CUPS=[
   {id:'B',cls:'B',name:'Polder Cup',diff:'normal',prize:[3000,1800,1000],rounds:[{track:'polder',time:'day',weather:'dry',laps:2},{track:'dorp',time:'day',weather:'dry',laps:3},{track:'veluwe',time:'day',weather:'dry',laps:2}]},
   {id:'A',cls:'A',name:'Delta Trofee',diff:'hard',need:'B',prize:[5000,3000,1600],rounds:[{track:'haven',time:'dusk',weather:'dry',laps:2},{track:'afsluitdijk',time:'day',weather:'rain',laps:2},{track:'circuit',time:'day',weather:'dry',laps:2},{track:'polder',time:'night',weather:'dry',laps:2}]},

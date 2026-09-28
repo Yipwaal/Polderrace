@@ -37,7 +37,7 @@ HITBOX_JS = r'''window.__hb=(()=>{
      if(ct&&gap>tol){fp++;if(ex.length<3)ex.push('vals '+ia+'/'+ib+' gat '+gap.toFixed(2));}if(!ct&&gap<-tol){fn++;if(ex.length<3)ex.push('mis '+ia+'/'+ib+' overlap '+(-gap).toFixed(2));}}
    return {fp,fn,ex};};
  return {fit,pairs};})();0'''
-from lib import Session, Report, DEFAULT
+from lib import Session, Report, DEFAULT, CAR_IDS
 
 rep = Report('botsingen')
 with Session(dict(DEFAULT, track='circuit', bots=2, laps=5), w=300, h=200) as s:
@@ -92,7 +92,7 @@ with Session(dict(DEFAULT, track='circuit', bots=2, laps=5), w=300, h=200) as s:
     m = tap(dict(botLat=0, botV=35, pDs=-6, pLat=0, pV=38, pAng=0, steerFrames=0))
     rep.check(m['loss'] < 8 and m['bot'] > 5, 'tikje van achteren: bot gaat mee, jij houdt je snelheid grotendeels', json.dumps(m))
     s.ev(HITBOX_JS)
-    fits = {c: s.ev(f"JSON.stringify(__hb.fit('{c}'))") for c in ['hatch', 'rally', 'coupe', 'roadster', 'gt', 'muscle', 'fastback', 'sedan', 'super', 'hyper', 'longtail', 'proto']}
+    fits = {c: s.ev(f"JSON.stringify(__hb.fit('{c}'))") for c in CAR_IDS}
     badfit = {c: f for c, f in fits.items() if json.loads(f)['out'] > 0.09 or json.loads(f)['miss'] > 0.09}
     rep.check(not badfit, 'hitbox valt op de carrosserie (max 9 cm eruit of erin)', str(badfit or fits['gt']))
     pr = json.loads(s.ev("JSON.stringify(__hb.pairs(400,0.08))"))
