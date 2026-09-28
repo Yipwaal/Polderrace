@@ -60,7 +60,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .mirror{position:absolute;border:4px solid #161a22;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.4);pointer-events:none}
 .replaybar{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(22,26,34,.85);color:#fff;border-radius:24px;padding:12px 14px;display:grid;gap:10px;justify-items:center;max-width:94vw}
 .replaybar .btnrow{flex-wrap:wrap;justify-content:center}.repinfo{font-weight:800;letter-spacing:.02em}
-.toast{position:absolute;bottom:22%;left:50%;transform:translateX(-50%);background:rgba(22,26,34,.85);color:#fff;padding:8px 16px;border-radius:999px;font:800 15px var(--font);pointer-events:none}
+.toast{position:absolute;bottom:22%;left:50%;transform:translateX(-50%);background:rgba(22,26,34,.85);color:#fff;padding:8px 16px;border-radius:999px;font:800 15px var(--font);pointer-events:none;z-index:31} /* above the menus and the results board, like the achievement popup */
 #mm{display:block;width:132px;height:132px}
 .lbl{font:800 11px/1.2 var(--font);letter-spacing:.12em;text-transform:uppercase;color:var(--lab)}
 .big{font-size:2.6rem;font-weight:900;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
@@ -224,6 +224,16 @@ kbd{font:800 12px/1 var(--font);min-width:1.8em;padding:5px 9px;border-radius:99
 .cupcard em{font:800 13px var(--font);font-style:normal;white-space:nowrap;display:flex;align-items:center}
 .cupcard em svg{display:block}
 .ccards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+/* career story: chapter tabs, a speaker with a round avatar, the goal of an event */
+.seg.chs button{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0}
+.seg.chs button span{overflow:hidden;text-overflow:ellipsis}.seg.chs button b{font-weight:900}
+.story.evinfo{margin:-4px 0 4px;background:rgba(255,255,255,.07)}
+.chapter{display:flex;flex-direction:column;gap:6px}.chapter h3{margin:0;font:900 20px/1.15 var(--font)}.chapter>small{font:700 13px/1.3 var(--font);color:var(--sub)}
+.story{display:flex;flex-direction:column;gap:12px;background:var(--card);border-radius:16px;padding:14px 16px;flex:0 0 auto}
+.sline{display:flex;gap:12px;align-items:flex-start}
+.sline .avatar{flex:none;width:38px;height:38px;border-radius:50%;background:var(--c);display:grid;place-items:center;font:900 17px/1 var(--font);font-style:normal;box-shadow:inset 0 0 0 2px rgba(255,255,255,.4)}
+.sline p{margin:0;font:600 14px/1.45 var(--font)}.sline b{display:block;font:900 13px/1.2 var(--font);color:var(--detour);margin-bottom:3px}
+.evgoal{margin:0;font:800 13px/1.35 var(--font);color:var(--sub)}.storybonus{margin:0;font:900 15px/1 var(--font);color:var(--detour)}
 .ccard{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--card);color:inherit;font:inherit;border:0;border-radius:16px;padding:12px 14px;cursor:pointer;min-width:0}
 .ccard:hover:not([aria-checked="true"]):not([aria-pressed="true"]){background:rgba(255,255,255,.14)}
 .ccard[aria-checked="true"],.ccard[aria-pressed="true"]{background:var(--detour);color:var(--ink)}
@@ -384,6 +394,7 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
 }
 @media (max-width:560px){
   .grid2,#tracks,.achs,.ccards{grid-template-columns:1fr}
+  .seg.chs button .nm{display:none} /* chapter tabs: just the numbers, the name is in the heading below */
   .rectable .rh,.rectable .rr{grid-template-columns:1fr 64px 64px 64px;padding:10px 14px}
   .modeseg button,.clsseg button{font-size:13px;padding:10px 2px}
   .stat{font-size:11px}
@@ -475,8 +486,10 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
       </div>
       <div id="homeCareer" class="panel" hidden>
         <div class="garhead"><h2>Carrière</h2><span id="careerCredits" class="credits"></span></div>
+        <div id="careerChs" class="seg full chs" role="radiogroup" aria-label="Hoofdstuk"><button data-v="c1"></button><button data-v="c2"></button><button data-v="c3"></button><button data-v="c4"></button></div>
+        <div class="chapter"><h3 id="careerChTitle"></h3><small id="careerChSub"></small><div id="careerIntro" class="story"></div></div>
         <div id="careerList" class="cups"></div>
-        <div class="panel" style="flex:0;gap:10px"><span class="eyebrow">Jouw auto</span><div id="careerCars" class="ccards"></div></div>
+        <div class="panel" style="flex:0;gap:10px"><span class="eyebrow">Jouw auto</span><div id="careerCars" class="ccards"></div><p id="careerCarNote" class="note small" hidden></p></div>
         <div class="btnrow nav"><button class="ghost" data-homeback>Terug</button><span class="btnrow"><button id="careerNew" class="ghost lite" hidden>Opnieuw beginnen</button><button id="careerGo" class="cta">Start</button></span></div>
       </div>
       <div id="homeNet" class="panel" hidden><div id="netBox" class="panel">
@@ -646,6 +659,7 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
         <div><span id="overSub" class="eyebrow"></span><h2 id="overTitle">Tijd is op</h2></div>
         <div class="tags"><span id="recordTag" class="tag" hidden>Nieuw record</span><span id="earnTag" class="earn" hidden></span></div>
       </div>
+      <div id="storyBox" class="story" hidden></div>
       <dl id="stats" class="stats">
         <div><dt>Afstand</dt><dd id="oDist">0,0 km</dd></div>
         <div><dt>Checkpoints</dt><dd id="oCp">0</dd></div>
@@ -2164,7 +2178,9 @@ if(!['race','elim','time','ghost','split'].includes(settings.mode))settings.mode
 settings.bots=clamp(settings.bots|0,settings.mode==='split'?0:1,7);settings.laps=clamp(settings.laps|0,1,5);
 let env={time:'day',weather:'dry'};
 const ACC_K=0.48,BRK_K=0.72;
-const saveSettings=()=>store.set('polderrace3d-settings',JSON.stringify(settings));
+/* careerEv: the career event being raced (race, elimination or duel); careerPrev: the quick-race settings it borrowed, given back in toMenu and never saved over */
+let careerEv=null,careerPrev=null;
+const saveSettings=()=>store.set('polderrace3d-settings',JSON.stringify(careerPrev?Object.assign({},settings,careerPrev):settings));
 let prefs={sound:true,fx:true,cam:0,damage:true,gearbox:'auto',mirror:!('ontouchstart' in window)};try{Object.assign(prefs,JSON.parse(store.get('polderrace3d-prefs','{}')));}catch(e){}
 if(!prefs.quality)prefs.quality=prefs.shadows===false?'low':'high';
 const savePrefs=()=>store.set('polderrace3d-prefs',JSON.stringify(prefs));
@@ -2228,9 +2244,9 @@ function rivalBoost(){const r={vmax:1,acc:1,grip:1,brake:1};if(net&&net.inRace)r
   for(const k in r){let m=0;for(const id of ids)m+=effStats(id)[k]/CARS[id][k]/ids.length;r[k]=1+(m-1)*RIVAL_TUNE;}return r;}
 function setupBots(n,defs){
   clearBots();const d=DIFF[settings.diff],rb=rivalBoost();defs=defs||makeBotDefs(n);
-  for(let k=0;k<defs.length;k++){const type=defs[k].type,col=defs[k].color,m=buildCar(type,new THREE.Color(col)),cd=CARS[type];scene.add(m.g);
-    bots.push({m,name:defs[k].name,type,color:col,out:false,outAt:0,elimPos:0,s:0,lat:0,lineLat:(Math.random()-.5)*2.2,speed:0,cur:0,
-      vmax:cd.vmax/3.6*d.speed*rb.vmax*(1-d.jit*0.7+Math.random()*d.jit),acc:cd.acc*ACC_K*d.acc*rb.acc*(1-d.jit*0.5+Math.random()*d.jit),aLat:d.aLat*cd.grip*rb.grip*(1-d.jit+Math.random()*d.jit*1.2),brk:d.brake*BRK_K*rb.brake,
+  for(let k=0;k<defs.length;k++){const type=defs[k].type,col=defs[k].color,m=buildCar(type,new THREE.Color(col)),cd=CARS[type],sk=defs[k].rival?1.015:1;scene.add(m.g); /* a career rival drives a touch sharper */
+    bots.push({m,name:defs[k].name,type,color:col,rival:!!defs[k].rival,out:false,outAt:0,elimPos:0,s:0,lat:0,lineLat:(Math.random()-.5)*2.2,speed:0,cur:0,
+      vmax:cd.vmax/3.6*d.speed*rb.vmax*sk*(1-d.jit*0.7+Math.random()*d.jit),acc:cd.acc*ACC_K*d.acc*rb.acc*(1-d.jit*0.5+Math.random()*d.jit),aLat:d.aLat*cd.grip*rb.grip*sk*(1-d.jit+Math.random()*d.jit*1.2),brk:d.brake*BRK_K*rb.brake,
       lap:0,finished:false,finishTime:0,bestLap:0,lapStart:0,passT:0,passLat:0,latV:0,mass:CARS[type].mass,lp:0,yawK:0,vx:0,vz:0});}
 }
 function gridSlot(k){const row=Math.floor(k/2),col=k%2;return {s:(S_START-9-row*9+TRACK_LEN)%TRACK_LEN,lat:(col?1:-1)*Math.min(3.2,ROAD_HALF-2.2)};}
@@ -2450,7 +2466,7 @@ function startRace(){
   raceLaps=mode==='champ'?CR()[champ.round].laps:mode==='elim'?settings.bots:settings.laps;
   lapRecordSet=false;ghostSaved=false;sectorsReset();setGateMode(mode==='time');distance=0;checkpoints=0;shake=0;raceBestLap=0;raceTopSpeed=0;raceTime=0;raceDone=false;raceFinishTime=0;finishAt=0;
   elimDone=0;playerOut=false;achRaceStart();replayClear();gustT=9;gustPhase=0;gustWarn=false;elimPos=0;lapTimes=[];player.lap=0;overView='results';resetDamage();
-  if(raceMode){clearTraffic();setupBots(0,mode==='champ'?champ.bots:(net&&net.inRace&&net.botDefs)?net.botDefs:makeBotDefs(split?Math.min(settings.bots,5):settings.bots));placeGrid();nextCp=0;if(split)splitSetup();if(net&&net.inRace)netPlace();}
+  if(raceMode){clearTraffic();setupBots(0,mode==='champ'?champ.bots:(net&&net.inRace&&net.botDefs)?net.botDefs:careerEv?careerEv.defs:makeBotDefs(split?Math.min(settings.bots,5):settings.bots));placeGrid();nextCp=0;if(split)splitSetup();if(net&&net.inRace)netPlace();}
   else if(mode==='ghost'){clearTraffic();clearBots();placeGrid();nextCp=0;ghostStart();}
   else{clearBots();buildTraffic();resetPlayer(0,0);nextCp=1;timeLeft=TRK.startTime;}
   if(mode!=='ghost')ghostHide();
@@ -2465,8 +2481,11 @@ function toMenu(step){
   if(champPrevDiff!==null){settings.diff=champPrevDiff;champPrevDiff=null;} /* the championship's difficulty must not leak into the quick-race menu */
   if(champ&&champ.round>=CR().length&&!champ.done){champ.done=true;champ.active=false;saveChamp();}
   if(champ&&champ.career){champ.active=false;saveChamp();champ=loadQuickChamp();}
+  careerEv=null;if(careerPrev){Object.assign(settings,careerPrev);careerPrev=null;}
   showMenu(step===undefined?-1:step);if(net&&(step===undefined||step<0))homePanel('net');
 }
+/* after a career race or cup: back to the career screen (the next event is selected there); otherwise to the menu */
+function toCareerOr(step){const c=!!careerEv||!!(champ&&champ.career);toMenu(step);if(c){careerSel=null;homePanel('career');}}
 function finishPlayer(win){
   if(split){splitFinish();return;}
   raceDone=true;raceFinishTime=raceTime;state='finished';finishAt=clock+3;
@@ -2526,21 +2545,25 @@ function showResults(){
   state='over';buildResults();
   let cr=0;
   if(!split)achRaceEnd(resultRows.findIndex(r=>r.me)+1);
-  if(mode==='champ'){champRecordRace();cr=awardCredits(resultRows.findIndex(r=>r.me)+1);}
+  const pos=resultRows.findIndex(r=>r.me)+1;let label='';
+  if(mode==='champ'){champRecordRace();cr=awardCredits(pos);}
   else if(mode==='ghost')cr=awardCredits();
-  else cr=awardCredits(resultRows.findIndex(r=>r.me)+1);
-  setEarned(cr);showOver();
+  else if(careerEv){careerEv.res=careerEventDone(careerEv.ev,pos);cr=addCredits(careerEv.ev.prize[pos-1]||0);label='prijzengeld';}
+  else cr=awardCredits(pos);
+  setEarned(cr,label);showOver();if(careerEv)careerStory(careerEv.ev,careerEv.res);
   if((mode==='race'||mode==='elim'||mode==='champ')&&!split&&!(net&&net.inRace)&&resultRows.length>1){const cup=mode==='champ'&&champ&&champ.career?CUPS.find(c=>c.id===champ.career):null;
     enterPodium(podiumEntries(resultRows,r=>r.tm||''),cup?cup.name:mode==='champ'?'Kampioenschap':(TRACKS[TRACK_ID].banner||TRACKS[TRACK_ID].name));}
 }
 function showOver(){$('replayBtn').hidden=!(replay&&replay.frames.length>30);['hud','touch','msg','lights'].forEach(id=>$(id).hidden=true);$('over').hidden=false;clearKeys();
   $('overSub').textContent=TRACKS[TRACK_ID].name+(TRACK_DIR==='rev'?' (omgekeerd)':'')+' · '+MODE_NAMES[mode].toLowerCase()+(mode==='time'?'':' · '+raceLaps+(raceLaps===1?' ronde':' ronden'));
-  $('againBtn').textContent=mode==='champ'?'Tussenstand':'Opnieuw racen';$('menuBtn').textContent='Hoofdmenu';$('menuBtn').hidden=false;
+  $('storyBox').hidden=true;const ce=careerEv&&careerEv.res;
+  $('againBtn').textContent=mode==='champ'?'Tussenstand':ce?(ce.passed?'Verder':'Opnieuw proberen'):'Opnieuw racen';$('menuBtn').textContent=careerEv||(champ&&champ.career)?'Carrière':'Hoofdmenu';$('menuBtn').hidden=false;
   overReady=false;setTimeout(()=>{overReady=true;if(state==='over')$('againBtn').focus({preventScroll:true});},700);}
 function onAgain(){
   if(!(state==='over'&&overReady))return;replayClear();
   if(mode==='champ'){if(overView==='results'){showStandings();return;}
-    if(champ.round<CR().length){loadChampRound();startRace();}else toMenu(-1);return;}
+    if(champ.round<CR().length){loadChampRound();startRace();}else toCareerOr(-1);return;}
+  if(careerEv&&careerEv.res&&careerEv.res.passed){toCareerOr(-1);return;} /* on to the next event; not passed: try again */
   startRace();
 }
 const pauseSettingsOpen=()=>$('pauseBoard').contains($('homeSettings'));
@@ -2598,7 +2621,7 @@ function hitCheckpoint(k){
 }
 $('againBtn').addEventListener('click',onAgain);$('replayBtn').addEventListener('click',replayOpen);$('repBack').addEventListener('click',replayClose);$('repSave').addEventListener('click',replaySave);
 $('repCam').addEventListener('click',()=>{if(!rp)return;rp.camMode=(rp.camMode+1)%3;rp.camT=0;rp.anchor=null;replayLabel();});
-$('repNext').addEventListener('click',()=>{if(!rp)return;rp.target=(rp.target+1)%rp.meshes.length;rp.anchor=null;replayLabel();});$('repPrev').addEventListener('click',()=>{if(!rp)return;rp.target=(rp.target-1+rp.meshes.length)%rp.meshes.length;rp.anchor=null;replayLabel();});$('menuBtn').addEventListener('click',()=>toMenu(-1));$('quitBtn').addEventListener('click',()=>toMenu(-1));
+$('repNext').addEventListener('click',()=>{if(!rp)return;rp.target=(rp.target+1)%rp.meshes.length;rp.anchor=null;replayLabel();});$('repPrev').addEventListener('click',()=>{if(!rp)return;rp.target=(rp.target-1+rp.meshes.length)%rp.meshes.length;rp.anchor=null;replayLabel();});$('menuBtn').addEventListener('click',()=>toCareerOr(-1));$('quitBtn').addEventListener('click',()=>toMenu(-1));
 $('resumeBtn').addEventListener('click',()=>setPaused(false));$('pSettings').addEventListener('click',openPauseSettings);
 $('restartBtn').addEventListener('click',()=>{if(!paused)return;paused=false;$('pause').hidden=true;if(actx)actx.resume();state='over';overReady=true;startRace();});$('pauseBtn').addEventListener('click',()=>setPaused(!paused));
 $('muteBtn').addEventListener('click',toggleMute);$('resetBtn').addEventListener('click',()=>resetToTrack());
@@ -2670,10 +2693,12 @@ function showStandings(){
   overView='standings';const st=champStandings(),ol=$('results');ol.innerHTML='';ol.classList.remove('withpts');
   st.forEach((r,k)=>ol.appendChild(li3(r.me?'me':'',(k+1)+'.',{name:r.name,sub:r.car},r.pts+' pt')));
   const done=champ.round>=CR().length,pos=st.findIndex(r=>r.me)+1;
+  $('storyBox').hidden=true;
   if(done){$('overTitle').textContent=pos===1?'Kampioen!':'Eindstand: '+pos+'e';{const cup=champ.career?CUPS.find(c=>c.id===champ.career):null;enterPodium(podiumEntries(st,r=>r.pts+' pt'),cup?cup.name:'Kampioenschap');}
     if(!champ.bonusPaid){champ.bonusPaid=true;const cup=champ.career?CUPS.find(c=>c.id===champ.career):null;const b=cup?(cup.prize[pos-1]||0):Math.round(([2000,1200,800][pos-1]||0)*DIFF[champ.diff].pay);const cr=b?addCredits(b):0;
-      setEarned(cr,cup?cup.name+'-bonus':'Kampioenschapsbonus');champ.active=false;champ.done=true;saveChamp();if(cup)careerCupDone(cup,pos);else if(pos===1)unlockAch('champ');}
-    $('againBtn').textContent='Naar het hoofdmenu';$('menuBtn').hidden=true;$('replayBtn').hidden=true;}
+      setEarned(cr,cup?cup.name+'-bonus':'Kampioenschapsbonus');champ.active=false;champ.done=true;saveChamp();if(cup)champ.res=careerEventDone(cup,pos);else if(pos===1)unlockAch('champ');}
+    {const cup=champ.career?CUPS.find(c=>c.id===champ.career):null;if(cup&&champ.res)careerStory(cup,champ.res);}
+    $('againBtn').textContent=champ.career?'Verder':'Naar het hoofdmenu';$('menuBtn').hidden=true;$('replayBtn').hidden=true;}
   else{$('overTitle').textContent='Tussenstand na race '+champ.round+' van '+CR().length;const nx=CR()[champ.round];
     $('againBtn').textContent='Volgende race: '+TRACKS[nx.track].name;}
   $('recordTag').hidden=true;$('stats').hidden=true;$('rstats').hidden=true;ol.hidden=false;$('againBtn').focus({preventScroll:true});
@@ -2919,12 +2944,73 @@ function podiumUpdate(dt){if(!inPodium)return;podiumT+=dt;
 }
 /* ================= career & achievements ================= */
 const CAR_PRICE={hatch:0,mini:1200,coupe:1500,rally:1800,roadster:2200,retro:2600,sedan:5500,gt:6000,wagon:6500,fastback:7000,muscle:7500,evo:8000,super:16000,proto:18000,speedster:19000,longtail:20000,hyper:22000,v12:24000};
-const CUPS=[
-  {id:'B',cls:'B',name:'Polder Cup',diff:'normal',prize:[3000,1800,1000],rounds:[{track:'polder',time:'day',weather:'dry',laps:2},{track:'dorp',time:'day',weather:'dry',laps:3},{track:'veluwe',time:'day',weather:'dry',laps:2}]},
-  {id:'A',cls:'A',name:'Delta Trofee',diff:'hard',need:'B',prize:[5000,3000,1600],rounds:[{track:'haven',time:'dusk',weather:'dry',laps:2},{track:'afsluitdijk',time:'day',weather:'rain',laps:2},{track:'circuit',time:'day',weather:'dry',laps:2},{track:'polder',time:'night',weather:'dry',laps:2}]},
-  {id:'S',cls:'S',name:'Oranje Grand Prix',diff:'extreme',need:'A',prize:[9000,5000,2500],rounds:[{track:'circuit',time:'dusk',weather:'dry',laps:3},{track:'veluwe',time:'day',weather:'fog',laps:2},{track:'haven',time:'night',weather:'dry',laps:2,dir:'rev'},{track:'afsluitdijk',time:'day',weather:'dry',laps:2},{track:'dorp',time:'night',weather:'dry',laps:3,dir:'rev'}]}];
+/* ---- career: four chapters with a story. Each chapter is a string of events (race, elimination, a duel with the chapter's rival)
+   that ends in a cup on points; an event opens when the one before it met its goal, a chapter when the previous finale did.
+   Results live in garage.career.cups[event id] = {best, won} (the finales keep the old cup ids B, A, S, so old saves carry over) ---- */
+const PEOPLE={kees:{name:'Opa Kees',col:'#f2c200',ink:'#1b1b1b'},daan:{name:'Daan de Wit',col:'#d62a2a'},marloes:{name:'Marloes',col:'#2f8f5b'},ingrid:{name:'Ingrid Bakker',col:'#1d4f9e'},baron:{name:'De Baron',col:'#1b1b1b'}};
+const RIVALS={daan:{name:'Daan',full:'Daan de Wit',color:'#d62a2a'},ingrid:{name:'Ingrid',full:'Ingrid Bakker',color:'#1d4f9e'},baron:{name:'De Baron',full:'Joost van Dam, de Baron',color:'#1b1b1b'}};
+const EV_KIND={race:'Race',elim:'Eliminatie',duel:'Duel',cup:'Kampioenschap'};
+const CHAPTERS=[
+  {id:'c1',tab:'Polder',cls:'B',name:'De polder',rival:['daan','rally'],bonus:1500,
+    intro:['kees','Zo, dus jij wilt racen? Ik reed vroeger rally, weet je. Begin maar in de polder, met de jongens uit het dorp. En pas op voor Daan de Wit: die denkt dat hij de snelste van de streek is.'],
+    outro:['kees','Kampioen van de polder! Er belde net iemand van Team Delta: ze willen je zien rijden in klasse A. Van mij krijg je € 1.500 voor je eerste A-auto.'],
+    events:[
+      {id:'b1',kind:'race',name:'Proefrit door de polder',track:'polder',laps:2,bots:3,diff:'easy',goal:3,prize:[500,350,250],
+        pre:['kees','Rustig beginnen: drie jongens uit het dorp, twee rondjes. Kom maar bij de eerste drie.'],win:['kees','Niet slecht voor een eerste keer! Je hebt het in je bloed.'],lose:['kees','Geeft niks. Nog een keer, en kijk verder vooruit in de bochten.']},
+      {id:'b2',kind:'race',name:'Kermisrace',track:'dorp',time:'dusk',laps:3,bots:5,diff:'easy',goal:3,prize:[700,450,300],
+        pre:['kees','Op de kermis rijden ze elk jaar een race door de straatjes. Daan wint hem altijd. Tijd dat iemand hem op zijn plek zet.'],win:['daan','Hé, wie ben jij nou weer? Geluk gehad. Volgende keer niet.'],lose:['daan','Haha! Ga eerst maar eens leren rijden.']},
+      {id:'b3',kind:'elim',name:'Laatste man staat',track:'circuit',bots:4,diff:'normal',goal:2,prize:[900,600,300],
+        pre:['kees','Op het circuit doen ze eliminatie: na elke ronde valt de laatste af. Niet achteraan blijven hangen!'],win:['kees','Zie je wel. Rustig blijven en op het goede moment toeslaan.'],lose:['kees','Achteraan is het gevaarlijk. Haal in de eerste ronde al een paar auto\'s in.']},
+      {id:'b4',kind:'duel',name:'Duel op de dijk',track:'afsluitdijk',laps:2,diff:'normal',goal:1,prize:[1200,300],
+        pre:['daan','Jij denkt dat je snel bent? Eén tegen één, over de Afsluitdijk. Wie verliest, betaalt de patat.'],win:['daan','...Oké. Jij hoeft de patat niet te betalen. Respect.'],lose:['daan','Patat met, graag! Kom maar terug als je durft.']},
+      {id:'B',kind:'cup',name:'Polder Cup',diff:'normal',goal:3,prize:[3000,1800,1000],rounds:[{track:'polder',time:'day',weather:'dry',laps:2},{track:'dorp',time:'day',weather:'dry',laps:3},{track:'veluwe',time:'day',weather:'dry',laps:2}],
+        pre:['kees','Dit is hem: de Polder Cup. Drie races, punten tellen. Eindig bij de eerste drie en de grote teams gaan je zien.'],win:['kees','Wat een cup! Ik heb de hele tijd staan juichen.'],lose:['kees','Net niet. De punten tellen over alle races: elke plek telt, ook als je niet wint.']}]},
+  {id:'c2',tab:'Delta',cls:'A',name:'De delta',rival:['ingrid','evo'],bonus:5000,
+    intro:['marloes','Welkom bij Team Delta. Wij rijden klasse A, van de havens tot de Zeeuwse dijken. Onze kopvrouw Ingrid Bakker is de beste van het land. Laat zien dat je naast haar hoort.'],
+    outro:['marloes','De Delta Trofee is van jou! Het team geeft je € 5.000 voor een klasse S-auto. En er is iemand die je wil spreken: de Baron zelf.'],
+    events:[
+      {id:'a1',kind:'race',name:'Havennacht',track:'haven',time:'night',laps:2,bots:5,diff:'normal',goal:3,prize:[1100,700,450],
+        pre:['marloes','Eerste test: een nachtrace tussen de containers. Houd je hoofd koel.'],win:['marloes','Mooi. Ingrid keek mee, ik zag haar fronsen.'],lose:['marloes','Tussen de containers is het krap. Rem eerder, geef eerder gas.']},
+      {id:'a2',kind:'race',name:'Regen op de dijk',track:'afsluitdijk',weather:'rain',laps:2,bots:5,diff:'normal',goal:3,prize:[1300,800,500],
+        pre:['kees','Regen? Dat is juist jouw kans. De anderen durven niet. Jij wel.'],win:['kees','Ha! Net als ik vroeger.'],lose:['kees','In de regen win je in de bochten, niet op het rechte stuk.']},
+      {id:'a3',kind:'elim',name:'Zeeuwse eliminatie',track:'zeeland',bots:5,diff:'hard',goal:2,prize:[1500,900,400],
+        pre:['ingrid','Dus jij bent de nieuwe. In Zeeland valt elke ronde iemand af. Ik hoop voor je dat jij het niet bent.'],win:['ingrid','Hm. Niet slecht. Maar een eliminatie is nog geen kampioenschap.'],lose:['ingrid','Zie je. Eén ronde te laat, en je staat aan de kant.']},
+      {id:'a4',kind:'duel',name:'Duel in de Maasstad',track:'rotterdam',time:'night',laps:2,diff:'hard',goal:1,prize:[2000,500],
+        pre:['ingrid','Rotterdam, \'s nachts, jij en ik. Geen teamorders. Laat maar zien wat je waard bent.'],win:['ingrid','...Je bent goed. Echt goed. Ik zie je in de Delta Trofee.'],lose:['ingrid','Je bent snel, maar je bent nog geen Ingrid Bakker.']},
+      {id:'A',kind:'cup',name:'Delta Trofee',diff:'hard',goal:3,prize:[5000,3000,1600],rounds:[{track:'haven',time:'dusk',weather:'dry',laps:2},{track:'afsluitdijk',time:'day',weather:'rain',laps:2},{track:'circuit',time:'day',weather:'dry',laps:2},{track:'polder',time:'night',weather:'dry',laps:2}],
+        pre:['marloes','De Delta Trofee. Vier races, en Ingrid wil winnen. Het hele team kijkt.'],win:['ingrid','Gefeliciteerd. Dat meen ik. Pas op voor de Baron: die verliest niet graag.'],lose:['marloes','Volgend jaar weer een kans. Of nu meteen, natuurlijk.']}]},
+  {id:'c3',tab:'Oranje',cls:'S',name:'Oranje',rival:['baron','v12'],bonus:6000,
+    intro:['baron','Zo. Jij bent dus het polderwonder waar iedereen het over heeft. Ik ben Joost van Dam, maar ze noemen me de Baron. In klasse S win ik al vijf jaar alles. Dat blijft zo.'],
+    outro:['kees','Kampioen van Nederland! Mijn kleinkind! Hier, € 6.000 uit de spaarpot. Maar de Baron wil revanche, hoor ik...'],
+    events:[
+      {id:'s1',kind:'race',name:'Grachten bij nacht',track:'grachten',time:'night',laps:2,bots:5,diff:'hard',goal:3,prize:[2200,1400,900],
+        pre:['kees','Klasse S! Die auto\'s gaan harder dan mijn ouwe rallyauto ooit ging. Pas op de bruggetjes.'],win:['kees','Ik zat op het puntje van mijn stoel!'],lose:['kees','Die bruggetjes... neem ze recht, dan blijf je op de weg.']},
+      {id:'s2',kind:'race',name:'Mist op de Veluwe',track:'veluwe',weather:'fog',laps:2,bots:5,diff:'hard',goal:3,prize:[2400,1500,1000],
+        pre:['marloes','Mist op de Veluwe. Je ziet de bochten pas als je erin zit. Vertrouw op je geheugen.'],win:['marloes','Blind rijden en toch winnen. De Baron heeft je gezien.'],lose:['marloes','Rij een paar rondjes tijdrit op de Veluwe, dan ken je de bochten uit je hoofd.']},
+      {id:'s3',kind:'elim',name:'Limburgse heuvels',track:'limburg',bots:5,diff:'hard',goal:2,prize:[2800,1600,800],
+        pre:['baron','Heuvels, haarspelden en een eliminatie. Hier zie je wie echt kan rijden.'],win:['baron','Hm. Een toevalstreffer.'],lose:['baron','Zoals ik al zei.']},
+      {id:'s4',kind:'duel',name:'Duel met de Baron',track:'circuit',time:'dusk',laps:3,diff:'extreme',goal:1,prize:[4000,800],
+        pre:['baron','Het circuit, drie ronden. Win je, dan rijd je mee in de Oranje Grand Prix. Verlies je, dan ga je terug naar je polder.'],win:['baron','...Onmogelijk. Goed dan. Tot in de Grand Prix.'],lose:['baron','De polder roept, geloof ik.']},
+      {id:'S',kind:'cup',name:'Oranje Grand Prix',diff:'extreme',goal:3,prize:[9000,5000,2500],rounds:[{track:'circuit',time:'dusk',weather:'dry',laps:3},{track:'veluwe',time:'day',weather:'fog',laps:2},{track:'haven',time:'night',weather:'dry',laps:2,dir:'rev'},{track:'afsluitdijk',time:'day',weather:'dry',laps:2},{track:'dorp',time:'night',weather:'dry',laps:3,dir:'rev'}],
+        pre:['kees','De Oranje Grand Prix. Vijf races. Ik heb een kaartje voor de tribune gekocht. Maak me trots.'],win:['baron','Ik... feliciteer je. Maar dit is nog niet voorbij.'],lose:['baron','Vijf jaar op rij. En volgend jaar weer.']}]},
+  {id:'c4',tab:'Legende',cls:'S',name:'Legende',rival:['baron','v12'],bonus:0,
+    intro:['baron','Je hebt de Grand Prix gewonnen. Knap. Maar echte legendes rijden de Tour van Nederland: elke uithoek van het land. Ingrid en Daan doen ook mee. Durf jij?'],
+    outro:['kees','Een legende! Kom, we gaan patat halen. Ik trakteer.'],
+    events:[
+      {id:'l1',kind:'duel',name:'Revanche van Daan',track:'zeeland',dir:'rev',time:'dusk',laps:2,diff:'extreme',goal:1,prize:[3000,600],rivals:[['daan','speedster']],
+        pre:['daan','Weet je nog, de patat? Ik heb gespaard en een Speedster gekocht. Revanche!'],win:['daan','Oké, oké. Jij bent gewoon beter. Zullen we samen patat halen?'],lose:['daan','Ha! Eindelijk! Dat was de patat van toen.']},
+      {id:'l2',kind:'race',name:'Ingrids laatste seizoen',track:'haven',dir:'rev',laps:2,bots:7,diff:'extreme',goal:1,prize:[3500,1500,800],rivals:[['ingrid','hyper']],
+        pre:['ingrid','Dit is mijn laatste seizoen. Ik ga niet zomaar opzij. Win maar eens van zeven man tegelijk.'],win:['ingrid','Van zeven man tegelijk. Dat had ik nooit gedacht: jij bent beter dan ik.'],lose:['ingrid','Nog niet, nieuwkomer. Nog niet.']},
+      {id:'l3',kind:'elim',name:'Nacht in het dorp',track:'dorp',dir:'rev',time:'night',bots:6,diff:'extreme',goal:1,prize:[4000,2000,1000],rivals:[['baron','v12'],['daan','speedster']],
+        pre:['kees','Het dorp waar alles begon, maar dan \'s nachts en achterstevoren. Zes tegenstanders, één winnaar.'],win:['kees','Het hele dorp stond op straat te juichen!'],lose:['kees','In het donker lijken de straatjes smaller. Je kunt het, echt.']},
+      {id:'L',kind:'cup',name:'Tour van Nederland',diff:'extreme',goal:3,prize:[15000,7000,3500],rivals:[['baron','v12'],['ingrid','hyper'],['daan','speedster']],
+        rounds:[{track:'polder',time:'dusk',weather:'dry',laps:2},{track:'veluwe',time:'day',weather:'dry',laps:2},{track:'grachten',time:'night',weather:'dry',laps:2},{track:'limburg',time:'day',weather:'dry',laps:2},{track:'rotterdam',time:'night',weather:'dry',laps:2},{track:'zeeland',time:'day',weather:'rain',laps:2}],
+        pre:['baron','Zes races door heel Nederland, en wij drieën tegen jou. Na deze tour weet iedereen wie de beste is.'],win:['baron','Je bent een legende. Dat moet ik toegeven. Het was me een eer.'],lose:['baron','De Tour is zwaar. Zelfs voor een Grand Prix-kampioen.']}]}];
+const CAREER_EVS=CHAPTERS.flatMap(c=>c.events);
+const CUPS=CAREER_EVS.filter(e=>e.kind==='cup');
+const chapterOf=ev=>CHAPTERS.find(c=>c.events.includes(ev));
 if(!garage.owned){garage.owned={hatch:true};for(const id in garage.cars){const u=garage.cars[id];if(u.eng||u.turbo||u.tyre||u.brake)garage.owned[id]=true;}saveGarage();}
-if(!garage.career)garage.career={cups:{}};if(!garage.ach)garage.ach={};if(!garage.wins)garage.wins={};
+if(!garage.career)garage.career={cups:{}};if(!garage.career.bonus)garage.career.bonus={};if(!garage.ach)garage.ach={};if(!garage.wins)garage.wins={};
 const owns=id=>!!garage.owned[id];
 /* you only race cars you own: the last one you drove in that class, else another one of that class, else any car you own */
 function ownedCar(id){if(CARS[id]&&owns(id))return id;const cls=CARS[id]?CARS[id].cls:'B',lb=settings.lastByClass||{};if(lb[cls]&&owns(lb[cls]))return lb[cls];
@@ -2933,41 +3019,105 @@ function ensureOwnedCars(){const a=ownedCar(settings.car),b=ownedCar(settings.p2
   settings.car=a;settings.p2car=b;saveSettings();if(car)previewEdit();return true;}
 /* a new player (the default car is the GT) or an old save can hold a car that is not bought yet */
 {const a=ownedCar(settings.car),b=ownedCar(settings.p2car);if(a!==settings.car||b!==settings.p2car){settings.car=a;settings.p2car=b;saveSettings();}}
-const cupUnlocked=c=>!c.need||((garage.career.cups[c.need]||{}).best||99)<=3;
-function careerRun(){let r=null;try{r=JSON.parse(store.get('polderrace3d-career-run','null'));}catch(e){}return r&&!r.done?r:null;}
+const evRes=ev=>garage.career.cups[ev.id];
+const evPassed=ev=>{const r=evRes(ev);return !!r&&r.best<=ev.goal;};
+const chUnlocked=ch=>{const i=CHAPTERS.indexOf(ch);return i===0||evPassed(CHAPTERS[i-1].events[CHAPTERS[i-1].events.length-1]);};
+/* the first event of an open chapter is open; the next one when this one met its goal (or when a later one was raced already: an old save) */
+function evUnlocked(ev){const ch=chapterOf(ev),k=ch.events.indexOf(ev);return chUnlocked(ch)&&(k===0||evPassed(ch.events[k-1])||ch.events.slice(k).some(e=>evRes(e)));}
+const cupUnlocked=c=>evUnlocked(c);
+/* where your career stands: the first open event you have not passed yet (null: everything done) */
+const careerNext=()=>CAREER_EVS.find(e=>evUnlocked(e)&&!evPassed(e))||null;
+function careerRun(){let r=null;try{r=JSON.parse(store.get('polderrace3d-career-run','null'));}catch(e){}return r&&!r.done&&CUPS.some(c=>c.id===r.career)?r:null;}
 function buyCar(id){const p=CAR_PRICE[id]||0;if(owns(id)||garage.credits<p)return false;garage.credits-=p;garage.owned[id]=true;saveGarage();tone(880,0.12,'triangle',0.12);tone(1320,0.2,'triangle',0.12,0.1);
   if(Object.keys(garage.owned).length>=6)unlockAch('collector');return true;}
+/* the bots of an event: the usual field with the chapter's rival(s) in their own car and colour (not your colour); the others get names
+   that are not a character of the story (the quick-race names include Ingrid and Daan) */
+const CAREER_NAMES=['Henk','Fenna','Sanne','Bram','Lotte','Mees','Noor','Sem'];
+function careerDefs(ev){const ch=chapterOf(ev),n=ev.kind==='duel'?1:(ev.bots||5),rv=(ev.rivals||[ch.rival]).slice(0,n),defs=makeBotDefs(n);
+  rv.forEach(([id,type],k)=>{const R=RIVALS[id],d=defs[defs.length-1-k];Object.assign(d,{name:R.name,type,color:R.color!==settings.color?R.color:d.color,rival:true});});
+  let j=0;for(const d of defs)if(!d.rival)d.name=CAREER_NAMES[j++];
+  return defs;}
 function startCup(cup,carId,fresh){
   let run=careerRun();if(fresh||!run||run.career!==cup.id)run=null;
   settings.car=carId;rebuildPlayerCar();leaveChampMode();
-  if(run)champ=run;else{const defs=makeBotDefs(5);champ={career:cup.id,rounds:cup.rounds,nRounds:cup.rounds.length,active:true,car:carId,color:settings.color,cls:cup.cls,diff:cup.diff,round:0,bots:defs,pts:{Jij:0},history:[]};defs.forEach(d=>champ.pts[d.name]=0);}
+  if(run)champ=run;else{const defs=careerDefs(cup);champ={career:cup.id,rounds:cup.rounds,nRounds:cup.rounds.length,active:true,car:carId,color:settings.color,cls:chapterOf(cup).cls,diff:cup.diff,round:0,bots:defs,pts:{Jij:0},history:[]};defs.forEach(d=>champ.pts[d.name]=0);}
   champ.active=true;saveChamp();menuFlow='champ';loadChampRound();startRace();
 }
-function careerCupDone(cup,pos){const c=garage.career.cups[cup.id]||{};c.best=Math.min(c.best||99,pos);if(pos===1)c.won=true;garage.career.cups[cup.id]=c;saveGarage();
-  if(pos===1)unlockAch('cup'+cup.id);const nx=CUPS.find(k=>k.need===cup.id);if(nx&&pos<=3)showToast(nx.name+' vrijgespeeld!');}
-let careerSel='B';
+/* a single career event (race, elimination, duel) borrows the quick-race settings for one race; toMenu gives them back (careerPrev) */
+const EV_KEYS=['mode','bots','laps','grid','diff','track','dir','time','weather'];
+function startCareerEvent(ev,carId){
+  if(ev.kind==='cup'){startCup(ev,carId,false);return;}
+  settings.car=carId;rebuildPlayerCar();if(champ&&champ.active){champ.active=false;saveChamp();}
+  if(!careerPrev){careerPrev={};for(const k of EV_KEYS)careerPrev[k]=settings[k];}
+  Object.assign(settings,{mode:ev.kind==='elim'?'elim':'race',bots:ev.kind==='duel'?1:(ev.bots||5),laps:ev.laps||2,grid:ev.grid||'back',diff:ev.diff,track:ev.track,dir:ev.dir||'fwd',time:ev.time||'day',weather:ev.weather||'dry'});
+  careerEv={ev,defs:careerDefs(ev),res:null};menuFlow='quick';
+  if(TRACK_ID!==ev.track||TRACK_DIR!==settings.dir)loadTrack(ev.track,settings.dir);applyEnv(settings.time,settings.weather);startRace();
+}
+/* an event is over (a race, or a cup's final standings): keep the best result, pay a chapter's bonus the first time its finale is passed,
+   open what comes next. Returns what the results screen shows */
+function careerEventDone(ev,pos){const ch=chapterOf(ev),was=evPassed(ev),r=garage.career.cups[ev.id]||{};r.best=Math.min(r.best||99,pos);if(pos===1)r.won=true;garage.career.cups[ev.id]=r;
+  const passed=pos<=ev.goal,fin=ev===ch.events[ch.events.length-1];let bonus=0;
+  if(passed&&fin&&ch.bonus&&!garage.career.bonus[ch.id]){garage.career.bonus[ch.id]=true;bonus=ch.bonus;garage.credits+=bonus;}
+  saveGarage();
+  if(pos===1&&fin)unlockAch('cup'+ev.id);
+  if(CAREER_EVS.filter(e=>e.kind==='duel').every(e=>(evRes(e)||{}).won))unlockAch('duels');
+  let unlocked='';if(passed&&!was){const k=ch.events.indexOf(ev),nx=ch.events[k+1],nc=CHAPTERS[CHAPTERS.indexOf(ch)+1];
+    unlocked=nx?nx.name:fin&&nc?'Hoofdstuk '+(CHAPTERS.indexOf(nc)+1)+': '+nc.name:'';if(unlocked)showToast(unlocked+' vrijgespeeld!');}
+  return {passed,first:passed&&!was,bonus,fin,chi:CHAPTERS.indexOf(ch),unlocked};}
+/* the story line under the results: who says what after this event */
+function careerStory(ev,res){const lines=[res.passed?ev.win:ev.lose];if(res.first&&res.fin)lines.push(CHAPTERS[res.chi].outro);
+  const box=$('storyBox');box.innerHTML='';for(const [who,t] of lines)box.appendChild(storyLine(who,t));
+  if(res.bonus){const p=document.createElement('p');p.className='storybonus';p.textContent='+ '+fmtCr(res.bonus)+' bonus';box.appendChild(p);}
+  box.hidden=false;}
+function storyLine(who,text){const P=PEOPLE[who],d=document.createElement('div');d.className='sline';const a=document.createElement('i');a.className='avatar';a.style.setProperty('--c',P.col);a.style.color=P.ink||'#f7f7f2';a.textContent=P.name.replace(/^(Opa|De) /,'')[0];
+  const t=document.createElement('p');const b=document.createElement('b');b.textContent=P.name;t.append(b,document.createTextNode(text));d.append(a,t);return d;}
+const goalText=g=>g===1?'winnen':'top '+g;
+function evSub(ev){const tr=r=>TRACKS[r.track].name+(r.dir==='rev'?' omgekeerd':'');
+  if(ev.kind==='cup')return ev.rounds.length+' races · '+ev.rounds.map(tr).join(', ');
+  const n=ev.kind==='duel'?1:ev.bots,L=ev.kind==='elim'?n:ev.laps;
+  return EV_KIND[ev.kind]+' · '+tr(ev)+' · '+L+(L===1?' ronde':' ronden')+(ev.kind==='duel'?'':' · '+n+' tegenstanders')+((ev.time&&ev.time!=='day')?' · '+TIME_NAMES[ev.time].toLowerCase():'')+((ev.weather&&ev.weather!=='dry')?' · '+WEATHER_NAMES[ev.weather].toLowerCase():'');}
+let careerCh=null,careerSel=null;
 function openCareer(){
-  const box=$('careerList');box.innerHTML='';$('careerCredits').textContent=fmtCr(garage.credits);const run=careerRun();
-  for(const c of CUPS){const ok=cupUnlocked(c),st=garage.career.cups[c.id],b=document.createElement('button');b.className='cupcard'+(careerSel===c.id?' sel':'');b.disabled=!ok;
-    const status=!ok?LOCK_SVG:run&&run.career===c.id?'bezig · '+(run.round+1)+' van '+c.rounds.length:st&&st.best<99?(st.won?'🏆 gewonnen':'beste: '+st.best+'e'):'0 van '+c.rounds.length;
-    const sub=!ok?'Vergrendeld: eindig top 3 in de '+CUPS.find(k=>k.id===c.need).name:c.rounds.length+' races · '+c.rounds.map(r=>TRACKS[r.track].name).join(', ');
-    b.innerHTML=`<span class="cupletter">${c.cls}</span><span class="cupbody"><strong>${c.name}</strong><small>${sub}</small></span><em>${status}</em>`;
-    b.setAttribute('aria-label',c.name+(ok?'':', vergrendeld'));b.addEventListener('click',()=>{careerSel=c.id;openCareer();});box.appendChild(b);}
-  const cup=CUPS.find(c=>c.id===careerSel),all=carsOf(cup.cls),cars=all.filter(owns),cb=$('careerCars');cb.innerHTML='';
+  const run=careerRun(),nx=careerNext();$('careerCredits').textContent=fmtCr(garage.credits);
+  if(!careerSel||!CAREER_EVS.some(e=>e.id===careerSel)){const e=run?CUPS.find(c=>c.id===run.career):nx||CAREER_EVS[CAREER_EVS.length-1];careerSel=e.id;careerCh=chapterOf(e).id;}
+  const ch=CHAPTERS.find(c=>c.id===careerCh)||CHAPTERS[0];
+  /* chapter tabs */
+  CHAPTERS.forEach((c,i)=>{const b=$('careerChs').querySelector('[data-v='+c.id+']'),ok=chUnlocked(c);b.disabled=!ok;b.innerHTML=(ok?'':LOCK_SVG)+'<b>'+(i+1)+'</b><span class="nm">'+c.tab+'</span>';
+    b.setAttribute('aria-label','Hoofdstuk '+(i+1)+': '+c.name+(ok?'':', vergrendeld: haal eerst de '+CHAPTERS[i-1].events[CHAPTERS[i-1].events.length-1].name));b.title=b.getAttribute('aria-label');});
+  syncRadios($('careerChs'),ch.id);
+  const done=ch.events.filter(evPassed).length,R=RIVALS[ch.rival[0]];
+  $('careerChTitle').textContent='Hoofdstuk '+(CHAPTERS.indexOf(ch)+1)+' · '+ch.name;
+  $('careerChSub').textContent='Klasse '+ch.cls+' · rivaal: '+R.full+' ('+CARS[ch.rival[1]].name+') · '+done+' van '+ch.events.length+' gehaald';
+  {const box=$('careerIntro'),fin=evPassed(ch.events[ch.events.length-1]);box.innerHTML='';if(fin)box.appendChild(storyLine(...ch.outro));else if(!ch.events.some(evRes))box.appendChild(storyLine(...ch.intro));box.hidden=!box.children.length;}
+  /* the events of this chapter */
+  const box=$('careerList');box.innerHTML='';
+  ch.events.forEach((e,k)=>{const ok=evUnlocked(e),st=evRes(e),b=document.createElement('button');b.className='cupcard'+(careerSel===e.id?' sel':'');b.disabled=!ok;
+    const status=!ok?LOCK_SVG:run&&run.career===e.id?'bezig · '+(run.round+1)+' van '+e.rounds.length:st&&st.best<99?(st.won?'🏆 gewonnen':evPassed(e)?'✓ '+st.best+'e':'beste: '+st.best+'e'):fmtCr(e.prize[0]);
+    b.innerHTML=`<span class="cupletter">${evPassed(e)?CHECK_SVG:k+1}</span><span class="cupbody"><strong></strong><small></small></span><em>${status}</em>`;
+    b.querySelector('strong').textContent=e.name;b.querySelector('small').textContent=ok?evSub(e):'Vergrendeld: haal eerst '+ch.events[k-1].name+' ('+goalText(ch.events[k-1].goal)+')';
+    b.setAttribute('aria-label',e.name+(ok?'':', vergrendeld'));b.setAttribute('aria-expanded',careerSel===e.id&&ok);b.addEventListener('click',()=>{careerSel=e.id;openCareer();});box.appendChild(b);
+    if(careerSel===e.id&&ok){const d=document.createElement('div');d.id='careerEvInfo';d.className='story evinfo';d.appendChild(storyLine(...e.pre));const g=document.createElement('p');g.className='evgoal';
+      g.textContent='Doel: '+goalText(e.goal)+' · prijzengeld '+e.prize.map(fmtCr).join(' / ')+(k===ch.events.length-1&&ch.bonus&&!garage.career.bonus[ch.id]?' · bonus '+fmtCr(ch.bonus)+' als je hem haalt':'');d.appendChild(g);box.appendChild(d);}});
+  const ev=ch.events.find(e=>e.id===careerSel)||ch.events[0];
+  /* your car: one of your own cars of the chapter's class */
+  const cls=ch.cls,all=carsOf(cls),cars=all.filter(owns),cb=$('careerCars');cb.innerHTML='';
   let pick=cars.includes(settings.car)?settings.car:cars[0];
   for(const id of all){const b=document.createElement('button');b.className='ccard';const own=owns(id);b.setAttribute('aria-pressed',id===pick);
-    b.innerHTML=`<strong><span></span>${own?'<small class="badge">in bezit</small>':''}</strong>`+(own?`<span>Klasse ${cup.cls} · ${Math.round(effStats(id).vmax)} km/u</span>`:`<span class="lock">${LOCK_SVG}${fmtCr(CAR_PRICE[id]||0)}</span>`);
+    b.innerHTML=`<strong><span></span>${own?'<small class="badge">in bezit</small>':''}</strong>`+(own?`<span>Klasse ${cls} · ${Math.round(effStats(id).vmax)} km/u</span>`:`<span class="lock">${LOCK_SVG}${fmtCr(CAR_PRICE[id]||0)}</span>`);
     b.querySelector('strong>span').textContent=CARS[id].name;b.setAttribute('aria-label',CARS[id].name+(own?'':', te koop in de garage voor '+fmtCr(CAR_PRICE[id]||0)));
     b.addEventListener('click',()=>{if(own){settings.car=id;rebuildPlayerCar();openCareer();}else{pickCar(id);garTab('perf');homePanel('garage');garageFrom='career';$('garUpg').querySelector('.buy').focus({preventScroll:true});}});cb.appendChild(b);}
-  const inRun=run&&run.career===cup.id;$('careerGo').disabled=!cupUnlocked(cup)||(!cars.length&&!inRun);$('careerGo').textContent=inRun?'Ga verder: race '+(run.round+1):'Start '+cup.name;
-  $('careerNew').hidden=!inRun;$('careerGo').onclick=()=>startCup(cup,inRun?run.car:pick,false);$('careerNew').onclick=()=>{if(pick)startCup(cup,pick,true);};
+  $('careerCarNote').hidden=cars.length>0;$('careerCarNote').textContent='Je hebt nog geen klasse '+cls+'-auto. Koop er een in de garage (tik hierboven op een auto).';
+  const inRun=run&&run.career===ev.id;$('careerGo').disabled=!evUnlocked(ev)||(!cars.length&&!inRun);$('careerGo').textContent=inRun?'Ga verder: race '+(run.round+1):'Start';
+  $('careerNew').hidden=!inRun;$('careerGo').onclick=()=>startCareerEvent(ev,inRun?run.car:pick);$('careerNew').onclick=()=>{if(pick)startCup(ev,pick,true);};
+  /* the chosen event (and what is said about it) in view: further down the list it would sit below the fold */
+  {const sel=box.querySelector('.cupcard.sel'),inf=$('careerEvInfo');if(sel)sel.scrollIntoView({block:'nearest'});if(inf)inf.scrollIntoView({block:'nearest'});}
 }
 /* ---- achievements ---- */
 const ACH=[['first_win','Eerste overwinning','Win een race',300],['all_tracks','Nederland rond','Win op alle banen',1500],['pit','PIT-manoeuvre','Laat een bot uitspinnen met een tik',400],
   ['pit3','Sloopkogel','Laat 3 bots uitspinnen in één race',800],['clean','Schone race','Win zonder een andere auto te raken',600],['speed300','300-club','Rij 300 km/u',500],
   ['ghost','Ghost-jager','Zet een ghost-ronde neer',200],['elim','Laatste man','Win een eliminatierace',500],['tt5','Lange adem','Rij 5 km in een tijdrit',400],
   ['night','Nachtbraker','Win een race in het donker',400],['rain','Regenmeester','Win een race in de regen',400],['comeback','Van achteren','Win vanaf de laatste startplek met 5+ bots',700],
-  ['champ','Kampioen','Win een los kampioenschap',1000],['cupB','Polder Cup','Win de Polder Cup',1000],['cupA','Delta Trofee','Win de Delta Trofee',2000],['cupS','Oranje Grand Prix','Win de Oranje Grand Prix',4000],
+  ['champ','Kampioen','Win een los kampioenschap',1000],['cupB','Polder Cup','Win de Polder Cup',1000],['cupA','Delta Trofee','Win de Delta Trofee',2000],['cupS','Oranje Grand Prix','Win de Oranje Grand Prix',4000],['cupL','Legende','Win de Tour van Nederland',6000],['duels','Rivalen verslagen','Win alle duels in de carrière',1500],
   ['maxed','Volledig getuned','Breng alle upgrades van één auto naar max',600],['rich','Spaarpot','Heb € 20.000 op zak',1000],['collector','Verzamelaar','Bezit 6 auto\'s',1500]];
 let achQueue=[],achBusy=false,raceContacts=0,racePits=0;
 function unlockAch(id){if(garage.ach[id])return;const a=ACH.find(x=>x[0]===id);if(!a)return;garage.ach[id]=Date.now();garage.credits+=a[3];saveGarage();achQueue.push(a);if(!achBusy)nextAch();}
@@ -3405,7 +3555,7 @@ function homePanel(v){const from=homeView;homeView=v;
     $('hPlay').focus({preventScroll:true});}
   if(v==='play'){const m=settings.mode,nb=settings.bots,L=settings.laps,run=careerRun();
     $('quickInfo').textContent=TRACKS[settings.track].name+(settings.dir==='rev'?' (omgekeerd)':'')+' · '+MODE_NAMES[m].toLowerCase()+' · '+CARS[settings.car].name+(m==='race'||m==='elim'||m==='split'?' · '+nb+' '+(nb===1?'bot':'bots'):'')+(m==='race'||m==='ghost'||m==='split'?' · '+L+' '+(L===1?'ronde':'ronden'):'');
-    $('careerHomeInfo').textContent=run&&CUPS.find(c=>c.id===run.career)?CUPS.find(c=>c.id===run.career).name+' · race '+(run.round+1)+' van '+CUPS.find(c=>c.id===run.career).rounds.length:Object.values(garage.career.cups).filter(c=>c.won).length+' van '+CUPS.length+' cups gewonnen';
+    {const nx=careerNext(),cup=run&&CUPS.find(c=>c.id===run.career);$('careerHomeInfo').textContent=cup?cup.name+' · race '+(run.round+1)+' van '+cup.rounds.length:nx?'Hoofdstuk '+(CHAPTERS.indexOf(chapterOf(nx))+1)+' · '+nx.name:'Legende! Alles gehaald';}
     const qc=loadQuickChamp(),ip=qc&&!qc.done&&!qc.career&&qc.round<CHAMP_ROUNDS.length;
     $('champHomeInfo').textContent=ip?'Bezig · race '+(qc.round+1)+' van '+CHAMP_ROUNDS.length+' · '+qc.pts.Jij+' pt':CHAMP_ROUNDS.length+' races tegen 5 vaste tegenstanders';
     $('hStart').focus({preventScroll:true});}
@@ -3440,6 +3590,7 @@ let garageFrom=null,garageCar=null; /* the career screen can open the garage to 
 function homeBack(){const from=homeView,to=from==='garage'&&garageFrom?garageFrom:HOME_PARENT[from]||'main';garageFrom=null;homePanel(to);const b=to==='play'&&$({career:'hCareer',net:'hNet'}[from]);if(b)b.focus({preventScroll:true});}
 document.querySelectorAll('[data-homeback]').forEach(b=>b.addEventListener('click',()=>{if(pauseSettingsOpen()){closePauseSettings();return;}homeBack();}));
 $('hStart').addEventListener('click',()=>{menuFlow='quick';leaveChampMode();showMenu(2);});
+radio($('careerChs'),segItems('careerChs'),'c1',v=>{const c=CHAPTERS.find(x=>x.id===v);if(!c||!chUnlocked(c))return;careerCh=v;careerSel=(c.events.find(x=>evUnlocked(x)&&!evPassed(x))||c.events[0]).id;openCareer();});
 $('hChamp').addEventListener('click',()=>{champ=loadQuickChamp();menuFlow='champ';showMenu(champInProgress()?3:0);});
 $('hQuick').addEventListener('click',()=>{menuFlow='quick';leaveChampMode();startRace();});
 $('hPlay').addEventListener('click',()=>homePanel('play'));$('hRecords').addEventListener('click',()=>homePanel('records'));$('hNet').addEventListener('click',()=>homePanel('net'));

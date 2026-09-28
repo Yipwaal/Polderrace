@@ -104,7 +104,11 @@ daarna één `(async function(){ ... })()`. Alle globals leven in die closure.
 - **game flow** — `state`: menu → countdown → racing → finished → over (en replay). `mode`: race, elim, time, ghost, champ (+split = race met 2 spelers).
   `startRace()`, `finishPlayer`, `showResults()` → `enterPodium`. `toMenu(step)`.
 - **ghost, championship (`CHAMP_ALL`, punten `CHAMP_PTS`), garage & credits (`UPG`, `garage`), podium (`PPOS`, ver weg in de wereld),
-  garage-ruimte (`GPOS`), carrière (`CUPS`), prestaties (`ACH`).**
+  garage-ruimte (`GPOS`), carrière, prestaties (`ACH`).**
+  Carrière = verhaal in `CHAPTERS` (4 hoofdstukken, personages `PEOPLE`, rivalen `RIVALS`): per hoofdstuk evenementen (race, eliminatie, duel,
+  en als finale een cup op punten). Een losse race leent de snel-race-instellingen (`careerEv`/`careerPrev`, terug in `toMenu`, nooit zo opgeslagen);
+  een cup loopt via `champ` met `career:<id>` (`polderrace3d-career-run`). Resultaten in `garage.career.cups[id]`; de finales heten nog `B`, `A`, `S`
+  (oude saves tellen mee). Tegenstanders tunen mee met je upgrades (`RIVAL_TUNE`, `rivalBoost`), anders wordt elke race met een getunede auto een wandeling.
   Je racet alleen auto's in bezit (`owns`, `ownedCar`, `ensureOwnedCars`): de autokeuze toont alleen eigen auto's; in de garage mag je
   niet-gekochte auto's bekijken, bij Terug zit je weer in een eigen auto.
 - **split screen** — speler 2 draait door globals te wisselen: `asP2(fn)` → `swapCtx(p2)`. **Elke nieuwe per-speler global
