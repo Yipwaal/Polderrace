@@ -32,10 +32,15 @@ Eigenaar: Yip. **Spreek Nederlands met Yip**; code-commentaar mag Engels blijven
 ## Publiceren
 
 Het spel draait als **claude.ai-artifact**: https://claude.ai/artifact/Pe2uUr4oTeTjyDygDkzUgx
-- Capabilities: `{"downloads": true, "room": {}}` — `room` is nodig voor online spelen, `downloads` voor replay opslaan.
+- Capabilities: `{"downloads": true, "room": {}}` — `room` is nodig voor de lobby met open games, `downloads` voor replay opslaan.
 - Titel "Polderrace 3D", icoon 🌷.
-- Online spelen werkt **alleen** als artifact op claude.ai (`window.claude.use('room')`). Elders gehost
-  (GitHub Pages, lokaal) werkt alles behalve online; het spel toont dan een nette melding.
+- Online spelen kan op twee manieren:
+  - **Lobby met open games** (`window.claude.use('room')`): alleen als artifact op claude.ai.
+  - **Spelen via host (met code)**: werkt overal, ook lokaal en op GitHub Pages. Rechtstreeks tussen de browsers
+    via WebRTC, zonder server. De host maakt per speler een uitnodigingscode, de speler stuurt een antwoordcode terug.
+    Op hetzelfde wifi werkt dat altijd, via internet meestal (STUN van Google). Strenge netwerken (hotspot, school,
+    werk) kunnen verbinden blokkeren: er is geen TURN-server.
+  Buiten claude.ai toont het online-scherm alleen "Spelen via host".
 - Heb je zelf geen Artifact-tool: zeg Yip dat de nieuwe versie klaarstaat. Hij publiceert `polderrace-3d.html`
   via een claude.ai-chat naar dezelfde URL, met dezelfde capabilities.
 - Publiceer alleen een versie die de qa-reviewer heeft goedgekeurd (`tests/reviewed.txt` = hash van het bestand).
@@ -56,7 +61,7 @@ Alle tests draaien headless met software-WebGL (SwiftShader), dus zonder videoka
 | rijgedrag, botsingen, bots | `test_collisions.py`, `test_regression.py` |
 | camera, terrein (Veluwe/Limburg) | `test_camera_terrain.py` |
 | spelverloop, kampioenschap, carrière, geld | `test_championship.py`, `test_regression.py` |
-| online, 2 spelers | `test_multiplayer.py`, `test_camera_terrain.py` (bevat split screen) |
+| online, 2 spelers | `test_multiplayer.py`, `test_p2p.py`, `test_camera_terrain.py` (bevat split screen) |
 | laden/opruimen van banen of scènes | `test_memory.py` |
 | voor publicatie | `tests/run_all.py` (volledig, ±30 min) of minimaal `run_all.py --fast` |
 
@@ -100,8 +105,15 @@ daarna één `(async function(){ ... })()`. Alle globals leven in die closure.
   garage-ruimte (`GPOS`), carrière (`CUPS`), prestaties (`ACH`).**
 - **split screen** — speler 2 draait door globals te wisselen: `asP2(fn)` → `swapCtx(p2)`. **Elke nieuwe per-speler global
   (zoals `camLift`) moet in `swapCtx` en in `newP2` erbij**, anders lekt de toestand tussen de spelers.
-- **online** — `room`-presence: lobby (`lobby:{id,name,track,n,max,open}`) en per game (`nick,car,color,host,st,b,k,race`). De host is de baas over
-  de bots (`b`) en de start (`race`); gasten sturen hun positie (`st`) en tikken tegen bots (`k`).
+- **online** — twee transports met dezelfde room-interface (`presence(patch)`, `peers()`, `onPeers(cb)`, `leave()`), zodat
+  `netEnter`/`netTick`/`netSyncRemotes`/`netHostStart`/`netBegin` voor allebei werken; `net.p2p` zegt welke het is.
+  (1) claude.ai-room (`roomNS`): lobby (`lobby:{id,name,track,n,max,open}`) en per game een room `'pr-'+id`.
+  (2) Spelen via host: WebRTC (`p2pHostRoom`/`p2pGuestRoom`), stertopologie: de host heeft per gast een RTCPeerConnection +
+  DataChannel, houdt de presence van iedereen bij en stuurt elke wijziging door; ids `'h'` en `'g1','g2',…`. Signalering met
+  codes (`p2pEncode`/`p2pDecode`: `PR1` + I/A + Z/B + base64url, niet-trickle ICE met timeout); de gast is DTLS-server
+  (`a=setup:passive`), zodat een trage antwoordcode (minutenlang via WhatsApp) nog werkt. `roomNS` wordt voor p2p nooit aangeraakt.
+  Presence per game: `nick,car,color,host,st,b,k,race`. De host is de baas over de bots (`b`) en de start (`race`, met
+  `order`: alleen wie daarin staat, start mee); gasten sturen hun positie (`st`) en tikken tegen bots (`k`).
 - **menu** — `homePanel(v)` (hoofdscherm-panelen), `showMenu(step)` (0 auto, 1 baan, 2 modus, 3 kampioenschap), `menuFlow` quick/champ/net.
 - **physics** — `drive(dt,inp)` (versnellingsbak `GEARS`), `edges()` (muren/sloot), botsingen: `pairContact` + `pairImpulse` + `yawKick`,
   `spinStep` voor uitspinnen. Afgestemd zodat een licht tikje niets doet en een PIT-manoeuvre wél draait (`test_collisions.py` bewaakt dit).
