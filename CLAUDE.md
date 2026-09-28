@@ -68,6 +68,8 @@ Alle tests draaien headless met software-WebGL (SwiftShader), dus zonder videoka
 Handig: `python tests/test_regression.py grachten,zeeland race,time fwd,rev`.
 Screenshots komen in `tests/.out/screens/`; bekijk ze met Read.
 Een andere kopie testen (bijvoorbeeld de oude versie om een bug te reproduceren): zet `POLDERRACE_GAME=<pad>` voor het commando.
+De testgarage bezit alle auto's (tests rijden elke auto). Wil je testen wat een nieuwe speler ziet (alleen de hot hatch), geef dan
+`extra_init=NEW_GARAGE` (uit `lib.py`) mee aan `Session`.
 Vind je een nieuw soort bug, voeg dan waar mogelijk een test toe (of breid een bestaande uit) zodat hij niet terugkomt.
 Wil je iets in de spelstatus onderzoeken, gebruik dan `tests/lib.py`: `Session(...)`, dan `s.ev("js in de spel-closure")`
 en `s.step(seconden)`. Voorbeeld: `s.ev("loadTrack('zeeland','fwd');0")`.
@@ -103,6 +105,8 @@ daarna één `(async function(){ ... })()`. Alle globals leven in die closure.
   `startRace()`, `finishPlayer`, `showResults()` → `enterPodium`. `toMenu(step)`.
 - **ghost, championship (`CHAMP_ALL`, punten `CHAMP_PTS`), garage & credits (`UPG`, `garage`), podium (`PPOS`, ver weg in de wereld),
   garage-ruimte (`GPOS`), carrière (`CUPS`), prestaties (`ACH`).**
+  Je racet alleen auto's in bezit (`owns`, `ownedCar`, `ensureOwnedCars`): de autokeuze toont alleen eigen auto's; in de garage mag je
+  niet-gekochte auto's bekijken, bij Terug zit je weer in een eigen auto.
 - **split screen** — speler 2 draait door globals te wisselen: `asP2(fn)` → `swapCtx(p2)`. **Elke nieuwe per-speler global
   (zoals `camLift`) moet in `swapCtx` en in `newP2` erbij**, anders lekt de toestand tussen de spelers.
 - **online** — twee transports met dezelfde room-interface (`presence(patch)`, `peers()`, `onPeers(cb)`, `leave()`), zodat
@@ -117,6 +121,8 @@ daarna één `(async function(){ ... })()`. Alle globals leven in die closure.
 - **menu** — `homePanel(v)` (hoofdscherm-panelen), `showMenu(step)` (0 auto, 1 baan, 2 modus, 3 kampioenschap), `menuFlow` quick/champ/net.
 - **physics** — `drive(dt,inp)` (versnellingsbak `GEARS`), `edges()` (muren/sloot), botsingen: `pairContact` + `pairImpulse` + `yawKick`,
   `spinStep` voor uitspinnen. Afgestemd zodat een licht tikje niets doet en een PIT-manoeuvre wél draait (`test_collisions.py` bewaakt dit).
+  Hitbox = afgeronde rechthoek (len × wid, hoekstraal `hitR` per model in `CAR_SPECS`, zichtbare draaiing incl. `drift`); een bot die
+  een duw krijgt, houdt die snelheid even (`pushDv`) in plaats van hard terug te remmen. Nieuw automodel: meet `hitR` met de pasvorm-check in `test_collisions.py`.
 - **camera** — `updateCamera(dt)`: `placeCam`, `camLift` houdt de camera boven heuvels.
 - **fx, damage** (schade is verwijderd, lege API blijft), **environment** (`applyEnv(time,weather)`), **mirror, replay, minimap, gauge, main loop** (`frame` → `update` → `hud`).
 

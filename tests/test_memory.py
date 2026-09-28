@@ -7,6 +7,10 @@ from lib import Session, Report, DEFAULT, TRACKS
 rep = Report('geheugen (geen lekken)')
 with Session(dict(DEFAULT, diff='easy'), w=400, h=260) as s:
     mem = []
+    # every car model builds its body once and keeps it (shared, a cache, not a leak); bots get random models, so draw each model once
+    # first, otherwise a model first seen in round 3 looks like growth
+    s.ev("(()=>{const g=new THREE.Group();for(const id of Object.keys(CAR_SPECS)){const m=buildCar(id,new THREE.Color('#888'));styleCar(m,id);g.add(m.g);}for(const f of [makeVan,makeTruck,makeTractor])g.add(f().g);"
+         "scene.add(g);g.traverse(o=>o.frustumCulled=false);renderer.render(scene,camera);scene.remove(g);disposeObj(g);return 0;})()")
     for rnd in range(4):
         for tr in TRACKS:
             s.ev(f"loadTrack('{tr}','fwd');applyEnv(['day','dusk','night','day'][{rnd}],['dry','rain','fog','dry'][{rnd}]);rebuildPlayerCar();menuScene();0")
