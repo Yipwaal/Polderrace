@@ -50,12 +50,17 @@ JS = r"""(()=>{world.updateMatrixWorld(true);const meshes=[],inst=[];
   /* blind spot of the rays above: a ray that STARTS inside a solid (a pylon leg, a pillar, a thick wall taller than CLEAR) sees
      only back faces and hits nothing. So also cast a ray straight UP from just above the asphalt through all closed solids,
      both faces counted: an odd number of crossings of one object means the road surface lies inside that object. */
-  const CLOSED=['BoxGeometry','CylinderGeometry','SphereGeometry','ConeGeometry','TorusGeometry','OctahedronGeometry','IcosahedronGeometry','DodecahedronGeometry'];
-  /* instanced meshes hold a clone of their geometry, and in three r128 a clone is a plain BufferGeometry: recognise boxes by shape */
-  const boxLike=g=>{const pa=g.attributes.position;if(g.type!=='BufferGeometry'||!pa||pa.count!==24||!g.index||g.index.count!==36)return false;if(!g.boundingBox)g.computeBoundingBox();const b=g.boundingBox;
-    for(let i=0;i<24;i++)for(const [c,lo,hi] of [[pa.getX(i),b.min.x,b.max.x],[pa.getY(i),b.min.y,b.max.y],[pa.getZ(i),b.min.z,b.max.z]])if(Math.abs(c-lo)>1e-5&&Math.abs(c-hi)>1e-5)return false;return true;};
-  const closed=o=>{const g=o.geometry,p=g.parameters||{};if(boxLike(g))return true;if(!CLOSED.includes(g.type)||p.openEnded)return false;
-    if(g.type==='SphereGeometry'&&((p.phiLength!==undefined&&p.phiLength<6.28)||(p.thetaLength!==undefined&&p.thetaLength<3.14)))return false;return true;};
+  /* a solid is any watertight mesh: after merging equal positions every edge belongs to exactly two triangles. That also
+     covers instanced meshes, whose geometry is a clone (in three r128 a plain BufferGeometry without type or parameters),
+     and it leaves out planes, ribbons and open-ended cylinders. */
+  const wt=new Map();
+  const closed=o=>{const g=o.geometry;if(wt.has(g))return wt.get(g);const pa=g.attributes.position;let ok=false;
+    if(pa&&pa.count<=20000){const id=new Map(),vid=[];for(let i=0;i<pa.count;i++){const k=Math.round(pa.getX(i)*1e4)+','+Math.round(pa.getY(i)*1e4)+','+Math.round(pa.getZ(i)*1e4);if(!id.has(k))id.set(k,id.size);vid.push(id.get(k));}
+      const ix=g.index?g.index.array:null,n=ix?ix.length:pa.count,ec=new Map();let tri=0;
+      for(let t=0;t+2<n;t+=3){const A=vid[ix?ix[t]:t],B=vid[ix?ix[t+1]:t+1],C=vid[ix?ix[t+2]:t+2];if(A===B||B===C||A===C)continue;tri++;
+        for(const [u,v] of [[A,B],[B,C],[C,A]]){const k=u<v?u*1e6+v:v*1e6+u;ec.set(k,(ec.get(k)||0)+1);}}
+      ok=tri>0;for(const c of ec.values())if(c!==2){ok=false;break;}}
+    wt.set(g,ok);return ok;};
   const sides=new Map();for(const o of meshes.concat(inst))for(const m of (Array.isArray(o.material)?o.material:[o.material]))if(m&&!sides.has(m)){sides.set(m,m.side);m.side=THREE.DoubleSide;}
   const solidM=meshes.filter(closed),upV=new THREE.Vector3(0,1,0);
   for(let i=0;i<NS;i++){for(const [lat,zone] of lats){if(zone!=='rijbaan')continue;const [x,z]=onTrack(i,lat),h=hAt(i,lat);
