@@ -7,7 +7,7 @@ window.__zfight=(root,opts)=>{opts=opts||{};const faces=[],m4=new THREE.Matrix4(
  const addPlane=(M,w,h,mat,tag)=>{M.decompose(v,q,s);const n=new THREE.Vector3(0,0,1).applyQuaternion(q),u=new THREE.Vector3(1,0,0).applyQuaternion(q),vv=new THREE.Vector3(0,1,0).applyQuaternion(q);
    faces.push({n,c:v.clone(),u,vv,hu:w*s.x/2,hv:h*s.y/2,mat,tag,plane:true});if(mat&&mat.side===THREE.DoubleSide)faces.push({n:n.clone().negate(),c:v.clone(),u,vv,hu:w*s.x/2,hv:h*s.y/2,mat,tag,plane:true});};
  /* the game's inst() clones the geometry, and in three r128 a clone is a plain BufferGeometry (no type, no parameters):
-    with opts.inst a box is recognised by its shape instead (24 vertices, 36 indices, every vertex on a corner of its bounding box) */
+    with opts.inst (test_zfight sets it by default) a box is recognised by its shape instead (24 vertices, 36 indices, every vertex on a corner of its bounding box) */
  const bl=new Map(),bb=new THREE.Box3(),bs=new THREE.Vector3(),bc=new THREE.Vector3();
  const boxLike=g=>{if(bl.has(g))return bl.get(g);let r=null;const pa=g.attributes.position;
    if(pa&&pa.count===24&&g.index&&g.index.count===36){bb.setFromBufferAttribute(pa);let ok=true;

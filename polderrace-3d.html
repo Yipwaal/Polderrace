@@ -1122,7 +1122,7 @@ function buildAfsluitdijk(){
   const sheepB=[],sheepH=[],cm=new THREE.Matrix4(),om=new THREE.Matrix4();
   for(let k=0;k<90;k++){const x=40+rnd()*1600,z=-180+rnd()*160;if(distToTrack(x,z)<12+rnd()*6)continue;
     tmpO.position.set(x,0,z);tmpO.rotation.set(0,rnd()*6.28,0);tmpO.scale.set(1,1,1);tmpO.updateMatrix();cm.copy(tmpO.matrix);
-    om.makeTranslation(0,0.75,0);sheepB.push(cm.clone().multiply(om));om.makeTranslation(0,0.95,0.75);sheepH.push(cm.clone().multiply(om));}
+    om.makeTranslation(0,0.75,0);sheepB.push(cm.clone().multiply(om));om.makeTranslation(0,0.98,0.75);sheepH.push(cm.clone().multiply(om));} /* head top 3 cm above the back, not in its plane */
   inst(new THREE.BoxGeometry(0.8,0.8,1.3),M(0xefece2),sheepB,null,true);inst(new THREE.BoxGeometry(0.35,0.4,0.45),M(0x1f1f1f),sheepH,null,false);
   {const pm=M(0x8d9398),hm=M(0x333a40,{emissive:0x222222});lampMats.push(hm);const lp=[],lh=[],la=[];
    for(let d=30;d<TRACK_LEN;d+=90){const i=Math.round(d/SPC)%NS,[x,z]=onTrack(i,-8.9),h=HT[i];lp.push(mtx(x,h+5,z));const [hx,hz]=onTrack(i,-7.4);lh.push(mtx(hx,h+10,hz,headingOf(T[i])));const [ax,az]=onTrack(i,-8.2);la.push(mtx(ax,h+10.1,az,headingOf(T[i]),1.7,0.12,0.12));
@@ -1276,7 +1276,7 @@ function finishVeluweDetails(){
   if(TRACK_ID!=='veluwe'||!veluweTF)return;
   for(const g of veluweGround){const t=veluweTF(g.position.x,g.position.z);g.position.y=t.h-0.2;}
   const sb=[],shd=[],dm=new THREE.Matrix4();for(const [x,z,r] of veluweSheep){const t=veluweTF(x,z);if(t.d<14)continue;tmpO.position.set(x,t.h,z);tmpO.rotation.set(0,r,0);tmpO.scale.set(1,1,1);tmpO.updateMatrix();
-    dm.makeTranslation(0,0.75,0);sb.push(tmpO.matrix.clone().multiply(dm));dm.makeTranslation(0,0.95,0.75);shd.push(tmpO.matrix.clone().multiply(dm));}
+    dm.makeTranslation(0,0.75,0);sb.push(tmpO.matrix.clone().multiply(dm));dm.makeTranslation(0,0.98,0.75);shd.push(tmpO.matrix.clone().multiply(dm));}
   inst(new THREE.BoxGeometry(0.8,0.8,1.3),M(0xefece2),sb,null,true);inst(new THREE.BoxGeometry(0.35,0.4,0.45),M(0x1f1f1f),shd,null,false);
   const wood=M(0x7a5a3a),tb=[],bn=[];for(const [x,y,z,h] of veluwePicnic){tb.push(mtx(x,y+0.75,z,h,0.8,0.08,2));for(const s of [-0.75,0.75])bn.push(mtx(x+Math.cos(h)*s,y+0.45,z-Math.sin(h)*s,h,0.3,0.06,2));}
   inst(new THREE.BoxGeometry(1,1,1),wood,tb,null,true);inst(new THREE.BoxGeometry(1,1,1),wood,bn,null,true);
@@ -1341,7 +1341,7 @@ function buildLimburg(){
   startLine();gates(TRK);
   const post=[];for(let d=0;d<TRACK_LEN;d+=10){const i=Math.round(d/SPC)%NS;for(const s of [-1,1]){const [x,z]=onTrack(i,s*10.8);post.push(mtx(x,HT[i]+0.5,z));}}inst(new THREE.BoxGeometry(0.16,1,0.16),M(0xf2f0ea),post,null,false);
   const vp=[],vh=[];for(let v=0;v<16;v++){const x0=BX0+rnd()*(BX1-BX0),z0=BZ0+rnd()*(BZ1-BZ0),ang=rnd()*3;
-    for(let r=0;r<9;r++)for(let c=0;c<14;c++){const x=x0+Math.cos(ang)*c*3+Math.sin(ang)*r*2.6,z=z0-Math.sin(ang)*c*3+Math.cos(ang)*r*2.6,t=TF(x,z);if(t.d<16)continue;vh.push(mtx(x,t.h+0.7,z,ang,0.5,1.2,2.8));if(c%3===0)vp.push(mtx(x,t.h+0.8,z));}}
+    for(let r=0;r<9;r++)for(let c=0;c<14;c++){const x=x0+Math.cos(ang)*c*3+Math.sin(ang)*r*2.6,z=z0-Math.sin(ang)*c*3+Math.cos(ang)*r*2.6,t=TF(x,z);if(t.d<16)continue;vh.push(mtx(x,t.h+0.7,z,ang,0.5,1.2,2.6));if(c%3===0)vp.push(mtx(x,t.h+0.8,z));}}
   inst(new THREE.BoxGeometry(1,1,1),M(0x3f6a2a),vh,null,true);inst(new THREE.BoxGeometry(0.1,1.6,0.1),M(0x6b4a2e),vp,null,false);
   const marl=M(0xe3cf8f),hr=M(0x3b3530),hb=[],hrf=[],ft=[];for(let k=0;k<70;k++){const x=BX0-100+rnd()*(BX1-BX0+200),z=BZ0-100+rnd()*(BZ1-BZ0+200),t=TF(x,z);if(t.d<22)continue;
     if(k%3){ft.push(mtx(x,t.h+2.6,z,0,2.2+rnd()));continue;}const w=6+rnd()*5,d=7+rnd()*4,ry=rnd()*6;hb.push(mtx(x,t.h+2.2,z,ry,w,4.4,d));
@@ -1435,7 +1435,9 @@ function reeds(every,near,far){const m=[];alongSides(every,(i)=>edgeLat(i,near+r
   inst(new THREE.ConeGeometry(1,1,4),M(0x8a9a4a),m,null,false);}
 function bushes(every,near,far,col){const m=[];alongSides(every,(i)=>edgeLat(i,near+rnd()*(far-near)),(x,z)=>{const s=0.8+rnd()*1.2;m.push(mtx(x,groundY(x,z)+s*0.6,z,rnd()*6,s,s*0.8,s));});inst(new THREE.SphereGeometry(1,7,5),M(col||0x4f7a3a),m,null,true);}
 function fences(every,lat){const p=[],r=[];for(let d=0;d<TRACK_LEN;d+=every){const i=Math.round(d/SPC)%NS;for(const s of [-1,1]){const l=edgeLat(i,lat),[x,z]=onTrack(i,s*l);if(distToTrack(x,z)<ROAD_HALF+2)continue;const y=groundY(x,z);p.push(mtx(x,y+0.6,z));
-    const j=Math.round((d+every)/SPC)%NS,[x2,z2]=onTrack(j,s*edgeLat(j,lat)),len=Math.hypot(x2-x,z2-z);if(len>every*1.6)continue;const yaw=Math.atan2(x2-x,z2-z);for(const h of [0.45,0.9])r.push(mtx((x+x2)/2,y+h,(z+z2)/2,yaw,0.08,0.1,len));}}
+    const j=Math.round(Math.min(d+every,TRACK_LEN)/SPC)%NS,[x2,z2]=onTrack(j,s*edgeLat(j,lat)),len=Math.hypot(x2-x,z2-z);if(len>every*1.6)continue;const yaw=Math.atan2(x2-x,z2-z),y2=groundY(x2,z2);
+    /* rails run from post to post and follow the slope: level rails stuck into the next post on the hills */
+    tmpO.rotation.order='YXZ';for(const h of [0.45,0.9]){tmpO.position.set((x+x2)/2,(y+y2)/2+h,(z+z2)/2);tmpO.rotation.set(-Math.atan2(y2-y,len),yaw,0);tmpO.scale.set(0.08,0.1,Math.hypot(len,y2-y));tmpO.updateMatrix();r.push(tmpO.matrix.clone());}tmpO.rotation.order='XYZ';}}
   inst(new THREE.BoxGeometry(0.14,1.2,0.14),M(0x6b4a2e),p,null,true);inst(new THREE.BoxGeometry(1,1,1),M(0x8a6a4a),r,null,false);}
 function planters(every,lat){const b=[],f=[],c=[],pal=['#c8302a','#f2c200','#e8e4dc','#9a5ab8'].map(k=>new THREE.Color(k));
   for(let d=rnd()*every;d<TRACK_LEN;d+=every){const i=Math.round(d/SPC)%NS;if(HT[i]>0.2)continue;const s=rnd()<0.5?-1:1,[x,z]=onTrack(i,s*lat);b.push(mtx(x,0.45,z,headingOf(T[i]),1.4,0.5,0.7));for(let k=0;k<5;k++){f.push(mtx(x+(rnd()-.5)*1.1,0.82,z+(rnd()-.5)*0.5,0,0.16));c.push(pick(pal));}}

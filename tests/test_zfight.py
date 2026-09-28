@@ -4,11 +4,10 @@ Checks every track, the garage room, the podium, every car model and every tunin
 (wing / rim style / start number / stripes). Pairs of the same mesh+material are ignored (invisible).
 A hit list shows: count, area, the two colours, the two objects (size @ world position).
 Fix a hit by moving one face >= 2 cm (the renderer uses a logarithmic depth buffer, polygonOffset does NOT work).
---inst also checks the repeated objects the game draws with inst() (houses, piers, fences, sheep, ...). Their geometry is a
-clone, which three r128 turns into a plain BufferGeometry, so without --inst they are skipped. Not on by default yet:
-polder, afsluitdijk, veluwe and limburg still have known hits there (fence rails, sheep, vineyard rows).
+The repeated objects the game draws with inst() (houses, piers, fences, sheep, ...) are checked too: their geometry is a
+clone, which three r128 turns into a plain BufferGeometry, so zf.js recognises boxes by their shape. --geen-inst skips them.
 
-usage: python tests/test_zfight.py [tracks|none] [--no-cars] [--inst]
+usage: python tests/test_zfight.py [tracks|none] [--no-cars] [--geen-inst]
 """
 import sys, collections
 from lib import Session, Report, DEFAULT, TRACKS
@@ -36,7 +35,7 @@ with Session(DEFAULT, w=400, h=260) as s:
     s.ev(DESC)
     for tr in tracks:
         s.ev(f"loadTrack('{tr}','fwd');0")
-        r = s.ev("__zfight(world,{top:100000,visibleOnly:true,inst:%s})" % ('true' if '--inst' in sys.argv else 'false'))
+        r = s.ev("__zfight(world,{top:100000,visibleOnly:true,inst:%s})" % ('false' if '--geen-inst' in sys.argv else 'true'))
         rep.check(r['hits'] == 0, f'baan {tr}', summarize(s, 'world', r) if r['hits'] else f"{r['boxes']} boxen")
     if tracks is not None:
         s.ev("homePanel('garage');0")
