@@ -38,7 +38,7 @@ Het spel draait als **claude.ai-artifact**: https://claude.ai/artifact/Pe2uUr4oT
   - **Lobby met open games** (`window.claude.use('room')`): alleen als artifact op claude.ai.
   - **Spelen via host (met code)**: werkt overal, ook lokaal en op GitHub Pages. Rechtstreeks tussen de browsers
     via WebRTC, zonder server. De host maakt per speler een uitnodigingscode, de speler stuurt een antwoordcode terug.
-    Op hetzelfde wifi werkt dat altijd, via internet meestal (STUN van Google). Strenge netwerken (hotspot, school,
+    Op hetzelfde wifi werkt dat bijna altijd (gastnetwerken met client-isolatie niet), via internet meestal (STUN van Google). Strenge netwerken (hotspot, school,
     werk) kunnen verbinden blokkeren: er is geen TURN-server.
   Buiten claude.ai toont het online-scherm alleen "Spelen via host".
 - Heb je zelf geen Artifact-tool: zeg Yip dat de nieuwe versie klaarstaat. Hij publiceert `polderrace-3d.html`

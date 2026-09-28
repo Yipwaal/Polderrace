@@ -12,7 +12,8 @@ crosses the object an odd number of times, and that is an obstruction too.
 The first 1.5 m of verge next to the asphalt is checked too (cars run wide there), but only for big
 things: anything at least 3 m across that rises more than 0.6 m (a dune, a wall, a building). Posts,
 bollards, benches, planters and flowers there are fine.
-On Dorp the cafe terraces are checked as well: tables at least 2.9 m apart, parasols not over the road.
+On Dorp the cafe terraces are checked as well: tables at least 2.9 m apart, parasols not over the road; and the pavement:
+bikes, lamp posts, planters and benches may not stand in each other.
 
 usage: python tests/test_road_clear.py [track,track,...] [--rev] [--dicht]
 """
@@ -78,6 +79,23 @@ JS = r"""(()=>{world.updateMatrixWorld(true);const meshes=[],inst=[];
 
 # Dorp cafe terraces (4 tables with parasols of 2.8 m across): tables at least 2.9 m apart (closer and the parasols overlap
 # and the chairs stick into the next table) and the parasol rim at least 0.3 m past the edge of the road.
+STOEP = r"""(()=>{world.updateMatrixWorld(true);const out=[],m=new THREE.Matrix4(),P=new THREE.Vector3(),Q=new THREE.Quaternion(),S=new THREE.Vector3(),E=new THREE.Euler();
+  /* footprints on the pavement as rectangles: [kind,x,z,yaw,half length (local x),half width (local z)] */
+  world.traverse(o=>{if(!o.isInstancedMesh)return;const c=o.material.color&&o.material.color.getHex(),cyl=o.geometry.attributes.position.count>24;
+    for(let k=0;k<o.count;k++){o.getMatrixAt(k,m);m.premultiply(o.matrixWorld);m.decompose(P,Q,S);E.setFromQuaternion(Q,'YXZ');let r=null;
+      if(c===0x2b2f36&&!cyl&&Math.abs(S.x-1.1)<0.01&&Math.abs(S.y-0.08)<0.01)r=['fiets',0.86,0.06];
+      else if(c===0x6b4a2e&&!cyl&&Math.abs(S.x-1.4)<0.01)r=['plantenbak',0.7,0.35];
+      else if(c===0x7a5a3a&&!cyl&&Math.abs(S.z-1.8)<0.01&&Math.abs(S.y-0.08)<0.01)r=['bankje',0.25,0.9];
+      else if(c===0x23382c&&cyl&&P.y>2)r=['lantaarnpaal',0.1,0.1];
+      if(r)out.push([r[0],P.x,P.z,E.y,r[1],r[2]]);}});
+  const ax=a=>[[Math.cos(a[3]),-Math.sin(a[3])],[Math.sin(a[3]),Math.cos(a[3])]];
+  const hit=(a,b)=>{if((a[1]-b[1])**2+(a[2]-b[2])**2>9)return false;const A=ax(a),B=ax(b),dx=b[1]-a[1],dz=b[2]-a[2];
+    return A.concat(B).every(([ux,uz])=>{const pa=a[4]*Math.abs(A[0][0]*ux+A[0][1]*uz)+a[5]*Math.abs(A[1][0]*ux+A[1][1]*uz),pb=b[4]*Math.abs(B[0][0]*ux+B[0][1]*uz)+b[5]*Math.abs(B[1][0]*ux+B[1][1]*uz);return Math.abs(dx*ux+dz*uz)<pa+pb-0.01;});};
+  const n={},bad=[];for(const q of out)n[q[0]]=(n[q[0]]||0)+1;
+  for(let i=0;i<out.length;i++)for(let j=i+1;j<out.length;j++){const a=out[i],b=out[j];if(a[0]===b[0])continue;if(hit(a,b))bad.push(a[0]+'/'+b[0]+' bij '+a[1].toFixed(0)+','+a[2].toFixed(0));}
+  return {n,bad};})()"""
+
+
 TERRAS = r"""(()=>{world.updateMatrixWorld(true);const all=(w,h,d)=>{const r=[],m=new THREE.Matrix4(),s=new THREE.Vector3();world.traverse(o=>{if(!o.isInstancedMesh)return;
     new THREE.Box3().setFromBufferAttribute(o.geometry.attributes.position).getSize(s);if(Math.abs(s.x-w)>0.03||Math.abs(s.y-h)>0.03||Math.abs(s.z-d)>0.03)return;
     for(let k=0;k<o.count;k++){o.getMatrixAt(k,m);r.push([m.elements[12],m.elements[14]]);}});return r;};
@@ -98,5 +116,8 @@ with Session(DEFAULT, w=400, h=260) as s:
                 t = s.ev(TERRAS)
                 rep.check(t['n'] >= 4 and t['gap'] >= 2.9 and t['rim'] >= t['need'] - 0.01, f'{tr}/{d} terrassen',
                           f"{t['n']} tafels" + (f", kleinste afstand {t['gap']} m (min 2.9), parasolrand {t['rim']} m van het midden (min {t['need']})" if t['n'] >= 4 else ''))
+                q = s.ev(STOEP)
+                rep.check(not q['bad'] and q['n'].get('fiets', 0) > 20, f'{tr}/{d} stoep: fietsen, palen, plantenbakken en bankjes los van elkaar',
+                          '; '.join(q['bad'][:4]) or str(q['n']))
     rep.check(not s.errs, 'geen JS-fouten', str(s.errs[:3]))
 rep.finish()

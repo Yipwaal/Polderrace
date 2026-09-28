@@ -44,7 +44,7 @@ window.__zfTris=(root,opts)=>{opts=opts||{};const F=[],a=new THREE.Vector3(),b=n
  root.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||!o.visible)return;let vis=true;o.traverseAncestors(q=>{if(!q.visible)vis=false;});if(!vis)return;
    const g=o.geometry,pa=g.attributes.position;if(!pa)return;const idx=g.index,nt=(idx?idx.count:pa.count)/3,mats=Array.isArray(o.material)?o.material:null;
    const groups=g.groups&&g.groups.length?g.groups:[{start:0,count:nt*3,materialIndex:0}],flip=o.matrixWorld.determinant()<0; /* mirrored: three draws the other winding as front */
-   for(const gr of groups){const mat=mats?mats[gr.materialIndex]:o.material;if(!mat||mat.transparent||mat.visible===false)continue;
+   for(const gr of groups){const mat=mats?mats[gr.materialIndex]:o.material;if(!mat||(mat.transparent&&!mat.depthWrite)||mat.visible===false)continue; /* transparent but depth-writing (stickers) can flicker too */
      for(let t=gr.start/3;t<(gr.start+gr.count)/3;t++){const i0=idx?idx.getX(3*t):3*t,i1=idx?idx.getX(3*t+1):3*t+1,i2=idx?idx.getX(3*t+2):3*t+2;
        a.fromBufferAttribute(pa,i0).applyMatrix4(o.matrixWorld);b.fromBufferAttribute(pa,i1).applyMatrix4(o.matrixWorld);c.fromBufferAttribute(pa,i2).applyMatrix4(o.matrixWorld);
        e1.subVectors(b,a);e2.subVectors(c,a);const n=new THREE.Vector3().crossVectors(e1,e2),ar=n.length()/2;if(flip)n.negate();if(ar<1e-5)continue;n.normalize();
