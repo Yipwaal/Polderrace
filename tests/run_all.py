@@ -22,7 +22,7 @@ if FAST:
     JOBS.append(['test_regression.py', 'polder,grachten,zeeland', 'race,time'])
 else:
     JOBS += [
-        ['test_road_clear.py', 'polder,dorp,circuit,afsluitdijk,haven,veluwe,grachten,limburg,rotterdam,zeeland', '--rev'],
+        ['test_road_clear.py', 'polder,dorp,circuit,afsluitdijk,haven,veluwe,grachten,limburg,rotterdam,zeeland', '--rev', '--dicht'],
         ['test_regression.py', 'polder,dorp,circuit,afsluitdijk,haven'],
         ['test_regression.py', 'veluwe,grachten,limburg,rotterdam,zeeland'],
         ['test_regression.py', 'polder,dorp,circuit,afsluitdijk,haven,veluwe,grachten,limburg,rotterdam,zeeland', 'race', 'rev'],
