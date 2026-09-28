@@ -3484,13 +3484,16 @@ function pairContact(A,B){
     let a0=1e9,a1=-1e9,b0=1e9,b1=-1e9;for(const q of PA){const d=q[0]*ux+q[1]*uz;if(d<a0)a0=d;if(d>a1)a1=d;}for(const q of PB){const d=q[0]*ux+q[1]*uz;if(d<b0)b0=d;if(d>b1)b1=d;}
     const o1=a1-b0,o2=b1-a0;if(o1<=0||o2<=0){sep=true;break;}const o=Math.min(o1,o2);if(o<bo){bo=o;bn=o1<o2?[-ux,-uz]:[ux,uz];}}if(sep)break;}
   if(!sep)return {nx:bn[0],nz:bn[1],pen:bo+R};
-  let bd=1e9,ca=null,cb=null;
+  const pr=[];let bd=1e9;
   const scan=(Pp,Q,flip)=>{for(const q of Pp)for(let i=0;i<4;i++){const a=Q[i],b=Q[(i+1)&3],ex=b[0]-a[0],ez=b[1]-a[1],t=clamp(((q[0]-a[0])*ex+(q[1]-a[1])*ez)/(ex*ex+ez*ez||1),0,1),
-    px=a[0]+ex*t,pz=a[1]+ez*t,d=(q[0]-px)*(q[0]-px)+(q[1]-pz)*(q[1]-pz);if(d<bd){bd=d;if(flip){ca=[px,pz];cb=q;}else{ca=q;cb=[px,pz];}}}};
+    px=a[0]+ex*t,pz=a[1]+ez*t,d=Math.hypot(q[0]-px,q[1]-pz);if(d<bd)bd=d;pr.push(flip?[px,pz,q[0],q[1],d]:[q[0],q[1],px,pz,d]);}};
   scan(PA,PB,false);scan(PB,PA,true);
-  const d=Math.sqrt(bd);if(d>=R)return null;
+  const d=bd;if(d>=R)return null;
   if(d<1e-6){const l=Math.hypot(dx,dz)||1;return {nx:dx/l,nz:dz/l,pen:R};}
-  const nx=(ca[0]-cb[0])/d,nz=(ca[1]-cb[1])/d,k=B.rc-(R-d)/2;return {nx,nz,pen:R-d,cx:cb[0]+nx*k,cz:cb[1]+nz*k};
+  /* every pair (nearly) as close as the closest one: two parallel sides (nose against tail, door against door) touch along a line,
+     and its middle is the contact point, so a straight hit pushes straight instead of turning the car round a corner */
+  let ax=0,az=0,bx=0,bz=0,n=0;for(const q of pr)if(q[4]<=d+0.01){ax+=q[0];az+=q[1];bx+=q[2];bz+=q[3];n++;}ax/=n;az/=n;bx/=n;bz/=n;
+  const m=pr.find(q=>q[4]===d),nx=(m[0]-m[2])/d,nz=(m[1]-m[3])/d,k=B.rc-(R-d)/2;return {nx,nz,pen:R-d,cx:bx+nx*k,cz:bz+nz*k};
 }
 /* contact point of a deep hit: middle of the overlap of both boxes along the contact face, on B's surface (symmetric, no corner guessing) */
 function contactOn(A,B,ct){
