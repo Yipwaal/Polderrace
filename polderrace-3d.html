@@ -1586,8 +1586,9 @@ const COLOR_NAMES=['Oranje','Rood','Geel','Blauw','Groen','Wit','Zwart'];
 const PM=(c,o)=>new THREE.MeshPhongMaterial(Object.assign({color:c,specular:0x3a3a3a,shininess:38},o||{}));
 const tyreMat=M(0x1b1b1b),hubMat=PM(0xa1a4a8,{specular:0xd8d8d8,shininess:70}),glassMat=M(0x2c3a48),tailMat=M(0x6e0b0b,{emissive:0xc81d1d}),plateMat=M(0xf2c200),blk=M(0x1d1f24),lampMat=M(0xfff6d8,{emissive:0x807860});
 const carGlass=PM(0x151d26,{specular:0x9aa6b2,shininess:80}),trimMat=PM(0x16181c,{specular:0x2c2c2c,shininess:24}),darkMetal=PM(0xffffff,{vertexColors:true,specular:0x555555,shininess:40}),
-  caliperMat=PM(0xc8302a,{specular:0x777777,shininess:50}),chromeMat=new THREE.MeshPhongMaterial({color:0xcfd3d6,specular:0xffffff,shininess:90});
-const SHARED=new Set([tyreMat,hubMat,glassMat,tailMat,plateMat,blk,lampMat,carGlass,trimMat,darkMetal,caliperMat,chromeMat]);
+  caliperMat=PM(0xc8302a,{specular:0x777777,shininess:50}),chromeMat=new THREE.MeshPhongMaterial({color:0xcfd3d6,specular:0xffffff,shininess:90}),
+  carbonMat=PM(0x23272c,{specular:0x6a6e74,shininess:70}),darkChrome=PM(0x34373c,{specular:0x9a9a9a,shininess:80,side:THREE.DoubleSide});
+const SHARED=new Set([tyreMat,hubMat,glassMat,tailMat,plateMat,blk,lampMat,carGlass,trimMat,darkMetal,caliperMat,chromeMat,carbonMat,darkChrome]);
 function disposeMat(m){for(const k of ['map','emissiveMap','alphaMap','normalMap','bumpMap','specularMap'])if(m[k]&&!SHARED.has(m[k]))m[k].dispose();m.dispose();}
 function disposeObj(o){o.traverse(n=>{if(n.geometry&&!SHARED.has(n.geometry))n.geometry.dispose();if(n.material)(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>{if(!SHARED.has(m))disposeMat(m);});});}
 const wheelSpin=(v,r,dt)=>clamp(v/r,-22,22)*dt;
@@ -1696,10 +1697,12 @@ function makeKit(S){
    (>= 2 cm against flicker) with a skirt that dives into the body, so it never floats. mirror: also build the x-mirrored copy */
 function patch(A,f,u0,u1,v0,v1,nu,nv,out,mirror,uvFlip){
   const G=[];for(let i=0;i<=nu;i++){const row=[];for(let j=0;j<=nv;j++){const s=f(u0+(u1-u0)*i/nu,v0+(v1-v0)*j/nv);if(!s)return A;row.push(s);}G.push(row);}
-  for(const mx of mirror?[1,-1]:[1]){const T=([p,n])=>[new THREE.Vector3(p.x*mx,p.y,p.z).addScaledVector(new THREE.Vector3(n.x*mx,n.y,n.z),out),new THREE.Vector3(n.x*mx,n.y,n.z),new THREE.Vector3(p.x*mx,p.y,p.z).addScaledVector(new THREE.Vector3(n.x*mx,n.y,n.z),-0.03)];
-    const Q=G.map(r=>r.map(T)),uv=(i,j)=>[uvFlip&&mx<0?1-i/nu:i/nu,j/nv];
+  const oF=typeof out==='function'?out:()=>out,shaped=typeof out==='function'; /* out(u,v): a shaped panel (ducktail), shaded per face */
+  for(const mx of mirror?[1,-1]:[1]){const T=([p,n],i,j)=>{const N=new THREE.Vector3(n.x*mx,n.y,n.z),P=new THREE.Vector3(p.x*mx,p.y,p.z);return [P.clone().addScaledVector(N,oF(i/nu,j/nv)),N,P.addScaledVector(N,-0.03)];};
+    const Q=G.map((r,i)=>r.map((q,j)=>T(q,i,j))),uv=(i,j)=>[uvFlip&&mx<0?1-i/nu:i/nu,j/nv];
     const face=(a,b,c,ua,ub,uc,na,nb,nc)=>{const fn=new THREE.Vector3().subVectors(b,a).cross(new THREE.Vector3().subVectors(c,a));if(fn.dot(na)<0)A.tri(a,c,b,na,nc,nb,ua,uc,ub);else A.tri(a,b,c,na,nb,nc,ua,ub,uc);};
-    for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){const a=Q[i][j],b=Q[i+1][j],c=Q[i][j+1],d=Q[i+1][j+1];face(a[0],b[0],d[0],uv(i,j),uv(i+1,j),uv(i+1,j+1),a[1],b[1],d[1]);face(a[0],d[0],c[0],uv(i,j),uv(i+1,j+1),uv(i,j+1),a[1],d[1],c[1]);}
+    const top=(a,b,c,ua,ub,uc,na,nb,nc)=>{if(!shaped)return face(a,b,c,ua,ub,uc,na,nb,nc);const fn=new THREE.Vector3().subVectors(b,a).cross(new THREE.Vector3().subVectors(c,a)).normalize();if(fn.dot(na)<0)fn.negate();face(a,b,c,ua,ub,uc,fn,fn,fn);};
+    for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){const a=Q[i][j],b=Q[i+1][j],c=Q[i][j+1],d=Q[i+1][j+1];top(a[0],b[0],d[0],uv(i,j),uv(i+1,j),uv(i+1,j+1),a[1],b[1],d[1]);top(a[0],d[0],c[0],uv(i,j),uv(i+1,j+1),uv(i,j+1),a[1],d[1],c[1]);}
     /* skirt round the edge */
     const ring=[];for(let i=0;i<nu;i++)ring.push(Q[i][0]);for(let j=0;j<nv;j++)ring.push(Q[nu][j]);for(let i=nu;i>0;i--)ring.push(Q[i][nv]);for(let j=nv;j>0;j--)ring.push(Q[0][j]);
     const cen=new THREE.Vector3();for(const q of ring)cen.add(q[0]);cen.divideScalar(ring.length);
@@ -1764,8 +1767,10 @@ function dressStd(K,D,o){const on=K.on,S=K.S,C=S.cab;K.topRects=K.topRects||[];K
   if(o.plateF!==undefined)F(D.plate,-0.26,0.26,o.plateF-0.06,o.plateF+0.06,0.045,2,1);
   if(o.plateR!==undefined)R(D.plate,0.26,-0.26,o.plateR-0.06,o.plateR+0.06,0.045,2,1); /* u runs right to left seen from behind, so the text reads */
   /* mirrors on the doors, just behind the A-pillar */
-  if(o.mz!==undefined){const y=o.my,x=K.sideX(o.mz,K.top(o.mz)-0.12);if(x>0)for(const sx of [1,-1]){D.trim.box(0.12,0.04,0.07,sx*(x+0.05),y-0.03,o.mz+0.01);
-    D.paint.box(0.2,0.12,0.16,sx*(x+0.16),y,o.mz);D.glass.box(0.16,0.08,0.02,sx*(x+0.16),y,o.mz-0.09);}}
+  if(o.mz!==undefined){const y=o.my,x=K.sideX(o.mz,K.top(o.mz)-0.12);if(x>0)for(const sx of [1,-1]){
+    const arm=new THREE.BoxGeometry(0.14,0.035,0.06);arm.rotateZ(sx*0.25);arm.translate(sx*(x+0.05),y-0.045,o.mz+0.01);D.trim.geo(arm);arm.dispose();
+    const h=new THREE.SphereGeometry(1,14,8,0,Math.PI*2,0,Math.PI/2);h.rotateX(Math.PI/2);h.scale(0.1,0.062,0.09);h.translate(sx*(x+0.16),y,o.mz-0.06);D.paint.geo(h);h.dispose(); /* dome forward, open back */
+    const gl=new THREE.CircleGeometry(1,16);gl.rotateY(Math.PI);gl.scale(0.085,0.05,1);gl.translate(sx*(x+0.16),y,o.mz-0.045);D.glass.geo(gl);gl.dispose();}}
   for(const z of o.handles||[])Sd(D.trim,z-0.07,z+0.07,o.hy-0.018,o.hy+0.018,0.02,2,1);
   if(o.sill)Sd(D.trim,S.wz[1]+K.ra+0.04,S.wz[0]-K.ra-0.04,o.sill[0],o.sill[1],0.02,8,1);
   /* exhausts: short open pipes with a dark inside, under the rear bumper */
@@ -1936,9 +1941,49 @@ function stripeGeo(K,A,x0,x1){const S=K.S,C=S.cab,R=(K.topRects||[]).filter(r=>r
 function finPlate(A,pts,x,t){const sh=new THREE.Shape(pts.map(([z,y])=>new THREE.Vector2(z,y))),g=new THREE.ExtrudeGeometry(sh,{depth:t,bevelEnabled:false});
   g.rotateY(-Math.PI/2);g.translate(x+t/2,0,0);A.geo(g);g.dispose();}
 function diffuser(K,D){const z=K.zR+0.24;for(let x=-0.6;x<=0.61;x+=0.3){const top=K.bot(z)+0.03,y0=0.08;D.trim.box(0.035,top-y0,0.42,x,(top+y0)/2,z);}}
+/* ---- tuning parts, fitted per model and built once (shared like the body) ----
+   GT wing: z = chord centre, h = plane height above the deck (or roof), span, chord; roof: wing on the roof edge (hatchbacks) */
+const TUNE_FIT={hatch:{roof:true,z:-1.5,h:0.1,span:1.5,chord:0.42},rally:{roof:true,z:-1.54,h:0.12,span:1.6,chord:0.46},
+  coupe:{z:-1.87,h:0.26,span:1.6,chord:0.34},roadster:{z:-1.8,h:0.26,span:1.58,chord:0.36},gt:{z:-2.05,h:0.3,span:1.76,chord:0.36},
+  muscle:{z:-2.2,h:0.28,span:1.8,chord:0.4,exUnder:true},fastback:{z:-2.24,h:0.28,span:1.78,chord:0.38},sedan:{z:-2.2,h:0.26,span:1.7,chord:0.38},
+  super:{z:-1.98,h:0.3,span:1.8,chord:0.38},hyper:{z:-2.02,h:0.38,span:1.84,chord:0.42},longtail:{z:-2.5,h:0.24,span:1.5,chord:0.4},
+  proto:{z:-2.25,h:0.42,span:1.92,chord:0.44}};
+/* airfoil outline [[z,y],...] with the leading edge at (zLE,yLE), chord towards -z; camber bulges down (downforce), aoa lifts the trailing edge */
+function airfoil(zLE,yLE,c,th,camber,aoa){const up=[],lo=[],ca=Math.cos(aoa),sa=Math.sin(aoa);
+  for(let k=0;k<=14;k++){const t=(1-Math.cos(k/14*Math.PI))/2,yt=5*th*c*(0.2969*Math.sqrt(t)-0.126*t-0.3516*t*t+0.2843*t*t*t-0.1036*t*t*t*t),yc=-camber*c*4*t*(1-t),s=t*c;
+    for(const [arr,y] of [[up,yc+yt],[lo,yc-yt]])arr.push([zLE-(s*ca-y*sa),yLE+s*sa+y*ca]);}
+  return up.concat(lo.reverse().slice(1,-1));}
+function tuneParts(K,kind){K.tune=K.tune||{};if(K.tune[kind])return K.tune[kind];const S=K.S,C=S.cab,T=TUNE_FIT[S.type]||{z:K.wingZ,h:0.26,span:S.wid-0.2,chord:0.38},
+  cf=Acc(),tr=Acc(),pt=Acc(),ch=Acc(),dk=Acc(),on=K.on;
+  const deckY=(z,x)=>T.roof?K.cabY(z,x):K.topY(z,x);
+  if(kind==='gt'){const span=T.span,c=T.chord,zLE=T.z+c/2,xu=span*0.3,feet=[-1,1].map(s=>deckY(T.z,xu)),y0=Math.max(...feet)+T.h,aoa=T.roof?0.1:0.16;
+    const foil=airfoil(zLE,y0,c,0.12,0.035,aoa);finPlate(cf,foil,0,span);
+    const ys=foil.map(p=>p[1]),lo=Math.min(...ys),hi=Math.max(...ys),zTE=Math.min(...foil.map(p=>p[0]));
+    finPlate(cf,[[zTE+0.02,hi+0.045],[zTE-0.04,hi+0.015],[zTE-0.04,lo-0.07],[zLE-0.06,lo-0.06],[zLE+0.04,lo-0.015],[zLE+0.04,hi+0.015]],span/2,0.025); /* end plates centred on the tips */
+    finPlate(cf,[[zTE+0.02,hi+0.045],[zTE-0.04,hi+0.015],[zTE-0.04,lo-0.07],[zLE-0.06,lo-0.06],[zLE+0.04,lo-0.015],[zLE+0.04,hi+0.015]],-span/2,0.025);
+    {const g=new THREE.BoxGeometry(span-0.03,0.028,0.012);g.rotateX(aoa);g.translate(0,foil[14][1]+0.012,zTE+0.006);cf.geo(g);g.dispose();} /* gurney flap */
+    /* raked posts: feet follow the deck and sink 4 cm into it, tops end 1.5 cm inside the plane */
+    const under=foil.slice(14).concat([foil[0]]).sort((a,b)=>a[0]-b[0]),yU=z=>{for(let i=0;i<under.length-1;i++){const [z1,y1]=under[i],[z2,y2]=under[i+1];if(z>=z1&&z<=z2)return y1+(y2-y1)*(z-z1)/(z2-z1||1);}return y0;};
+    const zf=T.roof?zLE-0.02:T.z+0.1,zb=T.roof?zLE-0.16:T.z-0.08,rk=T.roof?0.04:0.1;
+    for(const s of [-1,1]){const x=s*xu;finPlate(tr,[[zf,deckY(zf,x)-0.04],[zb,deckY(zb,x)-0.04],[zb-rk,yU(zb-rk)+0.015],[zf-rk*0.6,yU(zf-rk*0.6)+0.015]],x,0.03);}}
+  else if(kind==='duck'){
+    if(T.roof){/* hatchbacks: a longer roof spoiler in body colour with side fins */
+      const zr=C.rw+0.12,y=K.cabY(zr,0)-0.005,foil=airfoil(zr,y,0.46,0.1,0.02,-0.12);finPlate(pt,foil,0,1.46);
+      for(const s of [-1,1])finPlate(pt,[[zr-0.02,y-0.04],[zr-0.46,y-0.12],[zr-0.48,y+0.02],[zr-0.1,y+0.03]],s*0.72,0.03);}
+    else{/* a lip that rises from the boot lid and curls up over the rounded tail: follows the skin, 4.5 cm up where it starts (clear of stripes) */
+      const z2=K.zR+0.035,z1=Math.max(z2+0.2,Math.min(C?C.z1-0.075:z2+0.5,z2+0.5)); /* front edge 3.5 cm off the end of any stripe (which stops at z1 - 0.04) */let xw=9;for(let z=z2;z<=z1;z+=0.02)xw=Math.min(xw,K.sec(z)[14][0]);xw*=0.94;
+      patch(pt,on.top,-xw,xw,z2,z1,10,6,(u,v)=>0.045+0.11*Math.pow(1-v,2.2));}}
+  else{/* exhausts: tips that end 4-5 cm behind the bumper, with a dark inside */
+    /* tuned tips leave through the bumper face (just above its lower edge), so they show from the chase camera; the muscle car keeps them under its chrome bumper */
+    const ex=S.exh||[0.5],y=T.exUnder?(S.exhY||0.3):Math.max(S.exhY||0.3,K.bot(K.zR+0.03)+(kind==='sport'?0.095:kind==='dual'?0.08:0.085)),side=Math.min(Math.max(0.45,Math.abs(ex[0])),K.W-0.3),tips=kind==='sport'?[[side,y,0.058],[-side,y,0.058]]:kind==='dual'?[[side+0.065,y,0.042],[side-0.065,y,0.042],[-side+0.065,y,0.042],[-side-0.065,y,0.042]]:[[0.075,y+0.02,0.05],[-0.075,y+0.02,0.05]];
+    for(const [x,ty,r] of tips){const zs=[x-r,x,x+r].map(q=>K.endZ(q,ty,false)).filter(q=>q!==null),zb=zs.length?Math.min(...zs):K.zR; /* the rearmost skin under the rim, so the whole tip clears it */
+      const t=new THREE.CylinderGeometry(r,r*0.94,0.2,16,1,true);t.rotateX(Math.PI/2);t.translate(x,ty,zb+0.055);ch.geo(t);t.dispose();
+      const lip=new THREE.TorusGeometry(r-0.004,0.006,6,16);lip.translate(x,ty,zb-0.045);ch.geo(lip);lip.dispose();
+      const d=new THREE.CircleGeometry(r*0.9,14);d.rotateY(Math.PI);d.translate(x,ty,zb-0.01);dk.geo(d);d.dispose();}}
+  const o={cf:cf.build(),trim:tr.build(),paint:pt.build(),chrome:ch.build(),dark:dk.build()};for(const k in o)if(o[k])SHARED.add(o[k]);K.tune[kind]=o;return o;}
 function postWingRoof(K,D){const z=-1.66,y=K.cabY(-1.6,0);D.wingP.box(1.5,0.05,0.34,0,y+0.03,z-0.06,-0.1);for(const s of [-1,1])D.wingP.box(0.04,0.1,0.34,s*0.74,y-0.005,z-0.06);}
 const KITS=new Map();
-function carKit(type){if(KITS.has(type))return KITS.get(type);const s=CAR_SPECS[type]||CAR_SPECS.gt,S=Object.assign({zF:s.len/2,zR:-s.len/2},s);S.W=S.wid/2-0.005;if(S.wx===undefined)S.wx=S.W-S.w/2-0.012;
+function carKit(type){if(KITS.has(type))return KITS.get(type);const s=CAR_SPECS[type]||CAR_SPECS.gt,S=Object.assign({zF:s.len/2,zR:-s.len/2,type},s);S.W=S.wid/2-0.005;if(S.wx===undefined)S.wx=S.W-S.w/2-0.012;
   const K=makeKit(S),D={};for(const k of ['paint','trim','lamp','tail','chrome','plate','deco','glass','wingP','wingT','exh','stripe'])D[k]=Acc();
   s.dress(K,D);K.G={};for(const k in D){K.G[k]=D[k].build();if(K.G[k])SHARED.add(K.G[k]);}SHARED.add(K.body);if(K.cab)SHARED.add(K.cab);
   const w=S.wing;K.wingZ=w.z;K.wingY=w.roof?K.cabY(w.z,0.45):K.topY(w.z,0.45);KITS.set(type,K);return K;}
@@ -2544,22 +2589,13 @@ function styleExtras(m,u,rim){
     const onRoof=C&&C.ws-C.rw>0.5,rz=onRoof?(C.ws+C.rw)/2:(K.zF+(C?C.z0:0.4))/2,
       rs=onRoof?Math.min(0.62,(C.ws-C.rw)*0.7,2*C.sec(rz)[8][0]+0.04):0.5, /* no wider than the flat part of the roof (narrow race canopies) */
       rg=patch(Acc(),onRoof?K.on.cab:K.on.top,rs/2,-rs/2,rz-rs/2,rz+rs/2,4,4,0.045).build(); /* u from +x to -x: reads right way round from the chase camera */if(rg){const d=new THREE.Mesh(rg,dm);d.renderOrder=2;m.g.add(d);}}
-  const blkM=M(0x1b1d22),cf=new THREE.MeshPhongMaterial({color:0x22262b,specular:0x555555,shininess:60}),col=m.paint||PM(settings.color);
-  /* every model declares where a wing belongs (wingY/wingZ) and which meshes are its factory spoiler; a tuned wing replaces that spoiler instead of stacking on it */
+  const col=m.paint||PM(settings.color),add=(geo,mat,cast)=>{if(!geo)return;const o=new THREE.Mesh(geo,mat);o.castShadow=!!cast;m.g.add(o);};
+  /* a tuned spoiler replaces the factory one; wings, ducktails and exhaust tips are fitted per model (tuneParts) */
   if(u.wing&&u.wing!=='std'&&m.stockWing)m.stockWing.forEach(o=>o.visible=false);
-  const wy=m.wingY,wz=m.wingZ,ww=Math.min(2.08,m.wid*0.98);
-  if(u.wing==='duck'){const d=new THREE.Mesh(new THREE.BoxGeometry(ww*0.9,0.06,0.4),col);d.position.set(0,wy+0.09,wz+0.05);d.rotation.x=-0.34;d.castShadow=true;m.g.add(d);
-    for(const sx of [-1,1])box(0.05,0.16,0.4,col,sx*ww*0.45,wy+0.1,wz+0.05,m.g,false);}
-  if(u.wing==='gt'){for(const x of [-0.28,0.28]){const s=box(0.06,0.34,0.24,blkM,x*ww,wy+0.17,wz+0.14,m.g);s.rotation.x=0.35;}
-    const pl=box(ww,0.05,0.42,cf,0,wy+0.36,wz-0.02,m.g);pl.rotation.x=-0.16;const gf=box(ww*0.98,0.02,0.1,cf,0,wy+0.41,wz-0.22,m.g,false);gf.rotation.x=-0.5;
-    for(const x of [-1,1])box(0.03,0.26,0.5,blkM,x*ww/2,wy+0.4,wz-0.02,m.g,false);}
+  if(u.wing==='gt'||u.wing==='duck'){const t=tuneParts(K,u.wing);add(t.cf,carbonMat,true);add(t.trim,trimMat,true);add(t.paint,col,true);}
   /* exhaust (classes B and A only): the stock tips make way for a sport, twin or centre-exit set */
   {const ex=m.g.userData.exh;if(ex&&u.exhaust&&u.exhaust!=='std'&&CARS[m.type]&&CARS[m.type].cls!=='S'){ex.meshes.forEach(o=>o.visible=false);
-    const tip=(x,y,rad,len,mat)=>{const e=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,len,12),mat);e.rotation.x=Math.PI/2;e.position.set(x,y,ex.z-len/2+0.11);m.g.add(e);const inner=new THREE.Mesh(new THREE.CylinderGeometry(rad*0.72,rad*0.72,0.02,12),blkM);inner.rotation.x=Math.PI/2;inner.position.set(x,y,ex.z+0.11-len-0.02);m.g.add(inner);};
-    const xs=ex.xs.length?ex.xs:[-0.5,0.5],side=Math.max(0.45,Math.abs(xs[0]));
-    if(u.exhaust==='sport')for(const sx of [-1,1])tip(sx*side,ex.y,0.085,0.3,chromeMat);
-    else if(u.exhaust==='dual')for(const sx of [-1,1])for(const dx of [-0.11,0.11])tip(sx*side+dx,ex.y,0.05,0.28,chromeMat);
-    else if(u.exhaust==='center'){for(const dx of [-0.13,0.13])tip(dx,ex.y+0.04,0.07,0.3,new THREE.MeshPhongMaterial({color:0x2a2c30,specular:0x888888,shininess:70}));}}}
+    const t=tuneParts(K,u.exhaust);add(t.chrome,u.exhaust==='center'?darkChrome:chromeMat);add(t.dark,trimMat);}}
 }
 function openGarage(){
   const cls=CARS[settings.car].cls;syncRadios($('garClass'),cls);$('garCredits').textContent=fmtCr(garage.credits);
