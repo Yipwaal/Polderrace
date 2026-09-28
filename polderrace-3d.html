@@ -1750,8 +1750,9 @@ function dressStd(K,D,o){const on=K.on,S=K.S,C=S.cab;K.topRects=K.topRects||[];K
   const fits=(f,x,y0,y1)=>[y0,(y0+y1)/2,y1].every(y=>{const q=f(x,y);return q&&Math.abs(q[1].z)>0.5;});
   const cl=(f,x0,x1,y0,y1)=>{const a=Math.min(x0,x1),b=Math.max(x0,x1);let m=Math.max(Math.abs(a),Math.abs(b));while(m>0.05&&!fits(f,m,y0,y1))m-=0.01;
     const na=a<0?Math.max(a,-m):Math.min(a,m),nb=Math.min(b,m);return x0<=x1?[na,nb]:[nb,na];};
-  const F=(A,x0,x1,y0,y1,out,nu,nv)=>{[x0,x1]=cl(on.front,x0,x1,y0,y1);return Math.abs(x1-x0)<0.04?A:patch(A,on.front,x0,x1,y0,y1,nu||6,nv||2,out||0.02,Math.min(x0,x1)>0);};
-  const R=(A,x0,x1,y0,y1,out,nu,nv)=>{[x0,x1]=cl(on.rear,x0,x1,y0,y1);return Math.abs(x1-x0)<0.04?A:patch(A,on.rear,x0,x1,y0,y1,nu||6,nv||2,out||0.02,Math.min(x0,x1)>0);};
+  /* a grid point every 8 cm across: coarser, and on a round nose the panel between two points dips into the paint */
+  const F=(A,x0,x1,y0,y1,out,nu,nv)=>{[x0,x1]=cl(on.front,x0,x1,y0,y1);return Math.abs(x1-x0)<0.04?A:patch(A,on.front,x0,x1,y0,y1,Math.max(nu||6,Math.ceil(Math.abs(x1-x0)/0.08)),nv||2,out||0.02,Math.min(x0,x1)>0);};
+  const R=(A,x0,x1,y0,y1,out,nu,nv)=>{[x0,x1]=cl(on.rear,x0,x1,y0,y1);return Math.abs(x1-x0)<0.04?A:patch(A,on.rear,x0,x1,y0,y1,Math.max(nu||6,Math.ceil(Math.abs(x1-x0)/0.08)),nv||2,out||0.02,Math.min(x0,x1)>0);};
   const Sd=(A,z0,z1,y0,y1,out,nu,nv)=>{K.sideRects.push([Math.min(z0,z1),Math.max(z0,z1),y0,y1]);return patch(A,on.side,z0,z1,y0,y1,nu||8,nv||2,out||0.02,true);};
   const Tp=(A,x0,x1,z0,z1,out,nu,nv)=>{K.topRects.push([x0,x1,z0,z1]);if(x0>0)K.topRects.push([-x1,-x0,z0,z1]);return patch(A,on.top,x0,x1,z0,z1,nu||3,nv||4,out||0.02,x0>0);};
   const Cb=(A,x0,x1,z0,z1,out,nu,nv)=>patch(A,on.cab,x0,x1,z0,z1,nu||3,nv||4,out||0.02,x0>0);
