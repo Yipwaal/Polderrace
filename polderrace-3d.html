@@ -118,9 +118,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 /* swatches */
 .colors{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0}
 .colors .lab{font:800 11px/1 var(--font);letter-spacing:.12em;text-transform:uppercase;color:var(--lab);margin-right:6px}
-.sw{width:30px;height:30px;border-radius:999px;border:0;cursor:pointer;padding:0}
-.sw[data-v="#1d4f9e"]{box-shadow:inset 0 0 0 2px rgba(247,247,242,.6)}
-.sw[aria-checked="true"]{box-shadow:0 0 0 3px var(--sign),0 0 0 6px var(--detour)}
+.colors.well{background:var(--well);border-radius:23px;padding:8px 12px;gap:12px} /* 23 px: a pill on one row, a rounded card when it wraps on a phone */
+.sw{width:30px;height:30px;border-radius:999px;border:0;cursor:pointer;padding:0;box-shadow:inset 0 0 0 2px rgba(247,247,242,.22)} /* a light edge so dark and blue paints stand out on the well */
+.sw[aria-checked="true"]{box-shadow:inset 0 0 0 2px rgba(247,247,242,.22),0 0 0 3px var(--ink),0 0 0 6px var(--detour)}
 .sw:focus-visible{outline-offset:6px}
 /* option rows */
 .opts{display:flex;flex-direction:column;background:var(--card);border-radius:16px;margin:0}
@@ -132,11 +132,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .optgrid{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:center}
 .optgrid .optl{font-size:15px}
 .optgrid .seg button{flex:1;text-align:center;padding:8px 0}
-.stepper{display:flex;align-items:center;gap:6px;background:var(--well);border-radius:999px;padding:4px}
+.stepper{display:flex;align-items:center;gap:6px;background:var(--well);border-radius:999px;padding:5px}
 .stepper button{width:34px;height:34px;border-radius:999px;border:0;background:rgba(255,255,255,.12);color:var(--sign-ink);font:900 18px/1 var(--font);cursor:pointer}
 .stepper button:disabled{opacity:.45;background:transparent;cursor:default}
 .stepper output{min-width:30px;text-align:center;font:900 20px var(--font);font-variant-numeric:tabular-nums}
-.seg{display:flex;background:var(--well);border-radius:999px;padding:4px;gap:2px;flex-wrap:wrap}
+.seg{display:flex;background:var(--well);border-radius:999px;padding:5px;gap:2px;flex-wrap:wrap}
 .seg button{font:800 14px/1 var(--font);color:var(--sign-ink);background:transparent;border:0;padding:9px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
 .seg button[aria-checked="true"]{background:var(--detour);color:var(--ink);font-weight:900}
 .seg.alt button[aria-checked="true"]{background:var(--sign-ink);color:var(--sign)}
@@ -243,9 +243,9 @@ kbd{font:800 12px/1 var(--font);min-width:1.8em;padding:5px 9px;border-radius:99
 .buy:disabled{color:var(--lab);opacity:.8;cursor:default}
 .carprice{font:900 14px var(--font);color:var(--detour);white-space:nowrap}
 .paintrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%}
-.paintrow .colors{flex:1}
-.picklab{display:flex;align-items:center;gap:8px;background:var(--well);border-radius:999px;padding:5px 5px 5px 14px;font:800 13px var(--font);margin-left:auto;cursor:pointer}
-.picklab input{width:26px;height:26px;border:0;border-radius:999px;padding:0;background:none;appearance:none;-webkit-appearance:none;cursor:pointer}
+.paintrow .colors{flex:1 1 290px} /* all seven swatches on one row; on a phone "Eigen kleur" moves below them */
+.picklab{display:flex;align-items:center;gap:8px;background:var(--well);border-radius:999px;padding:8px 10px 8px 16px;font:800 13px var(--font);margin-left:auto;cursor:pointer} /* same height as the swatch well beside it */
+.picklab input{width:30px;height:30px;border:0;border-radius:999px;padding:0;background:none;appearance:none;-webkit-appearance:none;cursor:pointer}
 .picklab input::-webkit-color-swatch-wrapper{padding:0}.picklab input::-webkit-color-swatch{border:0;border-radius:999px}.picklab input::-moz-color-swatch{border:0;border-radius:999px}
 .numin{width:84px;text-align:center;background:var(--well);border:0;border-radius:10px;padding:9px 8px;font:900 18px var(--font);color:inherit;font-variant-numeric:tabular-nums}
 .numin::placeholder{color:var(--lab)}
@@ -533,7 +533,7 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
           <p class="note small">Geld verdien je met races, tijdritten en het kampioenschap. Hoger niveau en betere plek levert meer op. Sleep naast het paneel om de auto rond te draaien.</p>
         </div>
         <div id="garLook" class="panel" hidden>
-          <div class="panel" style="flex:0;gap:10px"><span class="eyebrow">Lakkleur</span><div class="paintrow"><div id="paintSeg" class="colors" role="radiogroup" aria-label="Lakkleur"></div><label class="picklab">Eigen kleur <input type="color" id="paintPick" aria-label="Eigen kleur"></label></div></div>
+          <div class="panel" style="flex:0;gap:10px"><span class="eyebrow">Lakkleur</span><div class="paintrow"><div id="paintSeg" class="colors well" role="radiogroup" aria-label="Lakkleur"></div><label class="picklab">Eigen kleur <input type="color" id="paintPick" aria-label="Eigen kleur"></label></div></div>
           <div class="opts looks">
             <div class="opt"><span class="optl">Velgen</span><div id="rimSeg" class="seg" role="radiogroup" aria-label="Velgkleur"></div></div>
             <div class="opt"><span class="optl">Velgmodel</span><div id="rimStyleSeg" class="seg" role="radiogroup" aria-label="Velgmodel"></div></div>
@@ -594,7 +594,7 @@ select.numin{font-size:15px;font-weight:800;text-align:left}
           <button data-v="B"><b>B</b>Compact</button><button data-v="A"><b>A</b>GT</button><button data-v="S"><b>S</b>Super</button>
         </div>
         <div id="cars" class="grid2" role="radiogroup" aria-label="Auto"></div>
-        <div id="colors" class="colors" role="radiogroup" aria-label="Kleur"><span class="lab">Kleur</span></div>
+        <div id="colors" class="colors well" role="radiogroup" aria-label="Kleur"><span class="lab">Kleur</span></div>
       </div>
       <div class="step" data-step="1" hidden>
         <div id="tracks" class="grid3" role="radiogroup" aria-label="Baan"></div>
@@ -3242,7 +3242,9 @@ function applyPrefs(){const q=prefs.quality,dp=window.devicePixelRatio||1;render
   sun.castShadow=q!=='low';const ms=q==='high'?2048:1024;if(sun.shadow.mapSize.x!==ms){sun.shadow.mapSize.set(ms,ms);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}resize();
   muted=!prefs.sound;$('sndOn').hidden=muted;$('sndOff').hidden=!muted;$('muteBtn').setAttribute('aria-label',muted?'Geluid aan':'Geluid uit');}
 document.querySelectorAll('.tog').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.pref;prefs[k]=!prefs[k];savePrefs();applyPrefs();syncToggles();}));
-document.querySelectorAll('[data-homeback]').forEach(b=>b.addEventListener('click',()=>{if(pauseSettingsOpen()){closePauseSettings();return;}homePanel('main');}));
+const HOME_PARENT={career:'play',net:'play'}; /* panels opened from "Spelen" go back there; the rest back to the home screen */
+function homeBack(){const from=homeView,to=HOME_PARENT[from]||'main';homePanel(to);const b=to==='play'&&$({career:'hCareer',net:'hNet'}[from]);if(b)b.focus({preventScroll:true});}
+document.querySelectorAll('[data-homeback]').forEach(b=>b.addEventListener('click',()=>{if(pauseSettingsOpen()){closePauseSettings();return;}homeBack();}));
 $('hStart').addEventListener('click',()=>{menuFlow='quick';leaveChampMode();showMenu(2);});
 $('hChamp').addEventListener('click',()=>{champ=loadQuickChamp();menuFlow='champ';showMenu(champInProgress()?3:0);});
 $('hQuick').addEventListener('click',()=>{menuFlow='quick';leaveChampMode();startRace();});
@@ -3263,7 +3265,10 @@ function menuNext(){
   if(menuFlow==='champ'){if(!champInProgress())newChamp();champ.active=true;saveChamp();loadChampRound();startRace();}
   else startRace();
 }
-function menuBack(){if(menuStep<0){if(homeView!=='main')homePanel('main');return;}if(menuFlow==='net'){netCarDone();return;}const steps=flowSteps(),i=steps.indexOf(menuStep);showMenu(i>0?steps[i-1]:-1);}
+function menuBack(){if(menuStep<0){if(homeView!=='main')homeBack();return;}if(menuFlow==='net'){netCarDone();return;}const steps=flowSteps(),i=steps.indexOf(menuStep);
+  if(i>0){showMenu(steps[i-1]);return;}
+  /* first step of Race or Kampioenschap: back to "Spelen", on the button that opened it */
+  const fl=menuFlow;showMenu(-1);homePanel('play');$(fl==='champ'?'hChamp':'hStart').focus({preventScroll:true});}
 function menuCycle(d){
   if(menuStep<0)return;
   if(menuStep===0){const ids=carsOf(CARS[settings.car].cls);pickCar(ids[(ids.indexOf(settings.car)+d+ids.length)%ids.length]);return;}
