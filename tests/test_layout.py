@@ -3,6 +3,7 @@
 - no panel/list collapsed to ~0 px height, and no rows in a column drawn over each other,
 - the primary buttons (Volgende / Terug / Start) are reachable (inside the viewport after scrolling into view).
 Screenshots of the garage look-tab per size go to tests/.out/.
+Then, once: Terug (button and Esc) goes one level up, and the focus ring of a chosen option stays inside its bar.
 """
 from lib import Session, Report, DEFAULT
 
@@ -48,4 +49,26 @@ for w, h in SIZES:
             if name == 'garage:look':
                 s.shot(f'layout_garage_look_{w}x{h}.png')
         rep.check(not bad and not s.errs, f'{w}x{h}', ' | '.join(bad[:4]) + (f' ERR {s.errs[:2]}' if s.errs else ''))
+NAV = [("Spelen > Race > Terug", "#hPlay,#hStart,#backBtn", "play"), ("Spelen > Race > Esc", "#hPlay,#hStart,ESC", "play"),
+       ("Spelen > Carriere > Terug", "#hPlay,#hCareer,#homeCareer [data-homeback]", "play"), ("Spelen > Online > Terug", "#hPlay,#hNet,#homeNet [data-homeback]", "play"),
+       ("Spelen > Kampioenschap > Terug", "#hPlay,#hChamp,#backBtn", "play"), ("Spelen > Terug", "#hPlay,#homePlay [data-homeback]", "main"),
+       ("Carriere > auto kopen > Garage > Terug", "#hPlay,#hCareer,#careerCars .ccard:has(.lock),#homeGarage [data-homeback]", "career"),
+       ("Garage > Terug", "#hGarage,#homeGarage [data-homeback]", "main")]
+with Session(DEFAULT, w=1280, h=720) as s:
+    for name, clicks, want in NAV:
+        s.ev("toMenu(-1);homePanel('main');0"); s.pg.wait_for_timeout(200)
+        for c in clicks.split(','):
+            if c == 'ESC':
+                s.pg.keyboard.press('Escape')
+            else:
+                s.pg.click(c)
+            s.pg.wait_for_timeout(250)
+        got = s.ev("(menuStep<0&&!$('home').hidden)?homeView:'menu '+menuStep")
+        rep.check(got == want, f'terug: {name}', f'kwam op {got}, verwacht {want}')
+    s.ev("toMenu(-1);homePanel('main');0"); s.pg.click('#hPlay'); s.pg.click('#hStart'); s.pg.wait_for_timeout(300)
+    s.pg.keyboard.press('Tab')  # keyboard modality, so the focused option shows its ring (:focus-visible) as it does for Yip
+    ring = s.pg.evaluate("""()=>{const b=document.querySelector('#modeSeg [aria-checked="true"]');b.focus();const bar=b.closest('.seg'),cs=getComputedStyle(b),pad=parseFloat(getComputedStyle(bar).paddingTop);
+        const reach=parseFloat(cs.outlineOffset)+parseFloat(cs.outlineWidth);return {fv:b.matches(':focus-visible'),reach,pad};}""")
+    rep.check(ring['fv'] and ring['reach'] <= ring['pad'], 'focusring van de gekozen optie blijft binnen de balk', str(ring))
+    rep.check(not s.errs, 'geen JS-fouten (navigatie)', str(s.errs[:2]))
 rep.finish()
