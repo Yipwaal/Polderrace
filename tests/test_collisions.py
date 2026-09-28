@@ -3,7 +3,7 @@
 - a light side tap at equal speed must NOT spin the bot or the player (bot yaw < 6 deg, player spin < 0.3)
 - a PIT manoeuvre on the rear corner MUST spin the bot (bot yaw > 60 deg)
 - 30 random light taps: none may be violent (bot yaw < 10 deg, player spin < 0.6)
-- straight into the back of a bot (10-23 m/s faster) turns nobody; 30 cm off-centre turns it a little, equally to both sides
+- straight into the back of a bot (10-23 m/s faster) turns nobody; 60 cm off-centre turns it a little (a few degrees), equally to both sides
 - a tap is not a brake: grazing a bot while overtaking or tapping it from behind costs only a few km/h (the old model treated a graze
   as a rear-end crash and the pushed bot braked hard against you: -21 km/h and 17 hits in a row)
 - the hitbox is the car: per model the rounded hitbox stays within 9 cm of the body's footprint (convex hull of the body skin), and for
@@ -72,11 +72,11 @@ with Session(dict(DEFAULT, track='circuit', bots=2, laps=5), w=300, h=200) as s:
     # straight into the back of a bot: pushes it straight, it must not turn (two parallel faces touch along a line: the contact point is
     # its middle, not a corner); off-centre hits turn it a little, the same amount to either side
     yaws = {}
-    for dv, lat in [(10, 0), (14, 0), (23, 0), (14, 0.3), (14, -0.3)]:
+    for dv, lat in [(10, 0), (14, 0), (23, 0), (14, 0.6), (14, -0.6)]:
         m = sc(dict(botLat=0, botV=22 if dv == 23 else 30, pDs=-6.5, pLat=lat, pV=(22 if dv == 23 else 30)+dv, pAng=0, steerFrames=0, T=3))
         yaws[(dv, lat)] = (m['botYaw'], m['pSpin'])
     rep.check(all(y < 5 and sp < 0.3 for (dv, lat), (y, sp) in yaws.items() if lat == 0), 'recht van achteren (10-23 m/s verschil): niemand draait', str(yaws))
-    rep.check(abs(yaws[(14, 0.3)][0] - yaws[(14, -0.3)][0]) <= 2 and yaws[(14, 0.3)][0] < 15, 'scheef van achteren: links en rechts even veel', str(yaws))
+    rep.check(abs(yaws[(14, 0.6)][0] - yaws[(14, -0.6)][0]) <= 2 and 1 <= yaws[(14, 0.6)][0] < 15, 'scheef van achteren: links en rechts even veel', str(yaws))
     # speed before the first contact and 0.5 s after it (gas held all the time), in km/h
     s.ev(r"""window.__tap=(o)=>{const r=JSON.parse(__scn(Object.assign({},o,{T:0.01})));paused=true;state='racing';const A=bots[0];let first=-1,v0=0,b0=0,n=0,prev=false,out=null;
      const i0=40;A.s=i0*SPC;A.lat=o.botLat;A.gridLat=o.botLat;A.speed=A.cur=A.vmax=o.botV;A.lp=A.latV=A.spin=A.yawOff=A.yawK=0;A.spun=false;A.pushDv=0;poseOnTrack(A.m.g,A.s,A.lat,0);
