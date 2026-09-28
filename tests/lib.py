@@ -24,6 +24,8 @@ OUT.mkdir(exist_ok=True)
 ANCHOR = "loadTrack(settings.track);applyEnv(settings.time,settings.weather);rebuildPlayerCar();"
 TRACKS = ['polder', 'dorp', 'circuit', 'afsluitdijk', 'haven', 'veluwe', 'grachten', 'limburg', 'rotterdam', 'zeeland']
 CAR_IDS = ['hatch', 'rally', 'coupe', 'roadster', 'gt', 'muscle', 'fastback', 'sedan', 'super', 'hyper', 'longtail', 'proto']
+# a new player's garage (only the hot hatch): pass as extra_init to test what the game offers before you buy cars
+NEW_GARAGE = "localStorage.setItem('polderrace3d-garage',JSON.stringify({owned:{hatch:true}}));"
 TEST_MARKERS = ['__ev', '__clog', 'mockroom', '__zfight', '__step']
 
 # The autopilot also presses 'Terug op de baan' (resetToTrack) like a player would when the car has faced the wrong way for

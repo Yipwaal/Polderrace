@@ -5,7 +5,7 @@
 Screenshots of the garage look-tab per size go to tests/.out/.
 Then, once: Terug (button and Esc) goes one level up, and the focus ring of a chosen option stays inside its bar.
 """
-from lib import Session, Report, DEFAULT
+from lib import Session, Report, DEFAULT, NEW_GARAGE
 
 SIZES = [(1280, 720), (1366, 768), (812, 854), (1920, 1080), (390, 844), (844, 390)]
 TOL = 24  # px: the sticky button bar on phones deliberately overhangs 22 px
@@ -34,7 +34,7 @@ BTN = {"online:host": "#netStart", "online:meedoen": "#p2pAnswerMake", "menu:mod
 
 rep = Report('menu-layout op 6 schermformaten')
 for w, h in SIZES:
-    with Session(DEFAULT, w=w, h=h) as s:
+    with Session(DEFAULT, w=w, h=h, extra_init=NEW_GARAGE) as s:  # a new player: garage and career show cars to buy
         bad = []
         for name, js in VIEWS:
             s.ev(f"toMenu(-1);{js};0"); s.pg.wait_for_timeout(250)
@@ -54,7 +54,7 @@ NAV = [("Spelen > Race > Terug", "#hPlay,#hStart,#backBtn", "play"), ("Spelen > 
        ("Spelen > Kampioenschap > Terug", "#hPlay,#hChamp,#backBtn", "play"), ("Spelen > Terug", "#hPlay,#homePlay [data-homeback]", "main"),
        ("Carriere > auto kopen > Garage > Terug", "#hPlay,#hCareer,#careerCars .ccard:has(.lock),#homeGarage [data-homeback]", "career"),
        ("Garage > Terug", "#hGarage,#homeGarage [data-homeback]", "main")]
-with Session(DEFAULT, w=1280, h=720) as s:
+with Session(DEFAULT, w=1280, h=720, extra_init=NEW_GARAGE) as s:
     for name, clicks, want in NAV:
         s.ev("toMenu(-1);homePanel('main');0"); s.pg.wait_for_timeout(200)
         for c in clicks.split(','):

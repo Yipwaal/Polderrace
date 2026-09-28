@@ -3,7 +3,7 @@ career Polder Cup (3 races). Every race must end in results + podium, standings 
 championship must be marked done, and credits must be paid.
 First: you can only race cars you own (car step, player 2, class buttons, keys, garage browsing, quick race).
 """
-from lib import Session, Report, DEFAULT
+from lib import Session, Report, DEFAULT, NEW_GARAGE
 
 rep = Report('kampioenschap en carrière')
 
@@ -22,7 +22,7 @@ def run(s):
 VISIBLE = "[...$('cars').querySelectorAll('.card')].filter(b=>!b.hidden).map(b=>b.dataset.v).join()"
 # a new player: only the hot hatch is owned, the saved settings still point at the (default) GT and a Supercar for player 2
 with Session(dict(DEFAULT, car='gt', p2car='super', mode='split'), w=900, h=560,
-             extra_init="localStorage.setItem('polderrace3d-garage',JSON.stringify({credits:3000,owned:{hatch:true}}));") as s:
+             extra_init=NEW_GARAGE.replace('{owned:', '{credits:3000,owned:')) as s:
     rep.check(s.ev("settings.car+'/'+settings.p2car") == 'hatch/hatch', 'niet-gekochte auto in de opslag wordt een eigen auto', s.ev("settings.car+'/'+settings.p2car"))
     s.ev("homePanel('play');0"); s.pg.click('#hStart'); s.pg.wait_for_timeout(300); s.pg.click('#nextBtn'); s.pg.wait_for_timeout(400)
     rep.check(s.ev('menuStep') == 0 and s.ev(VISIBLE) == 'hatch', 'autokeuze toont alleen auto\'s in bezit', s.ev(VISIBLE))
