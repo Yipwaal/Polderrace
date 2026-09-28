@@ -1,13 +1,13 @@
 """Z-fighting (flicker) detector: two visible faces of boxes/planes in the same plane that overlap.
 
-Checks every track, the garage room, the podium, every car model and every tuning variant
+Checks every track in both directions (decoration differs per direction: signs, start/finish, seeded placement), the garage room, the podium, every car model and every tuning variant
 (wing / rim style / start number / stripes). Pairs of the same mesh+material are ignored (invisible).
 A hit list shows: count, area, the two colours, the two objects (size @ world position).
 Fix a hit by moving one face >= 2 cm (the renderer uses a logarithmic depth buffer, polygonOffset does NOT work).
 The repeated objects the game draws with inst() (houses, piers, fences, sheep, ...) are checked too: their geometry is a
 clone, which three r128 turns into a plain BufferGeometry, so zf.js recognises boxes by their shape. --geen-inst skips them.
 
-usage: python tests/test_zfight.py [tracks|none] [--no-cars] [--geen-inst]
+usage: python tests/test_zfight.py [tracks|none] [--no-cars] [--geen-inst] [--fwd]   (--fwd: only the forward direction)
 """
 import sys, collections
 from lib import Session, Report, DEFAULT, TRACKS
@@ -34,9 +34,10 @@ rep = Report('z-fighting (flikkerende vlakken)')
 with Session(DEFAULT, w=400, h=260) as s:
     s.ev(DESC)
     for tr in tracks:
-        s.ev(f"loadTrack('{tr}','fwd');0")
-        r = s.ev("__zfight(world,{top:100000,visibleOnly:true,inst:%s})" % ('false' if '--geen-inst' in sys.argv else 'true'))
-        rep.check(r['hits'] == 0, f'baan {tr}', summarize(s, 'world', r) if r['hits'] else f"{r['boxes']} boxen")
+        for d in (['fwd'] if '--fwd' in sys.argv else ['fwd', 'rev']):
+            s.ev(f"loadTrack('{tr}','{d}');0")
+            r = s.ev("__zfight(world,{top:100000,visibleOnly:true,inst:%s})" % ('false' if '--geen-inst' in sys.argv else 'true'))
+            rep.check(r['hits'] == 0, f'baan {tr}/{d}', summarize(s, 'world', r) if r['hits'] else f"{r['boxes']} boxen")
     if tracks is not None:
         s.ev("homePanel('garage');0")
         r = s.ev("__zfight(garageRoom,{top:100000,visibleOnly:true,y0:0})")

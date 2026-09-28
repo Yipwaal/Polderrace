@@ -931,8 +931,12 @@ function buildPolder(){
 
   const tulipTex=['#d62a2a','#f5c518','#e85a9a','#f07a1a','#8e44ad'].map(c=>canvasTex(64,64,(g,w,h)=>{g.fillStyle='#3f6b2c';g.fillRect(0,0,w,h);g.fillStyle=c;g.fillRect(0,4,w,34);
     g.fillStyle='rgba(255,255,255,.18)';for(let i=0;i<40;i++)g.fillRect(Math.random()*w,4+Math.random()*34,2,2);},true));
+  /* a tulip field that overlaps an earlier one lies 2.5 cm higher (level on level), otherwise the two flicker (seen in 'rev') */
+  const fields=[],fieldHit=(a,b)=>{const ax=[[Math.cos(a.r),-Math.sin(a.r)],[-Math.sin(a.r),-Math.cos(a.r)]],bx=[[Math.cos(b.r),-Math.sin(b.r)],[-Math.sin(b.r),-Math.cos(b.r)]],dx=b.x-a.x,dz=b.z-a.z;
+    return ax.concat(bx).every(([ux,uz])=>Math.abs(dx*ux+dz*uz)<a.w/2*Math.abs(ax[0][0]*ux+ax[0][1]*uz)+a.d/2*Math.abs(ax[1][0]*ux+ax[1][1]*uz)+b.w/2*Math.abs(bx[0][0]*ux+bx[0][1]*uz)+b.d/2*Math.abs(bx[1][0]*ux+bx[1][1]*uz)+0.5);};
   for(let k=0;k<22;k++){const s=randPos(55);if(!s)continue;const w=40+rnd()*50,d=24+rnd()*30;const t=pick(tulipTex).clone();t.needsUpdate=true;t.repeat.set(w/10,d/1.6);
-    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),M(0xffffff,{map:t}));m.rotation.set(-Math.PI/2,0,rnd()*Math.PI);m.position.set(s[0],0.08,s[1]);m.receiveShadow=true;world.add(m);}
+    const f={x:s[0],z:s[1],w,d,r:rnd()*Math.PI,lv:0};for(const o of fields)if(fieldHit(o,f))f.lv=Math.max(f.lv,o.lv+1);fields.push(f);
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),M(0xffffff,{map:t}));m.rotation.set(-Math.PI/2,0,f.r);m.position.set(s[0],0.08+f.lv*0.025,s[1]);m.receiveShadow=true;world.add(m);}
 
   signs([['Kinderdijk','8'],['Gouda','23'],['Edam','61'],['Lelystad','34'],['Zwolle','88'],['Delft','17'],['Urk','52'],['Giethoorn','96']],10.2);
 
@@ -1015,9 +1019,13 @@ function buildDorp(){
       s+=w;}}
   for(let k=0;k<160;k++){const p=randPos(24);if(p&&!inCanal(p[0],p[1]))tree(p[0],p[1]);}
   {const fr=[],wh=[],tb=[],um=[],uc=[],ch=[];const ucol=[0xc8302a,0x1d4f9e,0xf2c200,0x2e5d3e].map(c=>new THREE.Color(c));
-   for(let d=20;d<TRACK_LEN;d+=23){const i=Math.round(d/SPC)%NS;if(HT[i]>0.05)continue;const sd=(d/23|0)%2?1:-1,[x,z]=onTrack(i,sd*7.75);if(inCanal(x,z))continue;const h=headingOf(T[i]);
-     for(let b=0;b<2+Math.floor(rnd()*3);b++){const o=b*0.7-0.7,px=x+T[i].x*o,pz=z+T[i].z*o,yaw=h+Math.PI/2;fr.push(mtx(px,0.7,pz,yaw,1.1,0.08,0.08));
-       for(const w of [-0.5,0.5])wh.push(mtx(px+Math.cos(yaw)*w,0.4,pz-Math.sin(yaw)*w,yaw));}}
+   /* bikes stand side by side, square to the kerb (0.7 m apart); they used to point along the road and overlapped each other.
+      Not in front of a cafe terrace; the rnd() calls stay the same so the rest of the village does not move */
+   const terS=[0,1,2].map(t=>[Math.round(NS*(0.15+t*0.3))%NS*SPC,t%2?1:-1]);
+   for(let d=20;d<TRACK_LEN;d+=23){const i=Math.round(d/SPC)%NS;if(HT[i]>0.05)continue;const sd=(d/23|0)%2?1:-1,[x,z]=onTrack(i,sd*7.6);if(inCanal(x,z))continue;const h=headingOf(T[i]);
+     const busy=terS.some(([ts,tsd])=>tsd===sd&&Math.abs(((d-ts)%TRACK_LEN+TRACK_LEN*1.5)%TRACK_LEN-TRACK_LEN/2)<9);
+     for(let b=0;b<2+Math.floor(rnd()*3);b++){if(busy)continue;const o=b*0.7-0.7,px=x+T[i].x*o,pz=z+T[i].z*o,yaw=h;fr.push(mtx(px,0.9,pz,yaw,1.1,0.08,0.08)); /* wheels stand on the 0.2 m pavement */
+       for(const w of [-0.5,0.5])wh.push(mtx(px+Math.cos(yaw)*w,0.56,pz-Math.sin(yaw)*w,yaw));}}
    for(let t=0;t<3;t++){const i=Math.round(NS*(0.15+t*0.3))%NS;if(HT[i]>0.05)continue;const sd=t%2?1:-1;
      /* tables 3 m apart measured along the pavement line itself: laid out along a straight tangent the outer parasols drifted over
         the road in the chicane, and counted in centre-line samples they bunched up in the inner bend */
@@ -3212,7 +3220,7 @@ let gustT=9,gustDir=1,gustPhase=0,gustWarn=false;const GUST_LEN=2.4;
 function updateWind(dt){
   if(!TRK||!TRK.wind||state!=='racing'){windX=0;gustPhase=0;return;}
   gustT-=dt;
-  if(gustT<1.1&&!gustWarn&&gustPhase<=0){gustWarn=true;gustDir=Math.random()<.5?-1:1;showToast(gustDir>0?'Zijwind van links!':'Zijwind van rechts!');}
+  if(gustT<1.1&&!gustWarn&&gustPhase<=0){gustWarn=true;gustDir=Math.random()<.5?-1:1;} /* no on-screen warning: Yip wants the gusts without messages */
   if(gustT<=0&&gustPhase<=0){gustPhase=GUST_LEN;gustWarn=false;}
   if(gustPhase>0){gustPhase-=dt;const f=Math.sin((1-gustPhase/GUST_LEN)*Math.PI)*8*gustDir,i=player.idx,ex=clamp(0.35+player.y/5,0.35,1.1)*clamp(Math.abs(player.speed)/22,0.2,1);
     player.slide.x+=R[i].x*f*ex*dt;player.slide.z+=R[i].z*f*ex*dt;for(const b of bots)if(!b.out)b.lp+=f*0.45*dt;for(const c of traffic)c.lp+=f*0.25*dt;
