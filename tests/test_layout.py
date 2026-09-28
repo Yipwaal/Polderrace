@@ -50,6 +50,23 @@ for w, h in SIZES:
                     bad.append(f"{name}: knop {BTN[name]} niet bereikbaar")
             if name == 'garage:look':
                 s.shot(f'layout_garage_look_{w}x{h}.png')
+        # what was scrolled into view stays clear of the sticky button bar: the opened career event (after 'Verder' the next one is chosen,
+        # often at the bottom of the list) and the chosen car (six a class, a Speedster sits at the bottom)
+        # (a phone on its side can have a scroll area lower than one car card: then at least its top, with the name, must show)
+        VIS = """([el,nav])=>{const i=document.querySelector(el),n=document.querySelector(nav);if(!i||!i.offsetParent)return 'niet te zien';const a=i.getBoundingClientRect(),b=n.getBoundingClientRect();
+            let p=i.parentElement;while(p&&!(p.scrollHeight>p.clientHeight+2&&/auto|scroll/.test(getComputedStyle(p).overflowY)))p=p.parentElement;
+            const top=p?Math.max(0,p.getBoundingClientRect().top):0,room=Math.min(b.top,p?p.getBoundingClientRect().bottom:innerHeight)-top;
+            if(a.bottom<=b.top+1&&a.top>=top-1)return '';if(a.height>room&&a.top>=top-1&&a.top<=top+16)return '';
+            return Math.round(a.top)+'-'+Math.round(a.bottom)+' px, knoppen vanaf '+Math.round(b.top);}"""
+        s.ev("toMenu(-1);garage.career.cups={b1:{best:1},b2:{best:1},b3:{best:1},b4:{best:1}};careerSel=null;homePanel('career');0"); s.pg.wait_for_timeout(300)
+        r = s.pg.evaluate(VIS, ['#careerEvInfo', '#homeCareer .nav'])
+        if r:
+            bad.append('carrière: uitgeklapt evenement ' + r)
+        s.ev("garage.career.cups={};for(const id of Object.keys(CARS))garage.owned[id]=true;settings.car='speedster';toMenu(-1);homePanel('main');menuFlow='quick';showMenu(0);0"); s.pg.wait_for_timeout(300)
+        r = s.pg.evaluate(VIS, ['#cars [aria-checked="true"]', '#menu .nav'])
+        if r:
+            bad.append('autokeuze: gekozen auto ' + r)
+        s.ev("garage.owned={hatch:true};settings.car='hatch';toMenu(-1);0")
         rep.check(not bad and not s.errs, f'{w}x{h}', ' | '.join(bad[:4]) + (f' ERR {s.errs[:2]}' if s.errs else ''))
 NAV = [("Spelen > Race > Terug", "#hPlay,#hStart,#backBtn", "play"), ("Spelen > Race > Esc", "#hPlay,#hStart,ESC", "play"),
        ("Spelen > Carriere > Terug", "#hPlay,#hCareer,#homeCareer [data-homeback]", "play"), ("Spelen > Online > Terug", "#hPlay,#hNet,#homeNet [data-homeback]", "play"),

@@ -224,10 +224,12 @@ kbd{font:800 12px/1 var(--font);min-width:1.8em;padding:5px 9px;border-radius:99
 .cupcard em{font:800 13px var(--font);font-style:normal;white-space:nowrap;display:flex;align-items:center}
 .cupcard em svg{display:block}
 .ccards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+#cars .card,#tracks .card{scroll-margin:12px 0 136px} /* the chosen car/track scrolls into view clear of the sticky buttons */
 /* career story: chapter tabs, a speaker with a round avatar, the goal of an event */
 .seg.chs button{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0}
 .seg.chs button span{overflow:hidden;text-overflow:ellipsis}.seg.chs button b{font-weight:900}
-.story.evinfo{margin:-4px 0 4px;background:rgba(255,255,255,.07)}
+.story.evinfo{margin:-4px 0 4px;background:rgba(255,255,255,.07);scroll-margin-bottom:136px} /* scrolled into view above the sticky button bar (two rows high on a phone on its side) */
+.cupcard.sel{scroll-margin:16px 0 136px}
 .chapter{display:flex;flex-direction:column;gap:6px}.chapter h3{margin:0;font:900 20px/1.15 var(--font)}.chapter>small{font:700 13px/1.3 var(--font);color:var(--sub)}
 .story{display:flex;flex-direction:column;gap:12px;background:var(--card);border-radius:16px;padding:14px 16px;flex:0 0 auto}
 .sline{display:flex;gap:12px;align-items:flex-start}
@@ -2006,7 +2008,7 @@ const CAR_SPECS={
     bot:[[2.05,0.3],[1.9,0.23],[1.6,0.21],[-1.6,0.21],[-1.9,0.24],[-2.05,0.32]],
     cab:{z0:0.52,z1:-1.5,roof:[[0.52,0.84],[0.24,1.03],[-0.05,1.18],[-0.4,1.23],[-0.75,1.19],[-1.1,1.06],[-1.5,0.87]],ws:-0.12,rw:-0.72,sg:[-0.95,0.46],inset:0.11,tumble:0.2,rc:0.1,crown:0.03},
     wing:{z:-1.85},
-    dress(K,D){dressStd(K,D,{grille:[{x:[-0.42,0.42],y:[0.28,0.38]}],plateF:0.44,
+    dress(K,D){dressStd(K,D,{plateF:0.44,
       tl:[{x:[0.36,0.78],y:[0.6,0.66]}],rtrim:[{x:[-0.8,0.8],y:[0.26,0.36]}],plateR:0.48,mz:0.36,my:0.94,handles:[-0.3],hy:0.78,sill:[0.25,0.32],exh:[-0.36,0.36],
       extra(K,D,h){/* frog-eye lamps on top of the wings, engine-lid louvres, chrome bumper strips, a small ducktail */
         for(const sx of [1,-1])discPatch(D.lamp,(x,z)=>K.on.top(sx*0.6-x,z),1.72,0.11,0.022,3,20);
@@ -3023,9 +3025,11 @@ const evRes=ev=>garage.career.cups[ev.id];
 const evPassed=ev=>{const r=evRes(ev);return !!r&&r.best<=ev.goal;};
 const chUnlocked=ch=>{const i=CHAPTERS.indexOf(ch);return i===0||evPassed(CHAPTERS[i-1].events[CHAPTERS[i-1].events.length-1]);};
 /* the first event of an open chapter is open; the next one when this one met its goal (or when a later one was raced already: an old save) */
-function evUnlocked(ev){const ch=chapterOf(ev),k=ch.events.indexOf(ev);return chUnlocked(ch)&&(k===0||evPassed(ch.events[k-1])||ch.events.slice(k).some(e=>evRes(e)));}
-/* where your career stands: the first open event you have not passed yet (null: everything done) */
-const careerNext=()=>CAREER_EVS.find(e=>evUnlocked(e)&&!evPassed(e))||null;
+function evUnlocked(ev){const ch=chapterOf(ev),k=ch.events.indexOf(ev);if(ev.kind==='cup'&&(careerRun()||{}).career===ev.id)return true; /* a cup under way (also from an old save) can always be finished */
+  return chUnlocked(ch)&&(k===0||evPassed(ch.events[k-1])||ch.events.slice(k).some(e=>evRes(e)));}
+/* where your career stands: the first event still to do in the furthest open chapter (an old save that passed the cups goes on there,
+   not back at event 1), else any event still to do anywhere (null: everything done) */
+const careerNext=()=>{const open=CHAPTERS.filter(chUnlocked),todo=e=>evUnlocked(e)&&!evPassed(e);return open[open.length-1].events.find(todo)||CAREER_EVS.find(todo)||null;};
 function careerRun(){let r=null;try{r=JSON.parse(store.get('polderrace3d-career-run','null'));}catch(e){}return r&&!r.done&&CUPS.some(c=>c.id===r.career)?r:null;}
 function buyCar(id){const p=CAR_PRICE[id]||0;if(owns(id)||garage.credits<p)return false;garage.credits-=p;garage.owned[id]=true;saveGarage();tone(880,0.12,'triangle',0.12);tone(1320,0.2,'triangle',0.12,0.1);
   if(Object.keys(garage.owned).length>=6)unlockAch('collector');return true;}
@@ -3531,7 +3535,8 @@ function showMenu(step){if(editP===2&&step!==0){editP=1;$('pTab1').setAttribute(
   if(step<0){menuScene();$('menu').hidden=true;$('home').hidden=false;homePanel('main');return;}
   if(step===3&&champInProgress()){settings.car=champ.car;settings.color=champ.color;rebuildPlayerCar();}
   menuScene();$('home').hidden=true;if(step===0)refreshCarCards();refreshMenu();$('menu').hidden=false;
-  const f=$('menu').querySelector('.step:not([hidden]) [aria-checked="true"]')||$('nextBtn');f.focus({preventScroll:true});}
+  const f=$('menu').querySelector('.step:not([hidden]) [aria-checked="true"]')||$('nextBtn');f.focus({preventScroll:true});
+  {const c=$('menu').querySelector('.step:not([hidden]) .card[aria-checked="true"]');if(c)c.scrollIntoView({block:'nearest'});}} /* the chosen car or track in view (six cars a class, ten tracks), clear of the sticky buttons (scroll-margin) */
 let homeView='main';
 /* what "Verder racen" on the home screen does: continue a cup or championship that is under way, otherwise a quick race with the current setup */
 function resumeInfo(){

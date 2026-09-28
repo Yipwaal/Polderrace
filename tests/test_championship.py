@@ -101,8 +101,17 @@ with Session(dict(DEFAULT, car='hatch', diff='easy'), w=640, h=400) as s:
 # an old save (before the story career) that already passed the Polder Cup: chapter 2 is open and so is all of chapter 1
 with Session(DEFAULT, w=640, h=400, extra_init="localStorage.setItem('polderrace3d-garage',JSON.stringify({owned:{hatch:true,gt:true},career:{cups:{B:{best:2}}}}));") as s:
     r = s.ev("JSON.stringify({c2:chUnlocked(CHAPTERS[1]),c3:chUnlocked(CHAPTERS[2]),ch1:CHAPTERS[0].events.map(evUnlocked),a:CHAPTERS[1].events.map(evUnlocked),next:careerNext().id})")
-    rep.check(r == '{"c2":true,"c3":false,"ch1":[true,true,true,true,true],"a":[true,false,false,false,false],"next":"b1"}', 'oude save: Polder Cup gehaald -> hoofdstuk 2 open', r)
+    rep.check(r == '{"c2":true,"c3":false,"ch1":[true,true,true,true,true],"a":[true,false,false,false,false],"next":"a1"}', 'oude save: Polder Cup gehaald -> hoofdstuk 2 open, daar ga je verder', r)
     rep.check(not s.errs, 'geen JS-fouten (oude save)', str(s.errs[:3]))
+# an old save in the middle of its first Delta Trofee: the cup stays open (Ga verder works), though the events before it were never raced
+RUN = "{career:'A',rounds:[{track:'haven',time:'dusk',weather:'dry',laps:2},{track:'afsluitdijk',time:'day',weather:'rain',laps:2}],nRounds:2,active:false,car:'gt',color:'#d62a2a',cls:'A',diff:'hard',round:1,bots:[{name:'Henk',type:'gt',color:'#1d4f9e'}],pts:{Jij:10,Henk:8},history:[['Jij','Henk']]}"
+with Session(DEFAULT, w=900, h=560, extra_init="localStorage.setItem('polderrace3d-garage',JSON.stringify({owned:{hatch:true,gt:true},career:{cups:{B:{best:2}}}}));localStorage.setItem('polderrace3d-career-run',JSON.stringify(%s));" % RUN) as s:
+    s.ev("homePanel('career');0"); s.pg.wait_for_timeout(400)
+    r = s.ev("JSON.stringify({sel:careerSel,go:!$('careerGo').disabled,txt:$('careerGo').textContent,open:!!document.getElementById('careerEvInfo')})")
+    rep.check(r == '{"sel":"A","go":true,"txt":"Ga verder: race 2","open":true}', 'oude save midden in een cup: Ga verder werkt', r)
+    s.pg.click('#careerGo'); s.pg.wait_for_timeout(600)
+    rep.check(s.ev("mode==='champ'&&champ.career==='A'&&champ.round===1&&TRACK_ID==='afsluitdijk'") is True, 'de lopende cup gaat verder bij race 2', s.ev("mode+' '+TRACK_ID"))
+    rep.check(not s.errs, 'geen JS-fouten (oude save met lopende cup)', str(s.errs[:3]))
 
 # balance: a bot-only race (3 laps, compare best laps: one incident does not count) in which one bot drives with the stats of your fully upgraded GT; the other five are rivals as the game sets them up
 BAL = """(k=>{toMenu(-1);const u=carUp('gt');u.eng=u.turbo=u.tyre=u.brake=3;settings.car='gt';settings.diff='hard';settings.laps=3;loadTrack('circuit','fwd');applyEnv('day','dry');startRace();
