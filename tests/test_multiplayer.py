@@ -32,11 +32,14 @@ with Session(DEFAULT, w=240, h=150, extra_init=mock) as s:
                 break
             pg.wait_for_timeout(500)
         rep.check(got == 'rotterdam/rev', f'{n} krijgt baan en richting van de host', got)
-    for _ in range(40):
+    # the game clamps a frame to 0.1 s, so below 10 fps (three software-rendered pages while other tests run) game time runs slower than
+    # the clock and the countdown can take much longer than its 4 s: wait up to 60 s, and say where each page is when it fails
+    for _ in range(120):
         H.wait_for_timeout(500)
         if all(ev('state', pg) == 'racing' for pg in [H, G, G2]):
             break
-    rep.check(all(ev('state', pg) == 'racing' for pg in [H, G, G2]), 'alle drie racen')
+    rep.check(all(ev('state', pg) == 'racing' for pg in [H, G, G2]), 'alle drie racen',
+              ' / '.join(ev("state+' '+TRACK_ID+' cd '+(typeof cd==='number'?cd.toFixed(1):'')", pg) for pg in [H, G, G2]))
     for pg in [H, G, G2]:
         ev('kb.up=true;0', pg)
     H.wait_for_timeout(6000)

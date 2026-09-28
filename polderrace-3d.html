@@ -2557,7 +2557,7 @@ function showResults(){
 function showOver(){$('replayBtn').hidden=!(replay&&replay.frames.length>30);['hud','touch','msg','lights'].forEach(id=>$(id).hidden=true);$('over').hidden=false;clearKeys();
   $('overSub').textContent=TRACKS[TRACK_ID].name+(TRACK_DIR==='rev'?' (omgekeerd)':'')+' · '+MODE_NAMES[mode].toLowerCase()+(mode==='time'?'':' · '+raceLaps+(raceLaps===1?' ronde':' ronden'));
   $('storyBox').hidden=true;const ce=careerEv&&careerEv.res;
-  $('againBtn').textContent=mode==='champ'?'Tussenstand':ce?(ce.passed?'Verder':'Opnieuw proberen'):'Opnieuw racen';$('menuBtn').textContent=careerEv||(champ&&champ.career)?'Carrière':'Hoofdmenu';$('menuBtn').hidden=false;
+  $('againBtn').textContent=mode==='champ'?'Tussenstand':ce?(ce.passed?'Verder':'Nog een keer'):'Opnieuw racen';$('menuBtn').textContent=careerEv||(champ&&champ.career)?'Carrière':'Hoofdmenu';$('menuBtn').hidden=false;
   overReady=false;setTimeout(()=>{overReady=true;if(state==='over')$('againBtn').focus({preventScroll:true});},700);}
 function onAgain(){
   if(!(state==='over'&&overReady))return;replayClear();
@@ -3024,7 +3024,6 @@ const evPassed=ev=>{const r=evRes(ev);return !!r&&r.best<=ev.goal;};
 const chUnlocked=ch=>{const i=CHAPTERS.indexOf(ch);return i===0||evPassed(CHAPTERS[i-1].events[CHAPTERS[i-1].events.length-1]);};
 /* the first event of an open chapter is open; the next one when this one met its goal (or when a later one was raced already: an old save) */
 function evUnlocked(ev){const ch=chapterOf(ev),k=ch.events.indexOf(ev);return chUnlocked(ch)&&(k===0||evPassed(ch.events[k-1])||ch.events.slice(k).some(e=>evRes(e)));}
-const cupUnlocked=c=>evUnlocked(c);
 /* where your career stands: the first open event you have not passed yet (null: everything done) */
 const careerNext=()=>CAREER_EVS.find(e=>evUnlocked(e)&&!evPassed(e))||null;
 function careerRun(){let r=null;try{r=JSON.parse(store.get('polderrace3d-career-run','null'));}catch(e){}return r&&!r.done&&CUPS.some(c=>c.id===r.career)?r:null;}
@@ -3057,7 +3056,7 @@ function startCareerEvent(ev,carId){
    open what comes next. Returns what the results screen shows */
 function careerEventDone(ev,pos){const ch=chapterOf(ev),was=evPassed(ev),r=garage.career.cups[ev.id]||{};r.best=Math.min(r.best||99,pos);if(pos===1)r.won=true;garage.career.cups[ev.id]=r;
   const passed=pos<=ev.goal,fin=ev===ch.events[ch.events.length-1];let bonus=0;
-  if(passed&&fin&&ch.bonus&&!garage.career.bonus[ch.id]){garage.career.bonus[ch.id]=true;bonus=ch.bonus;garage.credits+=bonus;}
+  if(passed&&fin&&ch.bonus&&!garage.career.bonus[ch.id]){garage.career.bonus[ch.id]=true;bonus=addCredits(ch.bonus);}
   saveGarage();
   if(pos===1&&fin)unlockAch('cup'+ev.id);
   if(CAREER_EVS.filter(e=>e.kind==='duel').every(e=>(evRes(e)||{}).won))unlockAch('duels');
