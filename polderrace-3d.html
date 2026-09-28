@@ -1411,7 +1411,10 @@ function buildZeeland(){
    for(let k=0;k<=m;k++){const [x,z]=Q[k],ry=hd(Q[Math.max(0,k-1)],Q[Math.min(m,k+1)]);pm.push(mtx(x,10.9,z,ry,11,27.8,6));hm.push(mtx(x,26.3,z,ry,4.5,3,5));
      if(!k)continue;const [x0,z0]=Q[k-1],l=Math.hypot(x-x0,z-z0),r=hd(Q[k-1],Q[k]),mx=(x+x0)/2,mz=(z+z0)/2;sp.push(mtx(mx,23.2,mz,r,10,2.4,l),mtx(mx,18,mz,r,4,3,l));gm.push(mtx(mx,11.95,mz,r,1,9.9,l));}
    for(const k of [0,m]){const q=Q[k],o=Q[k?k-1:1],ry=hd(o,q),l=Math.hypot(q[0]-o[0],q[1]-o[1]),ux=(q[0]-o[0])/l,uz=(q[1]-o[1])/l;
-     pm.push(mtx(q[0]+ux*8,11.1,q[1]+uz*8,ry,13,28.2,16));box(20,3.2,26,stone,q[0]+ux*8,-0.4,q[1]+uz*8,world).rotation.y=ry;}
+     const cx=q[0]+ux*8,cz=q[1]+uz*8;pm.push(mtx(cx,11.1,cz,ry,13,28.2,16));box(20,3.2,26,stone,cx,-0.4,cz,world).rotation.y=ry;
+     /* a low stone dam ties the landhoofd to the dike of the road: it runs into the dike slope, halfway up (buried there) */
+     let bi=0,bd=1e12;for(let i=0;i<NS;i++){const d=(P[i].x-cx)**2+(P[i].z-cz)**2;if(d<bd){bd=d;bi=i;}}
+     const sd=Math.sign((cx-P[bi].x)*R[bi].x+(cz-P[bi].z)*R[bi].z)||1,[dx,dz]=onTrack(bi,sd*(SHOULDER+EMB[bi]*0.5));box(14,2.8,Math.hypot(dx-cx,dz-cz),stone,(cx+dx)/2,-0.5,(cz+dz)/2,world).rotation.y=Math.atan2(dx-cx,dz-cz);}
    inst(new THREE.BoxGeometry(1,1,1),con,pm,null,true);inst(new THREE.BoxGeometry(1,1,1),con,sp,null,true);inst(new THREE.BoxGeometry(1,1,1),dark,gm,null,false);inst(new THREE.BoxGeometry(1,1,1),M(0xb4b2aa),hm,null,true);}
   /* a dune reaches 2s from its centre and distToTrack is measured from the dike toe: shrink dunes near the road so the whole
      dune (and its grass) stays 4 m clear of the verge, skip the ones that would get too small. Same rnd() calls as before. */
