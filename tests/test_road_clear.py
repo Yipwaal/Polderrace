@@ -12,6 +12,7 @@ crosses the object an odd number of times, and that is an obstruction too.
 The first 1.5 m of verge next to the asphalt is checked too (cars run wide there), but only for big
 things: anything at least 3 m across that rises more than 0.6 m (a dune, a wall, a building). Posts,
 bollards, benches, planters and flowers there are fine.
+On Dorp the cafe terraces are checked as well: tables at least 2.9 m apart, parasols not over the road.
 
 usage: python tests/test_road_clear.py [track,track,...] [--rev] [--dicht]
 """
@@ -75,6 +76,16 @@ JS = r"""(()=>{world.updateMatrixWorld(true);const meshes=[],inst=[];
   const groups={};for(const h of hits){const k=h.what;(groups[k]=groups[k]||[]).push(h);}
   return {n:hits.length,groups:Object.entries(groups).map(([k,l])=>({what:k,n:l.length,iFrom:Math.min(...l.map(h=>h.i)),iTo:Math.max(...l.map(h=>h.i)),maxUp:Math.max(...l.map(h=>h.up)),at:[l[0].x,l[0].z]})).sort((a,b)=>b.n-a.n)};})()""".replace('%CLEAR%', str(CLEAR)).replace('%DSTEP%', str(DSTEP))
 
+# Dorp cafe terraces (4 tables with parasols of 2.8 m across): tables at least 2.9 m apart (closer and the parasols overlap
+# and the chairs stick into the next table) and the parasol rim at least 0.3 m past the edge of the road.
+TERRAS = r"""(()=>{world.updateMatrixWorld(true);const all=(w,h,d)=>{const r=[],m=new THREE.Matrix4(),s=new THREE.Vector3();world.traverse(o=>{if(!o.isInstancedMesh)return;
+    new THREE.Box3().setFromBufferAttribute(o.geometry.attributes.position).getSize(s);if(Math.abs(s.x-w)>0.03||Math.abs(s.y-h)>0.03||Math.abs(s.z-d)>0.03)return;
+    for(let k=0;k<o.count;k++){o.getMatrixAt(k,m);r.push([m.elements[12],m.elements[14]]);}});return r;};
+  const tb=all(1.046,0.06,1.1),um=all(2.8,0.7,2.8);if(tb.length<4||um.length!==tb.length)return {n:Math.min(tb.length,um.length)};
+  const gap=Math.min(...tb.map((p,a)=>Math.min(...tb.filter((_,b)=>b!==a).map(q=>Math.hypot(p[0]-q[0],p[1]-q[1])))));
+  const rim=Math.min(...um.map(([x,z])=>{let b=1e9;for(let i=0;i<NS;i++)b=Math.min(b,Math.hypot(P[i].x-x,P[i].z-z));return b-1.4;}));
+  return {n:tb.length,gap:+gap.toFixed(2),rim:+rim.toFixed(2),need:ROAD_HALF+0.3};})()"""
+
 rep = Report('rijbaan vrij (niets op of laag boven de weg)')
 with Session(DEFAULT, w=400, h=260) as s:
     for tr in tracks:
@@ -83,5 +94,9 @@ with Session(DEFAULT, w=400, h=260) as s:
             r = s.ev(JS)
             detail = '' if not r['n'] else ' | '.join(f"{g['n']}x {g['what']} tot {g['maxUp']} m hoog, index {g['iFrom']}-{g['iTo']} (bij x={g['at'][0]} z={g['at'][1]})" for g in r['groups'][:5])
             rep.check(r['n'] == 0, f'{tr}/{d}', detail)
+            if tr == 'dorp':
+                t = s.ev(TERRAS)
+                rep.check(t['n'] >= 4 and t['gap'] >= 2.9 and t['rim'] >= t['need'] - 0.01, f'{tr}/{d} terrassen',
+                          f"{t['n']} tafels" + (f", kleinste afstand {t['gap']} m (min 2.9), parasolrand {t['rim']} m van het midden (min {t['need']})" if t['n'] >= 4 else ''))
     rep.check(not s.errs, 'geen JS-fouten', str(s.errs[:3]))
 rep.finish()
