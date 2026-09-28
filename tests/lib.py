@@ -60,11 +60,12 @@ def _three_source():
 class Session:
     """One headless browser page with the game loaded. Use as a context manager."""
 
-    def __init__(self, settings=None, prefs=None, w=1000, h=600, extra_init='', wait=9000):
+    def __init__(self, settings=None, prefs=None, w=1000, h=600, extra_init='', wait=9000, args=None):
+        """args: extra Chromium launch flags (e.g. for WebRTC between pages, see test_p2p.py)."""
         from playwright.sync_api import sync_playwright
         page = build_test_page()
         self.p = sync_playwright().start()
-        self.b = self.p.chromium.launch(args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
+        self.b = self.p.chromium.launch(args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] + list(args or []))
         self.ctx = self.b.new_context(viewport={'width': w, 'height': h})
         init = extra_init
         if settings:
