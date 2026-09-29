@@ -883,7 +883,9 @@ function inst(geo,mat,mats,colors,cast){
   geo.dispose();return true;
 }
 function roadMat(tex){const m=M(0xffffff,{map:tex});roadMats.push(m);return m;}
-function groundPlane(tex,rep){tex.repeat.set(rep,rep);const g=new THREE.Mesh(new THREE.PlaneGeometry(3600,3600),M(0xffffff,{map:tex,polygonOffset:true,polygonOffsetFactor:3,polygonOffsetUnits:6}));
+/* the land under everything: tiles of 36 m, not one 3.6 km quad. On two giant triangles the depth interpolation is off by centimetres
+   near the camera now and then, and the road only lies 7 cm higher: a frame with grass right through the road */
+function groundPlane(tex,rep){tex.repeat.set(rep,rep);const g=new THREE.Mesh(new THREE.PlaneGeometry(3600,3600,100,100),M(0xffffff,{map:tex,polygonOffset:true,polygonOffsetFactor:3,polygonOffsetUnits:6}));
   g.rotation.x=-Math.PI/2;g.position.set((BX0+BX1)/2,0,(BZ0+BZ1)/2);g.receiveShadow=true;world.add(g);}
 const checkerTex=canvasTex(256,32,(g)=>{for(let x=0;x<16;x++)for(let y=0;y<2;y++){g.fillStyle=((x+y)%2)?'#f2f2ee':'#202226';g.fillRect(x*16,y*16,16,16);}});
 function startLine(){const line=new THREE.Mesh(new THREE.PlaneGeometry(ROAD_HALF*2,1.8),M(0xffffff,{map:checkerTex}));line.rotation.x=-Math.PI/2;line.receiveShadow=true;

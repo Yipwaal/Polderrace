@@ -74,4 +74,14 @@ with Session(DEFAULT, w=400, h=260) as s:
           return out;})()""")
         rep.check(not r, 'uitlaten onder de achterbumper (af fabriek + getuned)', '; '.join(r[:8]))
     rep.check(not s.errs, 'geen JS-fouten', str(s.errs[:3]))
+# the land was one 3.6 km quad: on those two giant triangles the depth was off by centimetres near the camera now and then, and a frame
+# showed grass right through the road (2-5 of 60 frames of the menu fly-by on the polder). Step the fly-by and look at the road ahead
+GRASS = """(N=>{const gl=renderer.getContext(),buf=new Uint8Array(4);let hits=0;
+ const green=()=>{let n=0;for(const [fx,fy] of [[0.66,0.14],[0.7,0.1],[0.62,0.18],[0.68,0.2],[0.72,0.16]]){gl.readPixels(Math.round(gl.drawingBufferWidth*fx),Math.round(gl.drawingBufferHeight*fy),1,1,gl.RGBA,gl.UNSIGNED_BYTE,buf);if(buf[1]>150&&buf[0]<170&&buf[2]<120)n++;}return n>=3;};
+ for(let i=0;i<N;i++){update(1/30);syncCar(1/30);updateCamera(1/30);renderer.render(scene,camera);if(green())hits++;}return hits;})"""
+if not tracks or 'polder' in tracks:
+    with Session(dict(DEFAULT, track='polder'), w=1280, h=720) as s:
+        s.ev("homePanel('career');0"); s.pg.wait_for_timeout(500)
+        hits = s.ev(GRASS + '(90)')
+        rep.check(hits == 0, 'menu-achtergrond polder: nooit gras door de weg (90 frames)', f'{hits} frames met gras op de weg')
 rep.finish()
