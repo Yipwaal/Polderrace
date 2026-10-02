@@ -153,13 +153,13 @@ func updateAudio() -> void:
 	var pl: PlayerState = g.player
 	var st: String = g.state
 	# in a replay the engine follows the car the camera is on: speed from the recording, gears from a simple ratio
-	# ladder (Game.rp / Game.replay with the JS fields, filled in by the replay port)
+	# ladder (Rep.rp / Rep.replay, the replay port's playback state)
 	var rep := false
 	var rc: Dictionary = {}
 	var rv := absf(pl.speed)
 	if st == "replay":
-		var rp = g.get("rp")
-		var replay = g.get("replay")
+		var rp = Rep.rp
+		var replay = Rep.replay
 		if rp != null and replay != null:
 			rep = true
 			rc = Cars.CARS.get(replay.cars[rp.target].id, Cars.CARS[G.settings.car])
