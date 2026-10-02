@@ -11,9 +11,9 @@ extends RefCounted
 ## per track: [draw calls main view, draw calls mirror, triangles main view + mirror] (high quality, average of 4 points);
 ## measured after the batching (World.batch, 300 m instancing cells) plus a third
 const DRAWS := {
-	"polder": [700, 500, 1000000], "dorp": [600, 300, 550000], "circuit": [700, 200, 650000], "afsluitdijk": [800, 250, 600000],
-	"haven": [650, 250, 400000], "veluwe": [750, 400, 1500000], "grachten": [600, 200, 450000], "limburg": [550, 250, 1000000],
-	"rotterdam": [600, 350, 450000], "zeeland": [650, 200, 550000]}
+	"polder": [750, 520, 850000], "dorp": [600, 200, 450000], "circuit": [750, 150, 600000], "afsluitdijk": [700, 160, 500000],
+	"haven": [650, 170, 280000], "veluwe": [780, 360, 1200000], "grachten": [600, 150, 350000], "limburg": [570, 160, 880000],
+	"rotterdam": [620, 280, 350000], "zeeland": [640, 130, 450000]}
 
 var host: Node
 var L
@@ -77,13 +77,14 @@ func run(h: Node) -> TestReport:
 			Game._process(1.0 / 60)
 			proc += Time.get_ticks_usec() - a
 			a = Time.get_ticks_usec()
+			Hud.boardAt = 0.0   # the lap board refills every half second: here every frame (the worst case)
 			Hud.tick()
 			hud += Time.get_ticks_usec() - a
 			if _i % 8 == 0: await frames()
 		proc /= 240000.0
 		hud /= 240000.0
 		r.check(proc < 10.0, "%s: een frame van het spel (Game._process)" % tr, "%.2f ms (budget 10)" % proc)
-		r.check(hud < 1.0, "%s: HUD per frame (Hud.tick, met het rondenbord)" % tr, "%.3f ms (budget 1)" % hud)
+		r.check(hud < 1.0, "%s: HUD per frame (Hud.tick, rondenbord elke frame bijgewerkt)" % tr, "%.3f ms (budget 1)" % hud)
 	# ---- draw calls (a renderer only)
 	if not rendering:
 		print("--   tekenaanroepen: alleen met een renderer (xvfb-run ... --rendering-driver opengl3 res://tests/runner.tscn -- perf)")
