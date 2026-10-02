@@ -154,6 +154,9 @@ func rebuildPlayerCar(pid := "", pcol := "") -> void:
 	BRAKE = c.brake * G.BRK_K
 	GRIP = c.grip
 	syncCar(0)
+	# the race number is a canvas texture: draw it now (JS canvasTex draws at once), else it stays a grey square on the
+	# door until the next track or garage load
+	if Canvas2D.pending_count() > 0 and get_tree().current_scene != null: Canvas2D.flush(get_tree().current_scene)
 
 # ================================================================== traffic
 func clearTraffic() -> void:
