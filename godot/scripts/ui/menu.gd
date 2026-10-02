@@ -277,7 +277,9 @@ func applyEnv(t: String, w: String) -> void:
 
 ## JS applyPrefs after a setting changed: sound and picture quality (Game.applyPrefs)
 func applyPrefs() -> void:
+	var was := Sfx.muted
 	Game.applyPrefs()
+	if Sfx.muted != was: Sfx.mute_changed.emit(Sfx.muted)
 
 func toggleMute() -> void:
 	Sfx.toggleMute()
