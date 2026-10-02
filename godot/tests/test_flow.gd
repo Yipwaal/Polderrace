@@ -32,6 +32,9 @@ func run(host: Node) -> TestReport:
 	Rep.ghostUpdate()
 	r.check(Rep.ghostCar != null and Rep.ghostCar.g.visible, "ghost: doorzichtige auto rijdt mee in ronde 2")
 	r.check(Rep.ghostDelta() != null, "ghost: verschil met de ghost wordt getoond", str(Rep.ghostDelta()))
+	var br: Array = Hud.boardRows()
+	r.check(br.size() == 2 and br[1].name == "Ghost" and absf(br[1].best - float(Rep.ghostBest.t)) < 1e-6, "ghost: rondetijdenbord met Jij en de ghost",
+		str(br.map(func(x): return x.name)))
 	_drive_until(func(): return Game.raceDone, 120)
 	r.check(Game.raceDone and Game.lapTimes.size() == 2, "ghost: 2 ronden gereden", str(Game.lapTimes))
 	# ---- race with bots, 1 lap
