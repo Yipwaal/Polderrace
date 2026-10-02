@@ -163,6 +163,9 @@ static func inst(geo: Geo, mat: Material, xfs: Array, colors = null, cast := fal
 	if colors != null:
 		use_mat = mat.clone()
 		use_mat.vertex_color_use_as_albedo = true
+		# the JS uses the material itself: what Env does to it (night windows, lamps) must reach the clone too
+		for l in [winMats, lampMats, reflMats, beaconMats, roadMats, hillMats]:
+			if l.has(mat): l.append(use_mat)
 	var mesh := geo.to_mesh(use_mat)
 	for idxs in cells.values():
 		var mm := MultiMesh.new()
