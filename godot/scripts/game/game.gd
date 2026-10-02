@@ -1229,6 +1229,17 @@ func setPaused(p: bool) -> void:
 	Hud.setPaused(p)
 	clearKeys()
 
+## JS applyPrefs: picture quality (low: no shadows, lower 3D resolution; mid: smaller shadow map) and sound on/off.
+## The settings menu calls this after changing a preference.
+func applyPrefs() -> void:
+	var q: String = G.prefs.get("quality", "high")
+	if Env.me != null: Env.me.set_shadows(q != "low")
+	RenderingServer.directional_shadow_atlas_set_size(4096 if q == "high" else 2048, true)
+	var vp := get_viewport()
+	vp.scaling_3d_scale = 0.75 if q == "low" else 1.0
+	vp.msaa_3d = Viewport.MSAA_DISABLED if q == "low" else Viewport.MSAA_2X
+	Sfx.muted = not bool(G.prefs.get("sound", true))
+
 func bestKey(id: String, cls := "") -> String:
 	return "polderrace3d-best-" + tv(id) + "-" + (cls if cls != "" else Cars.CARS[G.settings.car].cls)
 

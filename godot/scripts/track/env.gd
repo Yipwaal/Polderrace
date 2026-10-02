@@ -224,18 +224,21 @@ func _set_sky(cols: Array, ground: Color) -> void:
 func _set_lights(hs: Color, hg: Color, hi: float, sc: Color, si: float, l: Vector3) -> void:
 	RenderingServer.global_shader_parameter_set("pr_hemi_sky", Vector4(hs.r * hi, hs.g * hi, hs.b * hi, 0))
 	RenderingServer.global_shader_parameter_set("pr_hemi_ground", Vector4(hg.r * hi, hg.g * hi, hg.b * hi, 0))
-	RenderingServer.global_shader_parameter_set("pr_sun", Vector4(sc.r * si, sc.g * si, sc.b * si, 1.0 if sun.shadow_enabled else 0.0))
+	_sun_param = Vector4(sc.r * si, sc.g * si, sc.b * si, 1.0 if sun.shadow_enabled else 0.0)
+	RenderingServer.global_shader_parameter_set("pr_sun", _sun_param)
 	RenderingServer.global_shader_parameter_set("pr_sun_dir", Vector4(l.x, l.y, l.z, 0))
 	# the light itself only gives the shadow and the light pass; LMat takes its colour from pr_sun
 	sun.light_color = Color.WHITE
 	sun.light_energy = 1.0 if si > 0.0 else 0.0
 
 ## shadows on/off (quality setting): with shadows the sun gets its own light pass, without them LMat adds it itself
+## (global_shader_parameter_get only works in the editor, so the last value is kept here)
+var _sun_param := Vector4(0.95, 0.894, 0.789, 1)
+
 func set_shadows(on: bool) -> void:
 	sun.shadow_enabled = on
-	var v: Vector4 = RenderingServer.global_shader_parameter_get("pr_sun")
-	v.w = 1.0 if on else 0.0
-	RenderingServer.global_shader_parameter_set("pr_sun", v)
+	_sun_param.w = 1.0 if on else 0.0
+	RenderingServer.global_shader_parameter_set("pr_sun", _sun_param)
 
 ## JS applyEnv(t, w): time 'day'/'dusk'/'night', weather 'dry'/'rain'/'fog'
 func apply(t: String, w: String, force := false) -> void:
