@@ -70,6 +70,10 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 - `python godot/tests/run.py track build laps cars flow audio menus rules` — alle Godot-tests headless (±8 min). Elke test
   speelt op een eigen savebestand (`G.use_store`, in runner.gd) met een garage die alle auto's bezit, nooit op die van de speler.
   `python godot/tests/test_net.py` — online: host en speler als twee processen.
+  `python godot/tests/run.py play` (±11 min, apart draaien) — doorspeeltest: de echte spelscène met echte toetsen en
+  muisklikken (`tests/play_driver.gd`), van nieuwe speler tot alles in bezit, elke modus, een heel kampioenschap,
+  vensterformaten; faalt ook op elke foutmelding in de uitvoer. Alleen delen: `PLAY_ONLY=home,garage`; schermafdrukken
+  met `PLAY_SHOTS=/map` onder xvfb (zie de kop van `tests/test_play.gd`).
 - `rules`: de spelregels gelijk aan de HTML (golden/rules.json): credits per modus/plaats/ronden/niveau, kampioenschapspunten
   en stand (ook bij gelijke punten), de carrière (resultaat, bonus, wat opengaat, prestaties), prestaties na een race,
   meetunen van de tegenstanders, uitslagvolgorde, eliminatie, ronde- en checkpointmeldingen met de records die ze opslaan,

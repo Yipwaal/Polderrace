@@ -2,7 +2,7 @@ extends RefCounted
 ## Plays the real game scene (res://scenes/main.tscn) like a player: real input events through Input.parse_input_event
 ## (keys with keycode and physical keycode, mouse clicks on the centre of a button, the mouse wheel to scroll a list),
 ## real frames (the game runs its own _process), the race driven with the keys (W plus A/D, steered like the autopilot
-## of tests/test_laps.gd, R when the car faces the wrong way). Used by tests/test_play.gd and tools/shot_play.gd.
+## of tests/test_laps.gd, R when the car faces the wrong way). Used by tests/test_play.gd.
 ## Errors that the engine logs while it plays (SCRIPT ERROR, ERROR) are collected by an own Logger.
 
 var tree: SceneTree
@@ -20,6 +20,8 @@ class ErrLog extends Logger:
 	var mx := Mutex.new()
 	func _log_error(function: String, file: String, line: int, code: String, rationale: String, _editor_notify: bool, error_type: int, bt: Array[ScriptBacktrace]) -> void:
 		if error_type == ERROR_TYPE_WARNING: return
+		# the dummy renderer of a headless run complains about a material freed with its mesh (the OpenGL renderer does not)
+		if "rendering/dummy/" in file: return
 		var where := ""
 		for b in bt:
 			if b.get_frame_count() > 0: where += " <- " + " <- ".join(range(mini(4, b.get_frame_count())).map(func(i): return "%s:%d %s" % [b.get_frame_file(i).get_file(), b.get_frame_line(i), b.get_frame_function(i)]))
@@ -201,6 +203,9 @@ func click(c: Control, label := "") -> bool:
 	log.last = "klik " + what
 	if c == null or not is_instance_valid(c) or not c.is_visible_in_tree():
 		return r.check(false, "klik: " + what + " is zichtbaar")
+	await frames(3)        # a panel that just opened lays itself out and scrolls its chosen item into view first
+	if not is_instance_valid(c) or not c.is_visible_in_tree():
+		return r.check(false, "klik: " + what + " blijft staan")
 	await scroll_to(c)
 	var p := c.get_global_rect().get_center()
 	var vp := tree.root.get_visible_rect()
@@ -229,12 +234,17 @@ func _first_label(n: Node) -> String:
 		if t != "": return t
 	return ""
 
-## the first visible button under n whose text contains t
+## the first visible button under n with a text that contains t
 func find_btn(n: Node, t: String) -> Control:
 	for c in n.find_children("*", "", true, false):
-		if (c is UiKit.Btn or c is BaseButton) and c.is_visible_in_tree() and t in _first_label(c):
+		if (c is UiKit.Btn or c is BaseButton) and c.is_visible_in_tree() and t in _all_text(c):
 			return c
 	return null
+
+func _all_text(n: Node) -> String:
+	var s: String = n.text if (n is Label or n is Button) else ""
+	for ch in n.get_children(): s += " " + _all_text(ch)
+	return s
 
 func focused() -> Control:
 	return tree.root.gui_get_focus_owner()

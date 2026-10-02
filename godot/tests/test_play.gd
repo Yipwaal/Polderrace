@@ -5,7 +5,9 @@ extends RefCounted
 ## screen, the career, the garage, settings (key binding), the keys during a race (M, R, V, C, E/Q, F11), the replay
 ## viewer, and window sizes from 1024x600 to 2560x1440. Checks what the screen shows, what is saved, and that the
 ## engine logs no errors on the way.
-## Only some parts: PLAY_ONLY=home,race python godot/tests/run.py play. Screenshots: tools/shot_play.py.
+## Only some parts: PLAY_ONLY=home,race python godot/tests/run.py play. With screenshots (OpenGL in xvfb, slower):
+## PLAY_SHOTS=/abs/dir PLAY_ONLY=home,garage xvfb-run -a -s "-screen 0 2560x1440x24" godot --path godot --rendering-driver opengl3 \
+##   res://tests/runner.tscn -- play
 
 var D
 var r: TestReport
@@ -14,7 +16,7 @@ func run(host: Node) -> TestReport:
 	r = TestReport.new("doorspelen met echte invoer (toetsen, muis)")
 	D = load("res://tests/play_driver.gd").new(host.get_tree(), r)
 	var only := OS.get_environment("PLAY_ONLY")
-	var parts := ["home", "setup", "race", "pause", "modes", "replay", "keys", "split", "garage", "settings", "career", "champ", "sizes"]
+	var parts := ["home", "setup", "race", "pause", "modes", "replay", "keys", "split", "garage", "settings", "career", "champ", "sizes", "pad", "rich"]
 	await D.boot("user://test-play.json", {"polderrace3d-garage": {"owned": {"hatch": true}}})
 	D.check_errors("opstarten")
 	for p in parts:
@@ -58,6 +60,13 @@ func part_home() -> void:
 	r.check(Menu.homeView == "play", "Backspace: terug naar Spelen", Menu.homeView)
 	await D.tap(KEY_BACKSPACE)
 	r.check(Menu.homeView == "main", "Backspace: hoofdscherm", Menu.homeView)
+	# M in the menu: sound off and on, saved, the switch in the settings follows
+	var m0 := Sfx.muted
+	await D.tap(KEY_M)
+	r.check(Sfx.muted != m0 and JSON.parse_string(str(G.store_get("polderrace3d-prefs"))).sound == (not Sfx.muted), "M in het menu: geluid uit, bewaard", str(Sfx.muted))
+	r.check(Menu.settingsUI.togs.sound.checked == (not Sfx.muted), "schakelaar Geluid volgt")
+	await D.tap(KEY_M)
+	r.check(Sfx.muted == m0, "M: geluid weer aan")
 
 # ------------------------------------------------------------------ race setup with keys and clicks
 func part_setup() -> void:
@@ -92,6 +101,17 @@ func part_setup() -> void:
 	r.check(Trk.TRACK_ID == "dorp" and S.track == "dorp", "baan Dorp geladen", Trk.TRACK_ID)
 	await D.click(Menu.setupUI.trackRadio.find("polder"), "baan Polder")
 	r.check(Trk.TRACK_ID == "polder", "terug naar Polder", Trk.TRACK_ID)
+	await D.click(Menu.setupUI.dirRadio.find("rev"), "Omgekeerd")
+	r.check(Trk.TRACK_DIR == "rev" and S.dir == "rev" and Menu.setupUI.tiName.text.ends_with("omgekeerd"), "richting omgekeerd: baan opnieuw geladen", Trk.TRACK_DIR)
+	await D.click(Menu.setupUI.dirRadio.find("fwd"), "Normaal")
+	r.check(Trk.TRACK_DIR == "fwd", "richting normaal", Trk.TRACK_DIR)
+	await D.click(Menu.setupUI.weatherRadio.find("rain"), "Regen")
+	await D.click(Menu.setupUI.timeRadio.find("night"), "Nacht")
+	r.check(Env.me.weather == "rain" and Env.me.time == "night" and S.weather == "rain" and S.time == "night", "nacht en regen", "%s %s" % [Env.me.time, Env.me.weather])
+	await D.shot("setup_night_rain")
+	await D.click(Menu.setupUI.weatherRadio.find("dry"), "Droog")
+	await D.click(Menu.setupUI.timeRadio.find("day"), "Dag")
+	r.check(Env.me.weather == "dry" and Env.me.time == "day", "dag en droog")
 	await D.tap(KEY_BACKSPACE)
 	await D.tap(KEY_BACKSPACE)
 	r.check(Menu.menuStep == 2, "twee keer terug: modus", str(Menu.menuStep))
@@ -124,7 +144,7 @@ func part_race() -> void:
 
 func part_pause() -> void:
 	if Game.state == "menu":
-		await D.click(Menu.homeUI.hPlay, "Spelen")
+		if Menu.homeView != "play": await D.click(Menu.homeUI.hPlay, "Spelen")
 		await D.click(Menu.homeUI.hQuick, "Snel racen")
 	await D.wait(4.5)
 	await D.tap(KEY_ESCAPE)
@@ -203,9 +223,12 @@ func part_modes() -> void:
 		r.check(Game.bots.any(func(b): return b.out) or Game.playerOut, "eliminatie: iemand ligt eruit")
 	await to_menu_from_results()
 	await audio_quiet("het menu")
-	# time trial: no bots, traffic; time runs out when you just stand there
+	# time trial: no bots, traffic; drive a bit, then stop: the time runs out
 	await setup_race("time")
 	r.check(Game.mode == "time" and Game.bots.is_empty() and Game.traffic.size() == int(Trk.TRK.get("traffic", 0)), "tijdrit: geen bots, wel verkeer", "%d bots %d verkeer" % [Game.bots.size(), Game.traffic.size()])
+	Engine.time_scale = 4.0
+	var c0: float = Game.clock
+	await D.drive_until(func(): return Game.clock - c0 > 10.0, 20)
 	Engine.time_scale = 6.0
 	var ok: bool = await D.until_game(func(): return Game.state == "over", 120)
 	Engine.time_scale = 1.0
@@ -237,6 +260,16 @@ func part_modes() -> void:
 	r.check(Game.bots.size() == 1 and (Rep.ghostCar == null or not Rep.ghostCar.g.visible), "race na ghost: 1 bot, geen ghost")
 	await D.tap(KEY_ESCAPE)
 	await D.click(Menu.overUI.quitBtn, "Naar menu")
+	# what these races left behind: a lap record and a time trial distance in Records, the ghost achievement
+	await D.click(Menu.homeUI.hRecords, "Records")
+	var txt: String = D._all_text(Menu.homeUI.recList)
+	r.check(G.store_get(Game.lapKey("polder", "B")) != null and G.fmtLap(float(G.store_get(Game.lapKey("polder", "B")))) in txt, "records: ronderecord Polder klasse B", str(G.store_get(Game.lapKey("polder", "B"))))
+	r.check("TIJDRIT" in txt.to_upper() and G.store_get(Game.bestKey("polder", "B")) != null, "records: tijdrit-afstand", str(G.store_get(Game.bestKey("polder", "B"))))
+	await D.tap(KEY_ESCAPE)
+	r.check(Ach.got("ghost") and Menu.homeUI.achHomeInfo.text != "0 van 21 behaald", "prestatie Ghost behaald, tegel telt mee", Menu.homeUI.achHomeInfo.text)
+	await D.click(Menu.homeUI.hAch, "Prestaties")
+	await D.shot("achievements")
+	await D.tap(KEY_ESCAPE)
 
 # ------------------------------------------------------------------ replay viewer
 func part_replay() -> void:
@@ -434,6 +467,8 @@ func part_garage() -> void:
 	await D.tap(KEY_ENTER)
 	r.check(int(G.carUp("mini").num) == 42, "startnummer 42 bewaard", str(G.carUp("mini").num))
 	r.check(D.focused() != Menu.garageUI.numIn, "Enter: uit het veld")
+	await D.frames(4)
+	r.check(Canvas2D.pending_count() == 0, "startnummer meteen getekend (geen grijs vlak op de deur)", str(Canvas2D.pending_count()))
 	await D.shot("garage_look")
 	var sv = JSON.parse_string(str(G.store_get("polderrace3d-garage")))
 	r.check(sv is Dictionary and int(sv.cars.mini.num) == 42 and sv.cars.mini.rim == "gold" and sv.owned.has("mini"), "garage bewaard")
@@ -469,6 +504,10 @@ func part_settings() -> void:
 	await D.click(Menu._buttons(su.bindList)[0], "gas speler 2")
 	await D.tap(KEY_P)
 	r.check(Game.binds.p2.up == ["KeyI"] and not Menu.bindCapture.is_valid(), "P is gereserveerd")
+	# the toast stands above the menus (CSS pointer-events:none): a click goes through it
+	r.check(Hud.toast.visible, "melding: P is gereserveerd")
+	var under: Control = await D.hovered_at(Hud.toast.get_global_rect().get_center())
+	r.check(under == null or not (under == Hud.toast or Hud.toast.is_ancestor_of(under)), "de melding vangt geen muisklikken", D._name_of(under))
 	await D.click(D.find_btn(su.keys, "Standaard herstellen"), "Standaard herstellen")
 	r.check(Game.binds.p2.up == ["ArrowUp"], "standaard terug", str(Game.binds.p2.up))
 	await D.click(su.tabRadio.find("pad"), "tab Controller")
@@ -502,6 +541,14 @@ func part_career() -> void:
 	await D.click(Menu.homeUI.hCareer, "Carrière")
 	r.check(Menu.homeView == "career" and Menu.careerSel == "b1", "carrière: eerste evenement", str(Menu.careerSel))
 	await D.shot("career")
+	# a car you do not own under "Jouw auto": the garage opens on it, Terug comes back here in a car you own
+	await D.click(D.find_btn(Menu.careerUI.cars, "Rallyhatch"), "Rallyhatch (niet in bezit)")
+	var kopen = Menu.garageUI.first_buy()
+	r.check(Menu.homeView == "garage" and G.settings.car == "rally" and kopen != null and "Kopen" in D._all_text(kopen), "carrière -> garage op de Rallyhatch met Kopen", "%s %s" % [Menu.homeView, G.settings.car])
+	# (like a browser: a Kopen you cannot pay is disabled and takes no focus)
+	r.check(D.focused() == kopen or kopen.disabled, "focus op Kopen als je hem kunt betalen")
+	await D.tap(KEY_ESCAPE)
+	r.check(Menu.homeView == "career" and Career.owns(G.settings.car), "Esc: terug in de carrière, in een eigen auto", "%s %s" % [Menu.homeView, G.settings.car])
 	var prevMode: String = G.settings.mode
 	var prevLaps := int(G.settings.laps)
 	await D.click(Menu.careerUI.careerGo, "Start")
@@ -598,6 +645,7 @@ func layout_ok(where: String) -> void:
 	var vp := Rect2(Vector2.ZERO, Vector2(D.tree.root.size))
 	var bad := []
 	var btns := []
+	var shown := {}       # button -> the part of it you see (a scrolling list clips its content)
 	for c in Menu.root.find_children("*", "", true, false):
 		if c is UiKit.Btn and c.is_visible_in_tree(): btns.append(c)
 	for b in btns:
@@ -605,13 +653,15 @@ func layout_ok(where: String) -> void:
 		var sc = CareerUI._scroller(b)
 		var clip: Rect2 = sc.get_global_rect() if sc != null else vp
 		if not rc.intersects(clip): continue        # scrolled out of view: the list scrolls
-		if not vp.grow(1).encloses(rc.intersection(clip)): bad.append("buiten beeld: " + D._name_of(b))
-	for i in btns.size():
-		for j in range(i + 1, btns.size()):
-			var a: Control = btns[i]
-			var b: Control = btns[j]
+		shown[b] = rc.intersection(clip)
+		if not vp.grow(1).encloses(shown[b]): bad.append("buiten beeld: " + D._name_of(b))
+	var vis: Array = shown.keys()
+	for i in vis.size():
+		for j in range(i + 1, vis.size()):
+			var a: Control = vis[i]
+			var b: Control = vis[j]
 			if a.is_ancestor_of(b) or b.is_ancestor_of(a): continue
-			if a.get_global_rect().grow(-2).intersects(b.get_global_rect().grow(-2)): bad.append("overlap: %s / %s" % [D._name_of(a), D._name_of(b)])
+			if shown[a].grow(-2).intersects(shown[b].grow(-2)): bad.append("overlap: %s / %s" % [D._name_of(a), D._name_of(b)])
 	r.check(bad.is_empty(), "%s: alles in beeld, niets over elkaar" % where, ", ".join(bad.slice(0, 4)))
 
 func part_sizes() -> void:
@@ -648,4 +698,129 @@ func part_sizes() -> void:
 	await D.resize(1920, 1080)
 	await layout_ok("instellingen na vergroten")
 	await D.tap(KEY_ESCAPE)
+	# a window dragged very small: every screen still runs (the scroll area's right margin once grew with content that
+	# did not fit, re-queued itself and looped until the message queue overflowed and the game crashed)
+	for sz in [Vector2i(400, 300), Vector2i(64, 64)]:
+		await D.resize(sz.x, sz.y)
+		for v in ["play", "garage", "settings", "career", "ach", "records", "main"]:
+			Menu.homePanel(v)
+			await D.frames(3)
+		for st in [2, 0, 1, -1]:
+			Menu.showMenu(st)
+			await D.frames(3)
+		r.check(Game.state == "menu" and Menu.home.visible, "venster %dx%d: alle schermen open zonder vastlopen" % [sz.x, sz.y])
 	await D.resize(1280, 720)
+
+# ------------------------------------------------------------------ the gamepad in the menus, the pause and the results
+## a button of the gamepad pressed and let go (Menu.padNav, what Game.readPad calls every frame: a gamepad cannot be
+## plugged in for a test, Input.get_connected_joypads stays empty)
+func pad(k: String) -> void:
+	Menu.padNav({k: true}, {})
+	await D.frame()
+	Menu.padNav({}, {k: true})
+	await D.frames(2)
+
+func part_pad() -> void:
+	Menu.homePanel("main")
+	await D.frames(2)
+	r.check(D.focused() == Menu.homeUI.hPlay, "controller: Spelen heeft de focus")
+	await pad("down")
+	var f1: Control = D.focused()
+	r.check(f1 != Menu.homeUI.hPlay and f1 is UiKit.Btn and Menu.home.is_ancestor_of(f1), "omlaag: volgende knop", D._name_of(f1))
+	await pad("up")
+	r.check(D.focused() == Menu.homeUI.hPlay, "omhoog: terug op Spelen")
+	await pad("a")
+	r.check(Menu.homeView == "play", "A: Spelen", Menu.homeView)
+	await pad("b")
+	r.check(Menu.homeView == "main", "B: terug", Menu.homeView)
+	await pad("start")
+	r.check(Menu.homeView == "play" and D.focused() == Menu.homeUI.hStart, "Start: Spelen, focus op Race", D._name_of(D.focused()))
+	await pad("a")
+	r.check(Menu.menuStep == 2, "A op Race: stap Spelmodus", str(Menu.menuStep))
+	var m0: String = G.settings.mode
+	await pad("r")
+	r.check(G.settings.mode != m0, "rechts: volgende modus", G.settings.mode)
+	await pad("l")
+	r.check(G.settings.mode == m0, "links: terug", G.settings.mode)
+	await pad("a")
+	r.check(Menu.menuStep == 0, "A: volgende stap", str(Menu.menuStep))
+	var car0: String = G.settings.car
+	var mine: int = Cars.carsOf(Cars.CARS[car0].cls).filter(func(id): return Career.owns(id)).size()
+	await pad("r")
+	r.check((G.settings.car != car0 if mine > 1 else G.settings.car == car0) and Career.owns(G.settings.car), "rechts: volgende eigen auto", G.settings.car)
+	await pad("l")
+	await pad("b")
+	await pad("b")
+	r.check(Menu.menuStep < 0 and Menu.homeView == "play", "B B: terug naar Spelen", "%d %s" % [Menu.menuStep, Menu.homeView])
+	# pause: down walks the buttons, B goes on with the race
+	await D.click(Menu.homeUI.hQuick, "Snel racen")
+	await D.wait(4.6)
+	await D.tap(KEY_ESCAPE)
+	await pad("down")
+	r.check(D.focused() != null and Menu.pauseOv.is_ancestor_of(D.focused()), "pauze: omlaag geeft een knop de focus", D._name_of(D.focused()))
+	await pad("b")
+	r.check(not Game.paused, "B: verder racen")
+	await D.tap(KEY_ESCAPE)
+	await pad("start")
+	r.check(not Game.paused, "Start: verder racen")
+	await D.tap(KEY_ESCAPE)
+	for _i in 6:
+		await pad("down")
+		if D.focused() == Menu.overUI.quitBtn: break
+	r.check(D.focused() == Menu.overUI.quitBtn, "pauze: omlaag tot Naar menu", D._name_of(D.focused()))
+	await pad("a")
+	r.check(Game.state == "menu" and Menu.home.visible, "A op Naar menu: hoofdmenu", Game.state)
+
+# ------------------------------------------------------------------ a player with everything
+func part_rich() -> void:
+	var owned := {}
+	for id in Cars.CARS: owned[id] = true
+	var cups := {}
+	for e in Career.CAREER_EVS: cups[e.id] = {"best": 1, "won": true}
+	var bonus := {}
+	for c in Career.CHAPTERS: bonus[c.id] = true
+	G.use_store("user://test-play-rich.json", {"polderrace3d-garage": {"credits": 60000, "owned": owned, "career": {"cups": cups, "bonus": bonus}},
+		"polderrace3d-settings": {"car": "v12", "color": "#f36f21", "mode": "race", "bots": 3, "laps": 1}})
+	Game.toMenu(-1)
+	await D.frames(3)
+	r.check(G.settings.car == "v12" and Menu.homeUI.garTitle.text == Cars.CARS.v12.name, "alles in bezit: in de " + Cars.CARS.v12.name, Menu.homeUI.garTitle.text)
+	await D.shot("home_rich")
+	await D.click(Menu.homeUI.hPlay, "Spelen")
+	r.check("Legende! Alles gehaald" in D._all_text(Menu.homeUI.hCareer), "carrière: alles gehaald", D._all_text(Menu.homeUI.hCareer))
+	await D.click(Menu.homeUI.hStart, "Race")
+	await D.click(Menu.setupUI.nextBtn, "Volgende")
+	r.check(Menu.setupUI.classRadio.items.all(func(b): return not b.disabled) and not Menu.setupUI.carsNote.visible, "alle klassen te kiezen, geen koop-tip")
+	r.check(D.focused() == Menu.setupUI.classRadio.find("S"), "focus op klasse S", D._name_of(D.focused()))
+	await D.tap(KEY_LEFT)
+	r.check(Cars.CARS[G.settings.car].cls == "A", "pijl links: klasse A", G.settings.car)
+	var n := Menu.setupUI.carCards.keys().filter(func(id): return Menu.setupUI.carCards[id].visible).size()
+	r.check(n == Cars.carsOf("A").size(), "alle A-auto's te kiezen", str(n))
+	await D.shot("setup_cars_rich")
+	await D.tap(KEY_RIGHT)
+	r.check(Cars.CARS[G.settings.car].cls == "S", "pijl rechts: klasse S", G.settings.car)
+	await pad("lb")
+	r.check(Cars.CARS[G.settings.car].cls == "A", "controller LB: klasse terug", G.settings.car)
+	await pad("rb")
+	r.check(Cars.CARS[G.settings.car].cls == "S", "controller RB: klasse verder", G.settings.car)
+	await D.click(Menu.setupUI.nextBtn, "Volgende")
+	await D.click(Menu.setupUI.nextBtn, "Start race")
+	r.check(Game.state == "countdown" and Game.bots.size() == 3 and Cars.CARS[Game.bots[0].type].cls == "S", "race in klasse S met 3 bots", str(Game.bots.size()))
+	await race_to_results(150)
+	await to_menu_from_results()
+	# garage: every car owned, upgrades to buy
+	await D.click(Menu.homeUI.hGarage, "Garage")
+	await D.click(Menu.garageUI.classRadio.find("B"), "klasse B")
+	r.check(Menu.garageUI.carCards.keys().all(func(id): return not Menu.garageUI.carCards[id].b.visible or Career.owns(id)), "garage: alle auto's in bezit")
+	var b = Menu.garageUI.first_buy()
+	r.check(b != null and not D._all_text(b).contains("Kopen"), "garage: upgrades, niets te kopen")
+	await D.tap(KEY_ESCAPE)
+	# career: every chapter open
+	await D.click(Menu.homeUI.hPlay, "Spelen")
+	await D.click(Menu.homeUI.hCareer, "Carrière")
+	r.check(Menu.careerUI.chRadio.items.all(func(x): return not x.disabled) and not Menu.careerUI.careerGo.disabled, "carrière: alle hoofdstukken open")
+	await D.click(Menu.careerUI.chRadio.items[0], "hoofdstuk 1")
+	r.check(Menu.careerCh == "c1", "hoofdstuk 1 gekozen", str(Menu.careerCh))
+	await D.shot("career_rich")
+	await D.tap(KEY_ESCAPE)
+	await D.tap(KEY_ESCAPE)
+	r.check(Menu.homeView == "main", "terug op het hoofdscherm")
