@@ -65,7 +65,7 @@ static func build() -> void:
 	# the canal under the humpback bridge (the highest point of the track), with quay walls and moored boats
 	var cg := O3.group(cP.x, 0, cP.z)
 	O3.rot(cg, 0, Trk.heading_of(cT), 0)
-	var wm := O3.mesh(Geo.plane(460, 22), Mats.phong(0x3f5f6e, {"specular": 0x8fa6bb, "shininess": 80}), 0, 0.04, 0, cg)
+	var wm := O3.mesh(Geo.plane(460, 22), Mats.phong(0x3f5f6e, {"specular": 0x8fa6bb, "shininess": 80, "receiveShadow": true}), 0, 0.04, 0, cg)
 	O3.rot(wm, -PI / 2, 0, 0)
 	var quay := M(0x8c3f2c)
 	for s in [-1, 1]:

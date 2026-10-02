@@ -21,6 +21,7 @@ var upnp_note: Label
 var status: Label
 var start_btn: Button
 var scroll: ScrollContainer
+var outer: VBoxContainer
 var leave_btn: Button
 
 func _ready() -> void:
@@ -38,9 +39,12 @@ func _ready() -> void:
 	card.custom_minimum_size = Vector2(560, 0)
 	center.add_child(card)
 	# a tall game screen (host controls) scrolls inside the sign instead of running off a small window
+	outer = VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 10)
+	card.add_child(outer)
 	scroll = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	card.add_child(scroll)
+	outer.add_child(scroll)
 	box = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -127,10 +131,10 @@ func _ready() -> void:
 		if Net.net != null: Net.net.game.presence({"car": G.settings.car, "color": G.settings.color})
 		refresh())
 	status = _note("")
-	box.add_child(status)
+	outer.add_child(status)
 	var nav := HBoxContainer.new()
 	nav.add_theme_constant_override("separation", 10)
-	box.add_child(nav)
+	outer.add_child(nav)
 	var back := Hud.mk_button("Terug", false)
 	back.pressed.connect(func(): close())
 	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -223,7 +227,7 @@ func refresh() -> void:
 	lobby_box.visible = not inGame
 	game_box.visible = inGame
 	leave_btn.visible = inGame
-	scroll.custom_minimum_size = Vector2(504, minf(box.get_combined_minimum_size().y, get_viewport().get_visible_rect().size.y - 90))
+	scroll.custom_minimum_size = Vector2(504, minf(box.get_combined_minimum_size().y, get_viewport().get_visible_rect().size.y - 190))
 	status.text = Net.status
 	status.visible = Net.status != ""
 	if not inGame:

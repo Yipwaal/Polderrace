@@ -3,14 +3,14 @@ class_name TrackCommon
 ## roofGeo, roofMesh). Track-specific helpers live in that track's builder file.
 
 static func waterPlane(w: float, d: float, x: float, z: float, y: float, col := 0x4f7394) -> MeshInstance3D:
-	var m := O3.mesh(Geo.plane(w, d), Mats.phong(col, {"specular": 0x9fb4c8, "shininess": 70}))
+	var m := O3.mesh(Geo.plane(w, d), Mats.phong(col, {"specular": 0x9fb4c8, "shininess": 70, "receiveShadow": true}))
 	O3.rot(m, -PI / 2, 0, 0)
 	m.position = Vector3(x, y, z)
 	World.add(m)
 	return m
 
 static func landPlane(tex: Texture2D, x0: float, z0: float, x1: float, z1: float, tile: float) -> MeshInstance3D:
-	var m := O3.mesh(Geo.plane(x1 - x0, z1 - z0), Mats.M(0xffffff, {"map": tex, "repeat": Vector2((x1 - x0) / tile, (z1 - z0) / tile)}))
+	var m := O3.mesh(Geo.plane(x1 - x0, z1 - z0), Mats.M(0xffffff, {"map": tex, "repeat": Vector2((x1 - x0) / tile, (z1 - z0) / tile), "receiveShadow": true}))
 	O3.rot(m, -PI / 2, 0, 0)
 	m.position = Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2)
 	World.add(m)

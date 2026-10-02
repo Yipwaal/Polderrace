@@ -36,6 +36,9 @@ var no_depth_test := false: set = _set_no_depth_test
 var disable_fog := false: set = _set_disable_fog
 var vertex_color_use_as_albedo := false: set = _set_vcol
 var flat_shading := false: set = _set_flat
+## three.js receiveShadow (per mesh there, per material here): only ground, roads, water and the like get shadows;
+## buildings, trees and instanced decor do not (otherwise big tree crowns get stripy self-shadow)
+var receive_shadow := false: set = _set_receive
 ## kept for code written against StandardMaterial3D; the shader ignores them
 var vertex_color_is_srgb := false
 var texture_filter := BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
@@ -52,7 +55,7 @@ func clone() -> LMat:
 	m._building = true
 	for p in ["kind", "albedo_color", "albedo_texture", "uv1_scale", "uv1_offset", "emission_enabled", "emission", "emission_energy_multiplier", "emission_texture",
 			"specular", "shininess", "transparency", "alpha_scissor_threshold", "cull_mode", "blend_mode", "depth_draw_mode", "no_depth_test", "disable_fog",
-			"vertex_color_use_as_albedo", "flat_shading"]:
+			"vertex_color_use_as_albedo", "flat_shading", "receive_shadow"]:
 		m.set(p, get(p))
 	m._building = false
 	m.render_priority = render_priority
@@ -81,6 +84,7 @@ func _set_no_depth_test(v): no_depth_test = v; _rebuild()
 func _set_disable_fog(v): disable_fog = v; _rebuild()
 func _set_vcol(v): vertex_color_use_as_albedo = v; _rebuild()
 func _set_flat(v): flat_shading = v; _rebuild()
+func _set_receive(v): receive_shadow = v; _rebuild()
 
 func _push_emission() -> void:
 	var e := emission * emission_energy_multiplier if emission_enabled else Color.BLACK
@@ -89,8 +93,8 @@ func _push_emission() -> void:
 func _rebuild() -> void:
 	if _building:
 		return
-	var key := "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [kind, transparency, blend_mode, cull_mode, depth_draw_mode, int(no_depth_test), int(disable_fog),
-		int(vertex_color_use_as_albedo), int(flat_shading), int(albedo_texture != null), int(emission_texture != null)]
+	var key := "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [kind, transparency, blend_mode, cull_mode, depth_draw_mode, int(no_depth_test), int(disable_fog),
+		int(vertex_color_use_as_albedo), int(flat_shading), int(albedo_texture != null), int(emission_texture != null), int(receive_shadow)]
 	if not _cache.has(key):
 		var sh := Shader.new()
 		sh.code = _code()
@@ -134,6 +138,7 @@ func _code() -> String:
 	if kind == Kind.PHONG: d.append("#define PHONG")
 	if kind == Kind.BASIC: d.append("#define BASIC")
 	if flat_shading: d.append("#define FLAT")
+	if receive_shadow: d.append("#define RECV")
 	return "shader_type spatial;\nrender_mode %s;\n%s\n%s" % [", ".join(rm), "\n".join(d), SHADER_BODY]
 
 const SHADER_BODY := """
@@ -270,7 +275,12 @@ void light() {
 #ifdef PHONG
 			t += pr_sun.rgb * g_ndl * phong_spec(g_nv, g_lv, VIEW);
 #endif
-			SPECULAR_LIGHT += dec((1.0 - g_fog) * t * ATTENUATION);
+#ifdef RECV
+			float sh = ATTENUATION;
+#else
+			float sh = 1.0;
+#endif
+			SPECULAR_LIGHT += dec((1.0 - g_fog) * t * sh);
 		}
 	} else {
 		// spot lights (headlights, podium): three adds them in gamma space too; close enough on the dark scenes they light

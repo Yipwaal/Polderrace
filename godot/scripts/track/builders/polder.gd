@@ -209,7 +209,7 @@ static func build() -> void:
 		for o in fields:
 			if fieldHit.call(o, f): f.lv = maxi(f.lv, o.lv + 1)
 		fields.append(f)
-		var m := O3.mesh(Geo.plane(w, d), M(0xffffff, {"map": t, "repeat": Vector2(w / 10, d / 1.6)}))
+		var m := O3.mesh(Geo.plane(w, d), M(0xffffff, {"map": t, "repeat": Vector2(w / 10, d / 1.6), "receiveShadow": true}))
 		O3.rot(m, -PI / 2, 0, f.r)
 		m.position = Vector3(s[0], 0.08 + f.lv * 0.025, s[1])
 		World.add(m)

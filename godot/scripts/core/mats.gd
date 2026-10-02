@@ -43,6 +43,8 @@ static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 		m.disable_fog = true
 	if o.get("flatShading", false):
 		m.flat_shading = true
+	if o.get("receiveShadow", false):
+		m.receive_shadow = true
 	if kind == LMat.Kind.PHONG:
 		m.specular = MathX.col(o.get("specular", 0x111111))
 		m.shininess = float(o.get("shininess", 30.0))
