@@ -126,8 +126,12 @@ func part_setup() -> void:
 func part_race() -> void:
 	if Menu.homeView != "play":
 		await D.click(Menu.homeUI.hPlay, "Spelen")
+	UiKit.focus(Menu.homeUI.hStart)
 	await D.tap(KEY_ENTER)      # focus on Race
 	r.check(Menu.menuStep == 2, "Enter op Race: modus", str(Menu.menuStep))
+	await D.click(Menu.setupUI.modeRadio.find("race"), "modus Race")
+	while int(G.settings.bots) > 2: if not await D.click(Menu.setupUI.botsSt.minus, "bots min"): break
+	while int(G.settings.laps) > 1: if not await D.click(Menu.setupUI.lapsSt.minus, "ronden min"): break
 	await D.click(Menu.setupUI.nextBtn, "Volgende")
 	await D.click(Menu.setupUI.nextBtn, "Volgende")
 	r.check(Menu.menuStep == 1, "Volgende, Volgende: baan", str(Menu.menuStep))

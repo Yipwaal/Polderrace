@@ -254,6 +254,28 @@ func run(host: Node) -> TestReport:
 	Menu.settingsUI.bindP1.get_parent().get_parent().get_child(1).press()
 	r.check(Game.binds.p1.up == ["KeyW", "ArrowUp"], "standaard herstellen", str(Game.binds.p1.up))
 	Menu.homeBack()
+	# ---- a tiny window (dragged small): the race setup, the online car step (one step pill) and the home panels lay out
+	# without a layout loop. The scroll area's right margin once grew with content wider than the window, re-queued
+	# itself and looped until the message queue overflowed and the game crashed.
+	var tree := host.get_tree()
+	var was := tree.root.size
+	var marg: MarginContainer = Menu.setupUI.scroll.get_child(0)
+	var worst := 0
+	for sz in [Vector2i(64, 64), Vector2i(400, 300)]:
+		tree.root.size = sz
+		for f in ["quick", "net"]:
+			Menu.menuFlow = f
+			for st in [2, 0, 1]:
+				Menu.showMenu(st)
+				for _i in 3: await tree.process_frame
+				worst = maxi(worst, marg.get_theme_constant("margin_right"))
+		Menu.menuFlow = "quick"
+		Menu.showMenu(-1)
+		for v in ["play", "garage", "settings", "career", "main"]:
+			Menu.homePanel(v)
+			for _i in 3: await tree.process_frame
+	tree.root.size = was
+	r.check(worst <= 10, "klein venster: race-opzet en panelen zonder lus (marge schuiflijst hooguit 10 px)", "%d px" % worst)
 	Game.set_process(true)
 	Game.set_process_input(true)
 	return r
