@@ -156,17 +156,21 @@ func type_text(s: String) -> void:
 		await frame()
 
 # ------------------------------------------------------------------ mouse
+## a real mouse reports window pixels; the UI may be scaled up in a big window (main.gd fitUi): p is a UI position
+func _win(p: Vector2) -> Vector2:
+	return tree.root.get_final_transform() * p
+
 func mouse_move(p: Vector2) -> void:
 	var m := InputEventMouseMotion.new()
-	m.position = p
-	m.global_position = p
+	m.position = _win(p)
+	m.global_position = _win(p)
 	Input.parse_input_event(m)
 
 func _mouse_button(p: Vector2, idx: MouseButton, pressed: bool) -> void:
 	var b := InputEventMouseButton.new()
 	b.button_index = idx
-	b.position = p
-	b.global_position = p
+	b.position = _win(p)
+	b.global_position = _win(p)
 	b.pressed = pressed
 	if pressed: b.button_mask = MOUSE_BUTTON_MASK_LEFT if idx == MOUSE_BUTTON_LEFT else 0
 	Input.parse_input_event(b)

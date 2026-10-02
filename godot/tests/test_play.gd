@@ -685,6 +685,9 @@ func part_sizes() -> void:
 	for sz in [Vector2i(1024, 600), Vector2i(1280, 720), Vector2i(1920, 1080), Vector2i(2560, 1440)]:
 		var tag := "%dx%d" % [sz.x, sz.y]
 		await D.resize(sz.x, sz.y)
+		# menus and HUD grow along with a big window (main.gd fitUi) instead of shrinking on a 1440p/4K screen
+		var f := maxf(1.0, minf(sz.x / 1280.0, sz.y / 720.0))
+		r.check(absf(D.tree.root.content_scale_factor - f) < 0.01, tag + ": UI meegeschaald", "%.2f (verwacht %.2f)" % [D.tree.root.content_scale_factor, f])
 		Menu.homePanel("main")
 		await layout_ok(tag + " hoofdscherm")
 		await D.shot("size_%s_home" % tag)
