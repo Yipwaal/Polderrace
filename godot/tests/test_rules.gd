@@ -160,6 +160,22 @@ func run(host: Node) -> TestReport:
 			"store": [g.lapKey(Trk.TRACK_ID), g.lapCarKey(Trk.TRACK_ID)].map(func(k): return [k, G.store_get(k, "?"), G.store_get(k + "-car", "?")])})
 	_list(got, O.laps, I.laps, "ronden en checkpoints: meldingen, rondetijden, records")
 
+	# ---- key names: Godot keys as KeyboardEvent.code (Game.codeOf), and their labels in the key binding screen
+	var KEYS := {"Space": KEY_SPACE, "ShiftLeft": KEY_SHIFT, "ShiftRight": KEY_SHIFT, "ControlLeft": KEY_CTRL, "AltRight": KEY_ALT, "KeyA": KEY_A,
+		"KeyQ": KEY_Q, "Digit5": KEY_5, "Numpad0": KEY_KP_0, "Numpad3": KEY_KP_3, "ArrowUp": KEY_UP, "ArrowLeft": KEY_LEFT, "Enter": KEY_ENTER,
+		"Tab": KEY_TAB, "PageUp": KEY_PAGEUP, "PageDown": KEY_PAGEDOWN, "Comma": KEY_COMMA, "Period": KEY_PERIOD, "Slash": KEY_SLASH,
+		"Semicolon": KEY_SEMICOLON, "Quote": KEY_APOSTROPHE, "BracketLeft": KEY_BRACKETLEFT, "BracketRight": KEY_BRACKETRIGHT,
+		"Backslash": KEY_BACKSLASH, "Minus": KEY_MINUS, "Equal": KEY_EQUAL, "F5": KEY_F5, "Backquote": KEY_QUOTELEFT, "CapsLock": KEY_CAPSLOCK,
+		"Home": KEY_HOME, "Delete": KEY_DELETE}
+	var codes := []
+	for c in I.keyLabels:
+		var ek := InputEventKey.new()
+		ek.physical_keycode = KEYS[c]
+		ek.location = KEY_LOCATION_RIGHT if c.ends_with("Right") and KEYS[c] in [KEY_SHIFT, KEY_CTRL, KEY_ALT] else KEY_LOCATION_LEFT
+		codes.append(Game.codeOf(ek))
+	_list(codes, I.keyLabels, I.keyLabels, "toetsnamen als in de browser (KeyboardEvent.code)")
+	_list(I.keyLabels.map(func(c): return SettingsUI.keyLabel(c)), O.keyLabels, I.keyLabels, "toetsnamen in het toetsenscherm")
+
 	# ---- save keys, formats, prices
 	_same(I.keys.tracks.map(func(t): return [g.tv(t, "fwd"), g.tv(t, "rev")]), O.tv, "opslag: baan+versie+richting")
 	got = []

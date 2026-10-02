@@ -89,6 +89,11 @@ I['laps'] = [{'mode': 'race', 'laps': 3, 'car': 'gt', 'times': [1.0, 63.25, 125.
              {'mode': 'time', 'car': 'hatch', 'cps': [1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0],
               'clock': [10, 20, 30, 40, 50, 85.37, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170]}]
 
+# ---- key names (KeyboardEvent.code) and their labels in the key binding screen
+I['keyLabels'] = ['Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'AltRight', 'KeyA', 'KeyQ', 'Digit5', 'Numpad0', 'Numpad3', 'ArrowUp',
+                  'ArrowLeft', 'Enter', 'Tab', 'PageUp', 'PageDown', 'Comma', 'Period', 'Slash', 'Semicolon', 'Quote', 'BracketLeft',
+                  'BracketRight', 'Backslash', 'Minus', 'Equal', 'F5', 'Backquote', 'CapsLock', 'Home', 'Delete']
+
 # ---- save keys, number formats, prices, event lines
 I['keys'] = {'tracks': ['polder', 'dorp', 'circuit', 'afsluitdijk', 'haven', 'veluwe', 'grachten', 'limburg', 'rotterdam', 'zeeland'],
              'ids': [['polder', 'fwd', 'gt'], ['dorp', 'rev', 'super'], ['zeeland', 'fwd', 'hatch']]}
@@ -142,6 +147,7 @@ O.laps=I.laps.map(c=>{settings.car=c.car;mode=c.mode;raceMode=mode!=='time';stat
   const msgs=[];const n=(c.times||c.cps).length;
   for(let i=0;i<n;i++){if(c.times)raceTime=c.times[i];else clock=c.clock[i];$('msg').textContent='';hitCheckpoint(c.times?0:c.cps[i]);msgs.push([$('msg').textContent,state,player.lap,r6(timeLeft)]);}
   return {msgs,lapTimes:lapTimes.map(r6),best:r6(raceBestLap),rec:lapRecordSet,cps:checkpoints,store:[lapKey(TRACK_ID),lapCarKey(TRACK_ID)].map(k=>[k,store.get(k,'?'),store.get(k+'-car','?')])};});
+O.keyLabels=I.keyLabels.map(keyLabel);
 /* save keys */
 O.tv=I.keys.tracks.map(t=>[tv(t,'fwd'),tv(t,'rev')]);
 O.keys=I.keys.ids.map(([id,dir,c])=>{settings.dir=dir;settings.car=c;return [bestKey(id),lapKey(id),lapCarKey(id),ghostKey(id),bestKey(id,'S'),lapCarKey(id,'mini')];});
