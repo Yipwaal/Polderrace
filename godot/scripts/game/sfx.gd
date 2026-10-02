@@ -186,8 +186,8 @@ func updateAudio() -> void:
 	windGain = _target(windGain, (pow(rv / 80, 2) * 0.22 + absf(g.windX) * 0.008) if on else 0.0, dt, 0.15)
 	squealGain = _target(squealGain, clampf((g.skidAmount() - 0.8) * 0.03, 0, 0.11) if on else 0.0, dt, 0.05)
 	var rain := Env.me != null and Env.me.weather == "rain"
-	var inGarage = g.get("inGarage")
-	rainGain = _target(rainGain, ((0.035 if st == "menu" else 0.06) if not muted and not g.paused and inGarage != true and rain else 0.0), dt, 0.3)
+	# no rain in the garage (JS !inGarage: the garage room is indoors)
+	rainGain = _target(rainGain, ((0.035 if st == "menu" else 0.06) if not muted and not g.paused and not GarageRoom.inGarage and rain else 0.0), dt, 0.3)
 	var nb: Mover = null
 	var nd := 45.0
 	if on and not rep:
