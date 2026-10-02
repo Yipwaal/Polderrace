@@ -64,9 +64,11 @@ func start_guest(address: String) -> int:
 	enet.peer_disconnected.connect(func(_id): _lost = true)
 	return OK
 
+## ENet's time-out for this peer: it only gives up when a resend is due, and with its default limit (32) the resends
+## grow so far apart that a crashed game stayed for half a minute; 8 keeps them close (about TIMEOUT_MIN)
 func _patient(pid: int) -> void:
 	var pp := enet.get_peer(pid)
-	if pp != null: pp.set_timeout(32, TIMEOUT_MIN, TIMEOUT_MAX)
+	if pp != null: pp.set_timeout(8, TIMEOUT_MIN, TIMEOUT_MAX)
 
 func is_connected_room() -> bool:
 	return _connected and not _left
@@ -107,6 +109,12 @@ func peers() -> Array:
 	for id in _presence:
 		out.append({"peer": id, "presence": _presence[id], "sameTab": id == me, "updatedAt": _updated.get(id, 0)})
 	return out
+
+## the goodbye of leave() is still under way: end it now (a new game on this PC needs the port)
+func close_now() -> void:
+	if _closing_at > 0:
+		_closing_at = 0
+		enet.close()
 
 func leave() -> void:
 	if _left:
@@ -173,9 +181,11 @@ func _process(_dt: float) -> void:
 		return
 	if _left:
 		return
+	if not host and enet.get_connection_status() == MultiplayerPeer.CONNECTION_DISCONNECTED:
+		# ENet gave up by itself (no route to that address, or the attempt timed out)
+		_close("lost" if _connected else "fail")
+		return
 	enet.poll()
-	if not host and not _connected and enet.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
-		pass   # waits for the "all" snapshot, which gives our id
 	while enet.get_available_packet_count() > 0:
 		var from := enet.get_packet_peer()
 		var raw := enet.get_packet()

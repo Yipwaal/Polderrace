@@ -66,6 +66,9 @@ func _lobby_info() -> Dictionary:
 
 func netCreate() -> void:
 	if net != null: return
+	# a game we just left may still be saying goodbye on the port
+	for c in get_children():
+		if c is NetRoom: c.close_now()
 	_game_id = "%08x%08x" % [randi(), randi()]
 	var room := NetRoom.new()
 	add_child(room)
@@ -87,25 +90,27 @@ func netJoin(address: String) -> void:
 	lan.stop()
 	var room := NetRoom.new()
 	add_child(room)
-	if addr == "" or room.start_guest(addr) != OK:
+	# a typo like "192.168.1" is no address (a PC name like "YIP-PC" is fine)
+	var typo := addr.replace(".", "").is_valid_int() and not addr.is_valid_ip_address()
+	if addr == "" or typo or room.start_guest(addr) != OK:
 		room.queue_free()
 		netStatus("Meedoen lukte niet: '%s' is geen IP-adres." % address.strip_edges())
 		_relist()
 		return
 	netEnter(room, false)
+	net.addr = addr
 	netStatus("Verbinden met %s…" % addr)
-	# no answer within 6 s: give up
+	# no answer within 6 s: give up (the room may be gone by then: compare ids, not the freed object)
+	var rid := room.get_instance_id()
 	get_tree().create_timer(6.0, true, false, true).timeout.connect(func():
-		if net != null and net.game == room and not room.is_connected_room():
-			netLeave()
-			_relist()
-			netStatus("Geen verbinding met %s. Is de game er nog, en zit je op hetzelfde netwerk? Anders houdt de firewall van de host het spel misschien tegen." % addr))
+		if net != null and net.game.get_instance_id() == rid and not net.game.is_connected_room():
+			_onClosed(net.game, "fail"))
 
 func netEnter(room: NetRoom, host: bool) -> void:
 	if net != null:
 		netLeave()
 	net = {"game": room, "host": host, "inRace": false, "remotes": {}, "lastSend": 0, "raceId": 0, "kicks": [], "kickSeq": 0, "seen": {},
-		"botDefs": null, "order": [], "startAt": 0, "botUpd": -1, "botAt": 0, "sentCar": G.settings.car + G.settings.color}
+		"botDefs": null, "order": [], "startAt": 0, "botUpd": -1, "botAt": 0, "sentCar": G.settings.car + G.settings.color, "addr": ""}
 	room.presence({"nick": G.prefs.nick, "car": G.settings.car, "color": G.settings.color, "host": host, "st": null, "b": null, "k": [], "race": null})
 	room.peers_changed.connect(func():
 		if net != null and net.game == room and netSyncRemotes(): changed.emit())
@@ -120,7 +125,9 @@ func netEnter(room: NetRoom, host: bool) -> void:
 func _onClosed(room: NetRoom, reason: String) -> void:
 	if net == null or net.game != room: return
 	var t: String = {"end": "De host heeft de game gesloten.", "full": "De game zit vol: maximaal %d spelers." % (NetRoom.MAX_GUESTS + 1),
-		"version": "De host speelt een andere versie van Polderrace. Zorg dat jullie dezelfde versie hebben."}.get(reason, "De verbinding met de host is weggevallen.")
+		"version": "De host speelt een andere versie van Polderrace. Zorg dat jullie dezelfde versie hebben.",
+		"fail": "Geen verbinding met %s. Is de game er nog, en zit je op hetzelfde netwerk? Anders houdt de firewall van de host het spel misschien tegen." % net.get("addr", "de host")
+		}.get(reason, "De verbinding met de host is weggevallen.")
 	var racing: bool = Game.state != "menu"
 	netLeave()
 	if racing:
