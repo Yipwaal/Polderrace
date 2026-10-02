@@ -286,6 +286,7 @@ static func _batch_collect(n: Node, scope: Node3D, xf: Transform3D, own: Diction
 				or lm.blend_mode != BaseMaterial3D.BLEND_MODE_MIX or lm.depth_draw_mode != BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY or lm.no_depth_test:
 			continue
 		var a: Array = mi.mesh.surface_get_arrays(0)
+		if a[Mesh.ARRAY_NORMAL] == null: continue
 		var key := "%d|%d|%d|%d" % [lm.get_instance_id(), mi.cast_shadow, int(a[Mesh.ARRAY_TEX_UV] != null), int(a[Mesh.ARRAY_COLOR] != null)]
 		if not parts.has(key): parts[key] = []
 		parts[key].append([a, t, lm, mi.cast_shadow, mi])
