@@ -28,6 +28,11 @@ func use_store(path: String, data: Dictionary = {}) -> void:
 	Champ.reload()
 	Game.binds = Game.DEFAULT_BINDS.duplicate(true)
 	Game._load_binds()
+	# like a fresh start on this save: the menus forget what was picked this session (career event, open tabs)
+	Menu.careerSel = null
+	Menu.careerCh = null
+	if Menu.garageUI != null: Menu.garageUI.garTab("perf")
+	if Menu.settingsUI != null: Menu.settingsUI.showTab("general")
 
 var _defaults := {}
 
