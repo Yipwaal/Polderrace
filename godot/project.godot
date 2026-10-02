@@ -14,6 +14,9 @@ config/icon="res://icon.svg"
 
 G="*res://scripts/core/globals.gd"
 Trk="*res://scripts/track/track.gd"
+Sfx="*res://scripts/game/sfx.gd"
+Game="*res://scripts/game/game.gd"
+Hud="*res://scripts/ui/hud.gd"
 
 [display]
 
