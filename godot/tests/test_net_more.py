@@ -293,6 +293,13 @@ def scenario_car():
     for p in (h, o):
         r = p.wait(lambda r: remote(r, 'Bram') and remote(r, 'Bram')['car'] == 'gt' and remote(r, 'Bram')['color'] == '#2f8f5b', 5)
         check(remote(r, 'Bram') and remote(r, 'Bram')['car'] == 'gt' and remote(r, 'Bram')['color'] == '#2f8f5b', f'{p.name} ziet de nieuwe auto van Bram', remote(r, 'Bram'))
+    # Esc in the car step: back to the online screen, still in the game
+    g.cmd('press Auto kiezen'); time.sleep(0.5)
+    r = g.rep()
+    check(not r.get('ui'), 'Auto kiezen opent de autostap', r.get('ui'))
+    g.cmd('esc'); time.sleep(0.5)
+    r = g.rep()
+    check(r.get('ui') and r.get('net') and not r.get('lobbyView') and 'NetUi' in r.get('focus', ''), 'Esc in de autostap: terug in het online-scherm', (r.get('ui'), r.get('focus')))
     no_errors([h, g, o])
     kill_all()
 

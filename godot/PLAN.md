@@ -14,7 +14,7 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 | G3 auto's (18 modellen, tuning, verkeer) | klaar; elke mesh gelijk (test `cars`), beeld gelijk (`tools/compare_car.py`) |
 | G4 gameplay (rijden, botsingen, bots, verkeer, race, camera, HUD, audio, fx, spiegel, ghost, replay, invoer) | klaar; autopiloot-ronde gelijk (test `laps`), spelverloop (test `flow`), geluid (test `audio`) |
 | G5 menu's (hoofdscherm, race-opzet, garage, carrière, kampioenschap, prestaties, records, instellingen, podium) | klaar: Menu (`scripts/ui/menu.gd` + `*_ui.gd`, look in `ui_kit.gd`), Champ, Career, Ach, GarageRoom, Podium; test `menus`, beeld gelijk (`tools/compare_menus.py`) |
-| G6 online: LAN zonder codes (automatisch vinden), meedoen via IP, UPnP | klaar; `tests/test_net.py` (host + speler als 2 processen) |
+| G6 online: LAN zonder codes (automatisch vinden), meedoen via IP, UPnP | klaar; `tests/test_net.py` (2 processen), `tests/test_net_more.py` (tot 9 spelers, LAN-scenario's) |
 | G7 split screen | klaar (test `flow`) |
 | G8 export (Windows .exe en Linux, GitHub Actions) | klaar; zie `README.md` en `.github/workflows/godot.yml` |
 | G9 QA | open |
@@ -69,7 +69,7 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 
 - `python godot/tests/run.py track build laps cars flow audio menus rules` — alle Godot-tests headless (±8 min). Elke test
   speelt op een eigen savebestand (`G.use_store`, in runner.gd) met een garage die alle auto's bezit, nooit op die van de speler.
-  `python godot/tests/test_net.py` — online: host en speler als twee processen.
+  `python godot/tests/test_net.py` — online: host en speler als twee processen; `test_net_more.py` — tot 9 spelers (zie Online).
 - `rules`: de spelregels gelijk aan de HTML (golden/rules.json): credits per modus/plaats/ronden/niveau, kampioenschapspunten
   en stand (ook bij gelijke punten), de carrière (resultaat, bonus, wat opengaat, prestaties), prestaties na een race,
   meetunen van de tegenstanders, uitslagvolgorde, eliminatie, ronde- en checkpointmeldingen met de records die ze opslaan,
@@ -91,11 +91,30 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 
 ## Online (G6) — ontwerp
 
-- **LAN-lobby zonder codes:** de host start een lobby en roept zich elke seconde om via UDP-broadcast (poort 47811,
-  bericht `POLDERRACE1 {naam, baan, spelers, max, poort}`); spelers zien open games in een lijst en klikken op Meedoen.
-- Spel zelf: Godot **ENet** (`ENetMultiplayerPeer`, poort 47810), host = server. Zelfde rolverdeling als de HTML:
-  de host bepaalt start, bots en volgorde; spelers sturen hun positie; botsingen tussen spelers lokaal per speler.
-- Ook: meedoen via IP-adres (internet, met port forwarding of UPnP via `UPNP`-klasse).
+- **LAN-lobby zonder codes** (`net/lan.gd`): een speler met het online-scherm open vraagt elke seconde "wie host?"
+  (UDP `POLDERRACE?1` naar poort 47811: 255.255.255.255, 127.0.0.1 en per netwerkkaart het broadcastadres voor /24, /23,
+  /22, /16 en bij 10.x /8, want Windows stuurt 255.255.255.255 maar uit één kaart en Godot kent de netmask niet); elke
+  host antwoordt rechtstreeks met `{pr, v, id, name, track, n, max, open, race}`. Alleen de host luistert, dus alleen
+  de host heeft de firewall nodig. Een game die 3,5 s niet antwoordt, verdwijnt uit de lijst.
+- Spel zelf: Godot **ENet** (`net/net_room.gd`, poort 47810, één reserveplek zodat de 9e speler "vol" hoort),
+  host = server, sterverbinding met presence-patches zoals de HTML-room. Zelfde rolverdeling als de HTML: de host
+  bepaalt start (`race` met `order`), bots (`b`) en volgorde; spelers sturen hun positie (`st`) en botsingen met bots
+  (`k`); een gast mag alleen nick/car/color/st/k zetten. `st`/`b`/`k` gaan onbetrouwbaar-op-volgorde (kanaal 1).
+- Afwijkingen van de HTML (bugs die daar ook zitten): `st` en `k` dragen het race-id (late pakketjes van de vorige race
+  tellen niet), `st[10]` = tijd sinds de start (de startlampen volgen de klok van de host, zelfde wachttijd voor groen
+  uit het race-id), bots bij gasten rijden door tussen de posities van de host (kleine verschillen uitgesmeerd),
+  *Nieuwe race* start ook bij wie nog rijdt of de replay bekijkt, een speler die naar het menu gaat of niets meer
+  stuurt verdwijnt van de baan, games die racen of vol zijn staan in de lijst (laatkomers wachten op de volgende race),
+  het protocol heeft een versie (`NetRoom.PROTO`).
+- ENet-time-out 12-20 s (limiet 8): ruim genoeg voor een trage pc die een baan laadt; een gesloten venster zegt meteen
+  gedag (`NOTIFICATION_WM_CLOSE_REQUEST`), een gecrasht spel verdwijnt na ±15 s (van de baan na 1,5 s).
+- Ook: meedoen via IP-adres (internet, met port forwarding of UPnP via `UPNP`-klasse, in een thread).
+- Tests: `tests/test_net.py` (2 processen, snel) en `tests/test_net_more.py` (±3 min): host + 3 spelers met alles
+  rond weggaan/haperen/nieuwe race/laatkomer/replay; 9 spelers (vol), Esc, verkeerd IP; auto kiezen (in een venster,
+  headless crasht die menustap); LAN met losse pc's in netwerk-namespaces met een slechte verbinding (`net_lossy.py`).
+  Spelers zijn `tests/net_ctl.gd` (commando's als aan het toetsenbord), gestart door `tests/net_players.py`; als root
+  op Linux draait elk testscript in een eigen netwerk, zodat andere spellen op deze pc niet meedoen.
+  Schermafdrukken van het online-scherm: `tools/shot_net.gd` (host en speler elk in een venster).
 
 ## Export (G8)
 

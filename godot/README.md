@@ -10,8 +10,9 @@ browserversie, maar nu als echt pc-spel, met online racen op je eigen netwerk zo
 2. Pak de zip uit en start **Polderrace.exe**. Er hoeft niets geïnstalleerd te worden.
    - Windows kan de eerste keer "Windows heeft uw pc beschermd" zeggen (het spel is niet ondertekend):
      klik op *Meer info* → *Toch uitvoeren*.
-   - Bij de eerste keer online spelen vraagt Windows of het spel het netwerk mag gebruiken: kies **Particuliere
-     netwerken** (thuis/LAN) en klik *Toegang toestaan*. Zonder dat zien anderen je game niet.
+   - Bij de eerste keer online spelen vraagt Windows of het spel het netwerk mag gebruiken: vink **Particuliere
+     netwerken** én **Openbare netwerken** aan en klik *Toegang toestaan*. Op een LAN-party noemt Windows het netwerk
+     vaak "openbaar"; zonder dat vinkje zien anderen de game van de host niet.
 3. Je voortgang (garage, carrière, records, instellingen) staat in je gebruikersmap (Windows:
    `%APPDATA%\Godot\app_userdata\Polderrace 3D\`).
 
@@ -42,10 +43,17 @@ De toetsen zijn in te stellen bij Instellingen.
 - **Via internet:** de host klikt *Via internet bereikbaar maken* (zet poort 47810 open via UPnP), of zet zelf
   UDP-poort **47810** open in de router. De anderen doen mee via het internet-IP-adres van de host.
 - Tot 8 spelers per game, plus bots. De host bepaalt de race; iedereen ziet elkaars auto's en dezelfde bots.
+- Je auto kies je in de game met *Auto kiezen*. Kom je binnen terwijl er een race bezig is, dan doe je mee vanaf de
+  volgende race. *Nieuwe race* (host, op de uitslag) start de volgende race voor iedereen, ook voor wie nog rijdt.
+- Alleen de host hoeft het spel door de firewall te laten (zie hierboven). Ziet niemand de game van de host:
+  check de firewall van de host, of doe mee via het IP-adres dat bij de host staat (het echte netwerk staat vooraan;
+  adressen met VirtualBox, Hyper-V of VPN erachter zijn het meestal niet).
+- Eén host per pc (de poort is dan bezet); meedoen kan wel met meerdere spellen op één pc.
 
 Poorten: 47810/UDP (het spel), 47811/UDP (games vinden op het netwerk).
 
 ## Voor ontwikkelaars
 
 Zie [PLAN.md](PLAN.md): opzet, portregels (de Godot-versie is een getrouwe port van `../polderrace-3d.html`) en tests.
-Tests: `python godot/tests/run.py track build laps cars flow` en `python godot/tests/test_net.py`.
+Tests: `python godot/tests/run.py track build laps cars flow` en `python godot/tests/test_net.py`
+(meer online-scenario's, tot 9 spelers: `python godot/tests/test_net_more.py`).
