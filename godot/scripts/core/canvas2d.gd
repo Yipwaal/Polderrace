@@ -61,16 +61,30 @@ static func flush(host: Node) -> void:
 	var batch: Array = _pending
 	_pending = []
 	var vps: Array = []
+	# Godot blends 2D into a transparent target premultiplied (rgb * a); a browser canvas hands three.js straight alpha.
+	# So every canvas is drawn in an inner viewport and copied through an un-premultiply shader into the outer one
+	# (a child viewport renders before its parent).
+	var mk := func(w: int, h: int) -> SubViewport:
+		var v := SubViewport.new()
+		v.size = Vector2i(w, h)
+		v.transparent_bg = true
+		v.disable_3d = true
+		v.render_target_update_mode = SubViewport.UPDATE_ONCE
+		v.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+		return v
 	for c in batch:
-		var vp := SubViewport.new()
-		vp.size = Vector2i(c.width, c.height)
-		vp.transparent_bg = true
-		vp.disable_3d = true
-		vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-		vp.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
-		c._build_nodes(vp)
-		host.add_child(vp)
-		vps.append(vp)
+		var outer: SubViewport = mk.call(c.width, c.height)
+		var inner: SubViewport = mk.call(c.width, c.height)
+		c._build_nodes(inner)
+		outer.add_child(inner)
+		var tr := TextureRect.new()
+		tr.texture = inner.get_texture()
+		tr.size = Vector2(c.width, c.height)
+		tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tr.material = _unpremul_material()
+		outer.add_child(tr)
+		host.add_child(outer)
+		vps.append(outer)
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
 	for i in batch.size():
@@ -357,6 +371,15 @@ func _build_nodes(vp: SubViewport) -> void:
 		else:
 			run.append(c)
 	flush_run.call()
+
+static var _unpremul_mat: ShaderMaterial
+static func _unpremul_material() -> ShaderMaterial:
+	if _unpremul_mat == null:
+		var sh := Shader.new()
+		sh.code = "shader_type canvas_item;\nrender_mode blend_disabled;\nvoid fragment(){ vec4 c = texture(TEXTURE, UV); COLOR = c.a > 0.0 ? vec4(min(c.rgb / c.a, vec3(1.0)), c.a) : vec4(0.0); }\n"
+		_unpremul_mat = ShaderMaterial.new()
+		_unpremul_mat.shader = sh
+	return _unpremul_mat
 
 static var _clear_mat: ShaderMaterial
 static func _clear_material() -> ShaderMaterial:

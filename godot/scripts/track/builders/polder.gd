@@ -1,5 +1,5 @@
 class_name BuildPolder
-## Port of buildPolder (+ windmill, farm, roofGeo, signs) from polderrace-3d.html. Same numbers, same seeded random
+## Port of buildPolder (+ windmill, farm) and detailPolder from polderrace-3d.html. Same numbers, same seeded random
 ## order (World.rnd), so the decor lands where it does in the HTML game.
 
 static func M(c: int, o: Dictionary = {}) -> LMat:
@@ -34,23 +34,13 @@ static func windmill(x: float, z: float, rot: float) -> void:
 	World.add(g)
 	World.sailGroups.append(sails)
 
-static func roofGeo() -> Geo:
-	var geo := Geo.extrude([Vector2(-0.5, 0), Vector2(0.5, 0), Vector2(0, 1)], 1.0)
-	geo.translate(0, 0, -0.5)
-	return geo
-
-static func roofMesh(w: float, h: float, d: float, mat) -> MeshInstance3D:
-	var m := O3.mesh(roofGeo(), mat, 0, 0, 0, null, true)
-	m.scale = Vector3(w, h, d)
-	return m
-
 static func farm(x: float, z: float, rot: float) -> void:
 	var g := O3.group(x, 0, z)
 	O3.rot(g, 0, rot, 0)
 	var brick := M(0x8c3f2c); var roofM := M(0x3b3530); var cream := M(0xf3efe4); var green := M(0x2e5d3e)
 	World.winMats.append(cream)
 	World.box(9, 4.5, 8, brick, 0, 2.25, 0, g)
-	var r1 := roofMesh(10.2, 5.8, 8.8, roofM); r1.position.y = 4.5; g.add_child(r1)
+	var r1 := TrackCommon.roofMesh(10.2, 5.8, 8.8, roofM); r1.position.y = 4.5; g.add_child(r1)
 	World.box(1.2, 2.4, 1.2, M(0x5a3a2a), 2, 8.2, 1, g)
 	for xx in [-2.6, 2.6]:
 		World.box(1.8, 1.6, 0.15, cream, xx, 2.6, 4.05, g, false)
@@ -58,7 +48,7 @@ static func farm(x: float, z: float, rot: float) -> void:
 		World.box(0.5, 1.6, 0.16, green, xx + 1.2, 2.6, 4.06, g, false)
 	World.box(1.2, 2.2, 0.15, green, 0, 1.1, 4.05, g, false)
 	World.box(11, 5.5, 14, M(0x6b3a2c), 11, 2.75, -2, g)
-	var r2 := roofMesh(12.2, 4.6, 14.8, roofM); r2.position = Vector3(11, 5.5, -2); g.add_child(r2)
+	var r2 := TrackCommon.roofMesh(12.2, 4.6, 14.8, roofM); r2.position = Vector3(11, 5.5, -2); g.add_child(r2)
 	World.box(4, 4, 0.15, green, 11, 2, 5.05, g, false)
 	World.add(g)
 
@@ -224,7 +214,7 @@ static func build() -> void:
 		m.position = Vector3(s[0], 0.08 + f.lv * 0.025, s[1])
 		World.add(m)
 
-	signs([["Kinderdijk", "8"], ["Gouda", "23"], ["Edam", "61"], ["Lelystad", "34"], ["Zwolle", "88"], ["Delft", "17"], ["Urk", "52"], ["Giethoorn", "96"]], 10.2)
+	TrackCommon.signs([["Kinderdijk", "8"], ["Gouda", "23"], ["Edam", "61"], ["Lelystad", "34"], ["Zwolle", "88"], ["Delft", "17"], ["Urk", "52"], ["Giethoorn", "96"]], 10.2)
 
 	# power line with lattice pylons across the polder
 	var A := Vector2(Trk.BX0 + 40, -120)
@@ -266,27 +256,6 @@ static func build() -> void:
 				q.y -= sin(t * PI) * 4
 				pts.append(q)
 			World.add(O3.line(pts, 0x4a4f52))
-
-static func signs(list: Array, lat: float) -> void:
-	var blue := M(0x1d4f9e)
-	var postMat := M(0xd2d5d7)
-	for k in list.size():
-		var n: String = list[k][0]
-		var km: String = list[k][1]
-		var i := int(floor(Trk.NS * (k + 0.35) / list.size())) % Trk.NS
-		if Trk.EMB[i] > 0.5:
-			continue
-		var tex := Canvas2D.tex(256, 128, func(g, w, h):
-			g.fillStyle = "#1d4f9e"; g.fillRect(0, 0, w, h); g.strokeStyle = "#f7f7f2"; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20)
-			g.fillStyle = "#f7f7f2"; g.font = "700 46px Barlow Condensed"; g.textAlign = "left"; g.fillText(n, 26, 62, 200)
-			g.textAlign = "right"; g.fillText(km, w - 26, 108))
-		var g := Node3D.new()
-		var face := M(0xffffff, {"map": tex})
-		O3.mesh(Geo.box(3.2, 1.6, 0.12), [blue, blue, blue, blue, face, blue], 0, 3.2, 0, g, true)
-		for x in [-1.1, 1.1]:
-			World.box(0.12, 2.6, 0.12, postMat, x, 1.3, -0.12, g)
-		World.place(g, i, lat, 0)
-		g.rotate_y(PI)
 
 ## JS detailPolder: a high-voltage line on lattice pylons right across the polder, and hay bales
 static func details() -> void:

@@ -28,6 +28,9 @@ var sky_geo: Geo
 var sun_sprite: Sprite3D
 var clouds: Array = []
 var stars: MeshInstance3D
+var birds: Node3D
+var pools: MultiMeshInstance3D
+var _pool_tex: ImageTexture
 var rain: MeshInstance3D
 var rain_pos := PackedVector3Array()
 var fog_color := Color.WHITE
@@ -79,6 +82,11 @@ func _ready() -> void:
 	_make_clouds()
 	_make_stars()
 	_make_rain()
+	_make_birds()
+	_pool_tex = Canvas2D.tex(64, 64, func(g, _w, _h):
+		var gr = g.createRadialGradient(32, 32, 1, 32, 32, 31)
+		gr.addColorStop(0, "rgba(255,220,150,0.55)"); gr.addColorStop(1, "rgba(255,220,150,0)")
+		g.fillStyle = gr; g.fillRect(0, 0, 64, 64))
 
 func _make_clouds() -> void:
 	var texs := []
@@ -111,6 +119,30 @@ func _make_clouds() -> void:
 		sp.render_priority = -5
 		clouds.append(sp)
 		add_child(sp)
+
+## flocks of little V-shaped birds circling over the track (JS birds)
+func _make_birds() -> void:
+	birds = Node3D.new()
+	add_child(birds)
+	var mat := Mats.basic(0x2a2e36)
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3(-0.9, 0.25, 0), Vector3.ZERO, Vector3.ZERO, Vector3(0.9, 0.25, 0)])
+	var bm := ArrayMesh.new()
+	bm.add_surface_from_arrays(Mesh.PRIMITIVE_LINES, arr)
+	bm.surface_set_material(0, mat)
+	for _f in 4:
+		var fl := Node3D.new()
+		fl.set_meta("u", {"a": randf() * 6, "r": 120 + randf() * 220, "y": 45 + randf() * 40, "w": (-1.0 if randf() < .5 else 1.0) * (0.05 + randf() * 0.05), "p": randf() * 6, "cx": 0.0, "cz": 0.0})
+		for _k in 7 + int(floor(randf() * 6)):
+			var b := MeshInstance3D.new()
+			b.mesh = bm
+			b.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			b.position = Vector3((randf() - .5) * 16, (randf() - .5) * 5, (randf() - .5) * 16)
+			b.scale = Vector3.ONE * 1.3
+			b.set_meta("p", randf() * 6)
+			fl.add_child(b)
+		birds.add_child(fl)
 
 func _make_stars() -> void:
 	var g := PackedVector3Array()
@@ -257,8 +289,9 @@ func apply(t: String, w: String, force := false) -> void:
 			m.emission_enabled = true
 			m.emission = MathX.col(0xffd890) * L.lamp
 		else:
-			m.emission = m.get_meta("base_emissive", Color(0.13, 0.13, 0.13))
-			m.emission_enabled = m.emission != Color.BLACK
+			# JS: m.userData.base || 0x222222 (the base is set by TrackLoader after building)
+			m.emission = m.get_meta("base_emissive", MathX.col(0x222222))
+			m.emission_enabled = true
 	for m in World.roadMats:
 		var k := 0.7 if wet else 1.0
 		m.albedo_color = Color(k, k, k)
@@ -272,6 +305,29 @@ func apply(t: String, w: String, force := false) -> void:
 	for m in World.hillMats:
 		var base: Color = m.get_meta("base", m.albedo_color)
 		m.albedo_color = base.lerp(fogc, float(m.get_meta("k", 0.0)))
+	birds.visible = t != "night" and not fog
+	if not Trk.TRK.is_empty():
+		for f in birds.get_children():
+			var u: Dictionary = f.get_meta("u")
+			u.cx = Trk.BX0 + randf() * (Trk.BX1 - Trk.BX0); u.cz = Trk.BZ0 + randf() * (Trk.BZ1 - Trk.BZ0)
+	# light pools under the track lamps at dusk and night (JS pools)
+	if pools != null:
+		pools.queue_free(); pools = null
+	if L.lamp > 0.0 and not World.trackLights.is_empty():
+		var pg := Geo.plane(1, 1).rotate_x(-PI / 2)
+		var pm := Mats.basic(0xffffff, {"map": _pool_tex, "transparent": true, "depthWrite": false, "blending": "add", "opacity": L.lamp})
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = pg.to_mesh(pm)
+		mm.instance_count = World.trackLights.size()
+		for k in World.trackLights.size():
+			var tl: Array = World.trackLights[k]
+			mm.set_instance_transform(k, World.mtx(tl[0], tl[1] + 0.14, tl[2], 0, tl[3] * 2, 1, tl[3] * 2))
+		pools = MultiMeshInstance3D.new()
+		pools.multimesh = mm
+		pools.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		pools.extra_cull_margin = 16384
+		add_child(pools)
 
 ## position clouds round the track (JS loadTrack)
 func place_clouds() -> void:
@@ -304,6 +360,14 @@ func update(dt: float, cam: Camera3D) -> void:
 			rain_pos[i * 2 + 1] = Vector3(x + 0.05, y - 0.9, z)
 		_rain_mesh()
 	stars.position = cp
+	if birds.visible:
+		for f in birds.get_children():
+			var u: Dictionary = f.get_meta("u")
+			u.a += dt * u.w
+			f.position = Vector3(u.cx + cos(u.a) * u.r, u.y + sin(clock * 0.7 + u.p) * 3, u.cz + sin(u.a) * u.r)
+			f.rotation.y = -u.a + (0.0 if u.w > 0 else PI)
+			for bd in f.get_children():
+				bd.scale.y = 0.6 + 0.4 * absf(sin(clock * 9 + bd.get_meta("p")))
 	sky_dome.position = cp
 	sun_sprite.position = cp + SUN_DIR * SKY_R * 0.8
 	if not World.beaconMats.is_empty():

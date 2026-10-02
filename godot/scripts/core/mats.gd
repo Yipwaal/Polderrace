@@ -4,7 +4,7 @@ class_name Mats
 ## Options use the three.js names:
 ##   map (Texture), repeat (Vector2: three texture.repeat), emissive (hex), emissiveIntensity, transparent, opacity,
 ##   side ("double"/"back"), vertexColors, depthWrite, depthTest, fog (false = no fog), specular (hex), shininess,
-##   flatShading, alphaTest.
+##   flatShading, alphaTest, blending ("add" = THREE.AdditiveBlending).
 
 static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 	var m := LMat.new()
@@ -35,6 +35,8 @@ static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 		m.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
 	if o.get("depthTest", true) == false:
 		m.no_depth_test = true
+	if o.get("blending", "") == "add":
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	if o.get("fog", true) == false:
 		m.disable_fog = true
 	if o.get("flatShading", false):

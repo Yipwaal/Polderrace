@@ -29,6 +29,7 @@ var shininess := 30.0: set = _set_shininess
 var transparency := BaseMaterial3D.TRANSPARENCY_DISABLED: set = _set_transparency
 var alpha_scissor_threshold := 0.5: set = _set_alpha_scissor
 var cull_mode := BaseMaterial3D.CULL_BACK: set = _set_cull_mode
+var blend_mode := BaseMaterial3D.BLEND_MODE_MIX: set = _set_blend_mode
 var depth_draw_mode := BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY: set = _set_depth_draw
 var no_depth_test := false: set = _set_no_depth_test
 var disable_fog := false: set = _set_disable_fog
@@ -49,7 +50,7 @@ func clone() -> LMat:
 	var m := LMat.new()
 	m._building = true
 	for p in ["kind", "albedo_color", "albedo_texture", "uv1_scale", "uv1_offset", "emission_enabled", "emission", "emission_energy_multiplier",
-			"specular", "shininess", "transparency", "alpha_scissor_threshold", "cull_mode", "depth_draw_mode", "no_depth_test", "disable_fog",
+			"specular", "shininess", "transparency", "alpha_scissor_threshold", "cull_mode", "blend_mode", "depth_draw_mode", "no_depth_test", "disable_fog",
 			"vertex_color_use_as_albedo", "flat_shading"]:
 		m.set(p, get(p))
 	m._building = false
@@ -72,6 +73,7 @@ func _set_shininess(v): shininess = v; set_shader_parameter("shininess", v)
 func _set_transparency(v): transparency = v; _rebuild()
 func _set_alpha_scissor(v): alpha_scissor_threshold = v; set_shader_parameter("alpha_cut", v)
 func _set_cull_mode(v): cull_mode = v; _rebuild()
+func _set_blend_mode(v): blend_mode = v; _rebuild()
 func _set_depth_draw(v): depth_draw_mode = v; _rebuild()
 func _set_no_depth_test(v): no_depth_test = v; _rebuild()
 func _set_disable_fog(v): disable_fog = v; _rebuild()
@@ -85,7 +87,7 @@ func _push_emission() -> void:
 func _rebuild() -> void:
 	if _building:
 		return
-	var key := "%d|%d|%d|%d|%d|%d|%d|%d|%d" % [kind, transparency, cull_mode, depth_draw_mode, int(no_depth_test), int(disable_fog),
+	var key := "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [kind, transparency, blend_mode, cull_mode, depth_draw_mode, int(no_depth_test), int(disable_fog),
 		int(vertex_color_use_as_albedo), int(flat_shading), int(albedo_texture != null)]
 	if not _cache.has(key):
 		var sh := Shader.new()
@@ -103,8 +105,10 @@ func _rebuild() -> void:
 
 func _code() -> String:
 	var rm := []
-	match transparency:
-		BaseMaterial3D.TRANSPARENCY_ALPHA, BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS: rm.append("blend_mix")
+	if blend_mode == BaseMaterial3D.BLEND_MODE_ADD:
+		rm.append("blend_add")
+	elif transparency == BaseMaterial3D.TRANSPARENCY_ALPHA or transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS:
+		rm.append("blend_mix")
 	match cull_mode:
 		BaseMaterial3D.CULL_DISABLED: rm.append("cull_disabled")
 		BaseMaterial3D.CULL_FRONT: rm.append("cull_front")
@@ -121,7 +125,7 @@ func _code() -> String:
 	if albedo_texture != null: d.append("#define TEX")
 	if vertex_color_use_as_albedo: d.append("#define VCOL")
 	if transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR: d.append("#define SCISSOR")
-	if transparency != BaseMaterial3D.TRANSPARENCY_DISABLED: d.append("#define ALPHA_ON")
+	if transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or blend_mode == BaseMaterial3D.BLEND_MODE_ADD: d.append("#define ALPHA_ON")
 	if not disable_fog: d.append("#define FOG")
 	if kind == Kind.PHONG: d.append("#define PHONG")
 	if kind == Kind.BASIC: d.append("#define BASIC")

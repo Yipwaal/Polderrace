@@ -16,7 +16,7 @@ func run(host: Node) -> TestReport:
 	World.root = Node3D.new()
 	host.add_child(World.root)
 	var only := OS.get_environment("TRACKS")
-	for id in TrackLoader.BUILDERS:
+	for id in TrackLoader.ported():
 		if only != "" and not id in only.split(","): continue
 		for dir in ["fwd", "rev"]:
 			var g: Dictionary = gold["%s/%s" % [id, dir]]
