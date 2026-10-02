@@ -362,6 +362,11 @@ func updateBots(dt: float) -> void:
 			poseOnTrack(b.m.g, b.s, b.lat)
 			continue
 		if netInRace() and not netIsHost():
+			# the host drives the bots (Net applies its positions, 20 times a second); in between they roll on smoothly
+			if Net.botsFresh():
+				var rel := fposmod(b.s - Trk.S_START, Trk.TRACK_LEN)
+				b.s = fposmod(b.s + b.speed * dt, Trk.TRACK_LEN)
+				if fposmod(b.s - Trk.S_START, Trk.TRACK_LEN) < rel: b.lap += 1
 			poseOnTrack(b.m.g, b.s, b.lat, b.yawOff)
 			for w in b.m.wheels: w.spin.rotation.x += wheelSpin(b.speed, w.r, dt)
 			continue
@@ -1337,6 +1342,8 @@ func netInRace() -> bool: return Net.inRace()
 func netIsHost() -> bool: return Net.isHost()
 func netAheadCount(me: float) -> int: return Net.aheadCount(me)
 func netKick(i: int, dvx: float, dvz: float, sp: float) -> void: Net.netKick(i, dvx, dvz, sp)
+## the car step of an online game is done (Menu calls this): back to the online screen
+func netCarDone() -> void: Net.netCarDone()
 func otherProgress() -> Variant:
 	if not split or p2 == null: return null
 	var o: PlayerState = p2.pl

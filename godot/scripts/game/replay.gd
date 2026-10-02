@@ -125,9 +125,10 @@ func replayStart() -> void:
 	var cars := [{"id": G.settings.car, "color": G.settings.color, "name": "Speler 1" if g.split else "Jij"}]
 	for b in g.bots: cars.append({"id": b.type, "color": b.color, "name": b.name})
 	if g.split and g.p2 != null: cars.append({"id": g.p2.carId, "color": g.p2.color, "name": "Speler 2"})
+	# online: the other players in this race, each in a fixed place of every frame (someone who leaves halfway keeps it)
 	if Net.inRace():
 		for r in Net.net.remotes.values():
-			if r.car != null: cars.append({"id": r.carId, "color": r.color, "name": r.name, "peer": r.peer})
+			if r.car != null and Net.net.order.has(r.peer): cars.append({"id": r.carId, "color": r.color, "name": r.name, "peer": r.peer})
 	replay = {"v": 1, "track": Trk.TRACK_ID, "time": Env.me.time if Env.me else "day", "weather": Env.me.weather if Env.me else "dry", "hz": 30, "cars": cars, "frames": []}
 	repRec = 0
 
@@ -143,9 +144,16 @@ func replayRecord(dt: float) -> void:
 	push.call(g.car.g, g.player.speed)
 	for b in g.bots: push.call(b.m.g, 0.0 if b.out else b.speed)
 	if g.split and g.p2 != null and g.p2.car != null: push.call(g.p2.car.g, g.p2.pl.speed)
-	if Net.inRace():
-		for r in Net.net.remotes.values():
-			if r.car != null: push.call(r.car.g, r.st[4] if r.st != null else 0.0)
+	for c in replay.cars:
+		if not c.has("peer"): continue
+		var r = Net.net.remotes.get(c.peer) if Net.net != null else null
+		if r != null and r.car != null and r.car.g.visible:
+			push.call(r.car.g, r.st[4] if r.st != null else 0.0)
+		else:
+			# gone (left the game, back to the menu): stays where it was last seen
+			var o := f.size()
+			var last: Array = replay.frames.back() if not replay.frames.is_empty() else []
+			f.append_array(last.slice(o, o + 4) + [0.0] if last.size() >= o + 5 else [0.0, -1000.0, 0.0, 0.0, 0.0])
 	replay.frames.append(f)
 
 func canReplay() -> bool:
@@ -157,9 +165,10 @@ func replayOpen() -> void:
 	var meshes := [g.car]
 	for b in g.bots: meshes.append(b.m)
 	if g.split and g.p2 != null and g.p2.car != null: meshes.append(g.p2.car)
-	if Net.net != null:
-		for r in Net.net.remotes.values():
-			if r.car != null: meshes.append(r.car)
+	for c in replay.cars:
+		if not c.has("peer"): continue
+		var r = Net.net.remotes.get(c.peer) if Net.net != null else null
+		meshes.append(r.car if r != null else null)    # a player who left the game has no car any more: skipped
 	# the podium makes way for the replay and comes back after it (JS: podiumArgs kept in rp.podium)
 	var pa = Podium.podiumArgs
 	Podium.leavePodium()
@@ -187,11 +196,20 @@ func replayClear() -> void:
 	replay = null; rp = null
 	if bar != null: bar.visible = false
 
+## the next car the camera can follow (online, a player who left the game has no car: skipped)
+func nextTarget(d: int) -> int:
+	var n: int = rp.meshes.size()
+	var t: int = rp.target
+	for _i in n:
+		t = (t + d + n) % n
+		if rp.meshes[t] != null: return t
+	return rp.target
+
 func replayLabel() -> void:
 	var c: Dictionary = replay.cars[rp.target]
 	var n: int = rp.meshes.size()
-	var pv: Dictionary = replay.cars[(rp.target - 1 + n) % n]
-	var nx: Dictionary = replay.cars[(rp.target + 1) % n]
+	var pv: Dictionary = replay.cars[nextTarget(-1)]
+	var nx: Dictionary = replay.cars[nextTarget(1)]
 	info.text = "REPLAY · %s (%s) · %s" % [c.name, Cars.CARS[c.id].name if Cars.CARS.has(c.id) else "", REP_CAMS[rp.camMode]]
 	prev_btn.text = "◀ " + pv.name
 	next_btn.text = nx.name + " ▶"
@@ -292,11 +310,11 @@ func _ready() -> void:
 	prev_btn = Hud.mk_button("◀ Auto", false)
 	prev_btn.pressed.connect(func():
 		if rp == null: return
-		rp.target = (rp.target - 1 + rp.meshes.size()) % rp.meshes.size(); rp.anchor = null; replayLabel())
+		rp.target = nextTarget(-1); rp.anchor = null; replayLabel())
 	next_btn = Hud.mk_button("Auto ▶", false)
 	next_btn.pressed.connect(func():
 		if rp == null: return
-		rp.target = (rp.target + 1) % rp.meshes.size(); rp.anchor = null; replayLabel())
+		rp.target = nextTarget(1); rp.anchor = null; replayLabel())
 	var cam := Hud.mk_button("Camera", false)
 	cam.pressed.connect(func():
 		if rp == null: return

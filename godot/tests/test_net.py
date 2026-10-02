@@ -2,6 +2,9 @@
 (no codes), join, start the same race when the host starts, and both must see each other's car and the same bots.
 usage: python godot/tests/test_net.py"""
 import subprocess, sys, json, pathlib, shutil, time
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import net_players
+net_players.isolate()      # Linux as root: a network of its own, so other games on this PC cannot mix in
 PROJ = pathlib.Path(__file__).resolve().parent.parent
 GODOT = shutil.which('godot') or 'godot'
 bad = []
