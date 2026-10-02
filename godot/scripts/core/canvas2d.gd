@@ -428,7 +428,12 @@ class _Layer extends Node2D:
 			if tri.is_empty():
 				return
 		for i in range(0, tri.size(), 3):
-			draw_colored_polygon(PackedVector2Array([p[tri[i]], p[tri[i + 1]], p[tri[i + 2]]]), col)
+			var a := p[tri[i]]
+			var b := p[tri[i + 1]]
+			var c := p[tri[i + 2]]
+			# a sliver without area draws nothing (and the renderer cannot triangulate it: "Invalid polygon data")
+			if absf((b - a).cross(c - a)) < 1e-6: continue
+			draw_colored_polygon(PackedVector2Array([a, b, c]), col)
 
 class CanvasGrad extends RefCounted:
 	var radial := false
