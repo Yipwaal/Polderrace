@@ -372,7 +372,7 @@ func _update_board() -> void:
 	var rows := [{"name": "Jij", "best": g.raceBestLap, "me": true, "out": g.playerOut, "prog": -1e9 if g.playerOut else g.progressOf(g.player.lap, g.player.s, g.raceDone, g.raceFinishTime)}]
 	if Net.inRace():
 		for r in Net.net.remotes.values():
-			if r.st != null: rows.append({"name": r.name, "best": 0, "prog": Net.netRemoteProg(r)})
+			if r.st != null: rows.append({"name": r.name, "best": 0, "out": false, "prog": Net.netRemoteProg(r)})
 	for b in g.bots:
 		rows.append({"name": b.name, "best": b.bestLap, "out": b.out, "prog": -1e9 if b.out else g.progressOf(b.lap, b.s, b.finished, b.finishTime)})
 	rows.sort_custom(func(a, b): return a.prog > b.prog)
