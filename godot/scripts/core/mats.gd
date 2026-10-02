@@ -2,7 +2,7 @@ class_name Mats
 ## Materials like the HTML game's: M(color, opts) = MeshLambertMaterial, PM(...) = MeshPhongMaterial, basic = MeshBasicMaterial.
 ## All are LMat (one shader that lights the three.js way, see lmat.gd). Colours are JS hex ints (0xRRGGBB).
 ## Options use the three.js names:
-##   map (Texture), repeat (Vector2: three texture.repeat), emissive (hex), emissiveIntensity, transparent, opacity,
+##   map (Texture), repeat (Vector2: three texture.repeat), emissive (hex), emissiveMap (Texture), emissiveIntensity, transparent, opacity,
 ##   side ("double"/"back"), vertexColors, depthWrite, depthTest, fog (false = no fog), specular (hex), shininess,
 ##   flatShading, alphaTest, blending ("add" = THREE.AdditiveBlending).
 
@@ -17,6 +17,8 @@ static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 			set_repeat(m, o.repeat)
 	if o.get("vertexColors", false):
 		m.vertex_color_use_as_albedo = true
+	if o.has("emissiveMap") and o.emissiveMap != null:
+		m.emission_texture = o.emissiveMap
 	if o.has("emissive") and int(o.emissive) != 0:
 		m.emission_enabled = true
 		m.emission = MathX.col(o.emissive)

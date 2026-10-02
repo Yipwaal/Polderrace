@@ -11,6 +11,9 @@ extends ShaderMaterial
 ##   sun pass:    SPECULAR_LIGHT = dec((1 - f) * colour * sun * N.L * shadow)   (added on top in gamma space by the GPU)
 ## Light comes from global shader parameters set by Env (pr_*), not from Godot's ambient light or fog.
 ##
+## Shadows: like three.js only what asks for it receives shadows (three mesh.receiveShadow = true -> O3.receive(mesh), which sets
+## receive_shadow on its materials); everything else is lit by the sun without shadows (no self-shadowing on boxes, spheres, ...).
+##
 ## The properties carry StandardMaterial3D's names (albedo_color, albedo_texture, emission, transparency, cull_mode, ...),
 ## so code can treat an LMat like a StandardMaterial3D. Flags that change the shader code rebuild it (cached per variant).
 
@@ -24,6 +27,8 @@ var uv1_offset := Vector3.ZERO: set = _set_uv1_offset
 var emission_enabled := false: set = _set_emission_enabled
 var emission := Color.BLACK: set = _set_emission
 var emission_energy_multiplier := 1.0: set = _set_emission_energy
+## three emissiveMap: multiplies the emissive colour (same uv as the map)
+var emission_texture: Texture2D: set = _set_emission_texture
 var specular := Color(0.0666, 0.0666, 0.0666): set = _set_specular
 var shininess := 30.0: set = _set_shininess
 var transparency := BaseMaterial3D.TRANSPARENCY_DISABLED: set = _set_transparency
@@ -35,6 +40,8 @@ var no_depth_test := false: set = _set_no_depth_test
 var disable_fog := false: set = _set_disable_fog
 var vertex_color_use_as_albedo := false: set = _set_vcol
 var flat_shading := false: set = _set_flat
+## three mesh.receiveShadow (per material here, see O3.receive): false = render_mode shadows_disabled
+var receive_shadow := false: set = _set_receive
 ## kept for code written against StandardMaterial3D; the shader ignores them
 var vertex_color_is_srgb := false
 var texture_filter := BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
@@ -49,9 +56,9 @@ func _init() -> void:
 func clone() -> LMat:
 	var m := LMat.new()
 	m._building = true
-	for p in ["kind", "albedo_color", "albedo_texture", "uv1_scale", "uv1_offset", "emission_enabled", "emission", "emission_energy_multiplier",
+	for p in ["kind", "albedo_color", "albedo_texture", "uv1_scale", "uv1_offset", "emission_enabled", "emission", "emission_energy_multiplier", "emission_texture",
 			"specular", "shininess", "transparency", "alpha_scissor_threshold", "cull_mode", "blend_mode", "depth_draw_mode", "no_depth_test", "disable_fog",
-			"vertex_color_use_as_albedo", "flat_shading"]:
+			"vertex_color_use_as_albedo", "flat_shading", "receive_shadow"]:
 		m.set(p, get(p))
 	m._building = false
 	m.render_priority = render_priority
@@ -68,6 +75,7 @@ func _set_uv1_offset(v): uv1_offset = v; set_shader_parameter("uv_offset", Vecto
 func _set_emission_enabled(v): emission_enabled = v; _push_emission()
 func _set_emission(v): emission = v; _push_emission()
 func _set_emission_energy(v): emission_energy_multiplier = v; _push_emission()
+func _set_emission_texture(v): emission_texture = v; _rebuild()
 func _set_specular(v): specular = v; set_shader_parameter("spec", Vector3(v.r, v.g, v.b))
 func _set_shininess(v): shininess = v; set_shader_parameter("shininess", v)
 func _set_transparency(v): transparency = v; _rebuild()
@@ -79,6 +87,7 @@ func _set_no_depth_test(v): no_depth_test = v; _rebuild()
 func _set_disable_fog(v): disable_fog = v; _rebuild()
 func _set_vcol(v): vertex_color_use_as_albedo = v; _rebuild()
 func _set_flat(v): flat_shading = v; _rebuild()
+func _set_receive(v): receive_shadow = v; _rebuild()
 
 func _push_emission() -> void:
 	var e := emission * emission_energy_multiplier if emission_enabled else Color.BLACK
@@ -87,8 +96,8 @@ func _push_emission() -> void:
 func _rebuild() -> void:
 	if _building:
 		return
-	var key := "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [kind, transparency, blend_mode, cull_mode, depth_draw_mode, int(no_depth_test), int(disable_fog),
-		int(vertex_color_use_as_albedo), int(flat_shading), int(albedo_texture != null)]
+	var key := "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [kind, transparency, blend_mode, cull_mode, depth_draw_mode, int(no_depth_test), int(disable_fog),
+		int(vertex_color_use_as_albedo), int(flat_shading), int(albedo_texture != null), int(emission_texture != null), int(receive_shadow)]
 	if not _cache.has(key):
 		var sh := Shader.new()
 		sh.code = _code()
@@ -96,6 +105,7 @@ func _rebuild() -> void:
 	shader = _cache[key]
 	set_shader_parameter("albedo", Vector4(albedo_color.r, albedo_color.g, albedo_color.b, albedo_color.a))
 	set_shader_parameter("tex", albedo_texture)
+	set_shader_parameter("emap", emission_texture)
 	set_shader_parameter("uv_scale", Vector2(uv1_scale.x, uv1_scale.y))
 	set_shader_parameter("uv_offset", Vector2(uv1_offset.x, uv1_offset.y))
 	set_shader_parameter("spec", Vector3(specular.r, specular.g, specular.b))
@@ -121,8 +131,10 @@ func _code() -> String:
 	rm.append("fog_disabled")
 	rm.append("ambient_light_disabled")
 	if kind == Kind.BASIC: rm.append("unshaded")
+	if not receive_shadow: rm.append("shadows_disabled")
 	var d := []
 	if albedo_texture != null: d.append("#define TEX")
+	if emission_texture != null: d.append("#define EMAP")
 	if vertex_color_use_as_albedo: d.append("#define VCOL")
 	if transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR: d.append("#define SCISSOR")
 	if transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or blend_mode == BaseMaterial3D.BLEND_MODE_ADD: d.append("#define ALPHA_ON")
@@ -142,6 +154,7 @@ global uniform vec4 pr_fog_range;     // near, far (three.js Fog: smoothstep(nea
 
 uniform vec4 albedo = vec4(1.0);
 uniform sampler2D tex : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D emap : filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec2 uv_scale = vec2(1.0);
 uniform vec2 uv_offset = vec2(0.0);
 uniform vec3 emissive = vec3(0.0);
@@ -239,7 +252,11 @@ void fragment() {
 		lit += pr_sun.rgb * ndl * phong_spec(nv, lv, VIEW);
 #endif
 	}
+#ifdef EMAP
+	lit += emissive * texture(emap, UV).rgb;
+#else
 	lit += emissive;
+#endif
 	EMISSION = emit(mix(lit, pr_fog.rgb, f));
 	ALBEDO = vec3(0.0);
 	g_col = c.rgb;

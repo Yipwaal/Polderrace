@@ -6,6 +6,7 @@ static func waterPlane(w: float, d: float, x: float, z: float, y: float, col := 
 	var m := O3.mesh(Geo.plane(w, d), Mats.phong(col, {"specular": 0x9fb4c8, "shininess": 70}))
 	O3.rot(m, -PI / 2, 0, 0)
 	m.position = Vector3(x, y, z)
+	O3.receive(m)
 	World.add(m)
 	return m
 
@@ -13,6 +14,7 @@ static func landPlane(tex: Texture2D, x0: float, z0: float, x1: float, z1: float
 	var m := O3.mesh(Geo.plane(x1 - x0, z1 - z0), Mats.M(0xffffff, {"map": tex, "repeat": Vector2((x1 - x0) / tile, (z1 - z0) / tile)}))
 	O3.rot(m, -PI / 2, 0, 0)
 	m.position = Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2)
+	O3.receive(m)
 	World.add(m)
 	return m
 
