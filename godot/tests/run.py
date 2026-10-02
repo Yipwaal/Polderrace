@@ -11,7 +11,7 @@ DEFAULT = ['track']
 names = sys.argv[1:] or DEFAULT
 # (re)import first: new scripts with class_name are only known after an import, and an unknown class makes the runner hang
 subprocess.run([GODOT, '--headless', '--path', str(PROJ), '--import'], capture_output=True, text=True, timeout=600)
-r = subprocess.run([GODOT, '--headless', '--path', str(PROJ), 'res://tests/runner.tscn', '--', *names], capture_output=True, text=True, timeout=3600)
+r = subprocess.run([GODOT, '--headless', '--path', str(PROJ), 'res://tests/runner.tscn', '--', *names], capture_output=True, text=True, timeout=7200)
 out = r.stdout + r.stderr
 for line in out.splitlines():
     if line.startswith(('OK', 'FOUT', '--', '==')) or 'SCRIPT ERROR' in line or line.startswith('ERROR') or 'Parse Error' in line:

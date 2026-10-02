@@ -1,14 +1,20 @@
 extends Node
 ## Test runner: godot --path godot res://tests/runner.tscn -- <test> [<test> ...]
 ## Each test is res://tests/test_<name>.gd with `func run(node: Node) -> TestReport` (may await).
-## A script that does not compile counts as FOUT; a watchdog ends a run that hangs (exit code 1).
+## A script that does not compile counts as FOUT; a watchdog ends a test that hangs (exit code 1).
 
-const WATCHDOG_S := 1500.0
+const WATCHDOG_S := 1500.0    # per test (all suites in one run take longer than that together)
+var _test := 0
+
+func _watch(n: String) -> void:
+	_test += 1
+	var mine := _test
+	get_tree().create_timer(WATCHDOG_S, true, false, true).timeout.connect(func():
+		if mine != _test: return
+		print("FOUT watchdog: test ", n, " liep langer dan ", WATCHDOG_S, " s")
+		get_tree().quit(1))
 
 func _ready() -> void:
-	get_tree().create_timer(WATCHDOG_S, true, false, true).timeout.connect(func():
-		print("FOUT watchdog: tests liepen langer dan ", WATCHDOG_S, " s")
-		get_tree().quit(1))
 	var names := OS.get_cmdline_user_args()
 	var failed := 0
 	for n in names:
@@ -27,6 +33,7 @@ func _ready() -> void:
 		var owned := {}
 		for id in Cars.CARS: owned[id] = true
 		G.use_store("user://test-%s.json" % n, {"polderrace3d-garage": {"owned": owned}})
+		_watch(n)
 		var t = sc.new()
 		var rep: TestReport = await t.run(self)
 		rep.finish()

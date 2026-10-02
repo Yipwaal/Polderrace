@@ -446,6 +446,8 @@ func part_garage() -> void:
 	G.saveGarage()
 	await D.click(Menu.homeUI.hGarage, "Garage")
 	r.check(GarageRoom.inGarage and Menu.homeView == "garage", "garage open")
+	# the garage keeps the tab it was left on (as in the browser): a player clicks Prestaties first
+	if not Menu.garageUI.perf.visible: await D.click(Menu.garageUI.tabPerf, "tab Prestaties")
 	await D.shot("garage")
 	var car: String = G.settings.car
 	var c0: int = G.garage.credits
@@ -495,6 +497,8 @@ func part_garage() -> void:
 func part_settings() -> void:
 	await D.click(Menu.homeUI.hSettings, "Instellingen")
 	var su := Menu.settingsUI
+	# the settings keep the tab they were left on: a player clicks Algemeen first
+	if not su.general.visible: await D.click(su.tabRadio.find("general"), "tab Algemeen")
 	var fx0 := bool(G.prefs.fx)
 	await D.click(su.togs.fx, "snelheidseffecten")
 	r.check(bool(G.prefs.fx) != fx0 and JSON.parse_string(str(G.store_get("polderrace3d-prefs"))).fx == G.prefs.fx, "schakelaar bewaard")
