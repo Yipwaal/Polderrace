@@ -284,6 +284,7 @@ func apply(t: String, w: String, force := false) -> void:
 	stars.visible = t == "night" and w == "dry"
 	rain.visible = wet
 	lamps_on = t != "day" or fog or wet
+	CarKit.applyEnv(t, lamps_on)   # car lamp glass, tail lights, headlight pools (JS lampMat/tailMat/beamMat)
 	for m in World.lampMats:
 		if L.lamp > 0.0:
 			m.emission_enabled = true

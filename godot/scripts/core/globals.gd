@@ -16,6 +16,10 @@ func _init() -> void:
 			_store = d
 	_load_settings()
 
+func _ready() -> void:
+	# the car module styles cars from the garage entry (JS carUp)
+	CarKit.up_of = carUp
+
 func store_get(k: String, d = null):
 	return _store.get(k, d)
 

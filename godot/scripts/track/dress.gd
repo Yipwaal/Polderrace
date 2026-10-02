@@ -2,7 +2,7 @@ class_name Dress
 ## Port of "roadside dressing for every track" (dressTrack and its helpers) from polderrace-3d.html.
 ## Same seeded random order as the JS (World.rnd), so everything lands on the same spot.
 
-## parked cars need the car builder (scripts/car); it registers itself here: func(type: String, color: Color) -> Node3D
+## parked cars are built by CarKit.buildCar (scripts/car); car_builder can replace it: func(type: String, color: Color) -> Node3D
 static var car_builder: Callable = Callable()
 
 static func rnd() -> float:
@@ -155,13 +155,12 @@ static func parkedCars(n: int, lat: float, filter = null) -> void:
 		var type: String = World.pick(["hatch", "sedan", "coupe", "rally"])
 		var col := Color(World.pick(cols))
 		var ry := Trk.heading_of(Trk.T[i]) + (0.0 if rnd() < 0.5 else PI)
-		if car_builder.is_valid():
-			var g: Node3D = car_builder.call(type, col)
-			g.position = Vector3(x, 0, z)
-			g.rotation.y = ry
-			for mi in g.find_children("*", "GeometryInstance3D", true, false):
-				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			World.add(g)
+		var g: Node3D = car_builder.call(type, col) if car_builder.is_valid() else CarKit.buildCar(type, col).g
+		g.position = Vector3(x, 0, z)
+		g.rotation.y = ry
+		for mi in g.find_children("*", "GeometryInstance3D", true, false):
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		World.add(g)
 		placed += 1
 
 static func adBoards(every: float, lat: float) -> void:

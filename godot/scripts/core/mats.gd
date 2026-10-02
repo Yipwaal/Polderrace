@@ -4,7 +4,8 @@ class_name Mats
 ## Options use the three.js names:
 ##   map (Texture), repeat (Vector2: three texture.repeat), emissive (hex), emissiveMap (Texture), emissiveIntensity, transparent, opacity,
 ##   side ("double"/"back"), vertexColors, depthWrite, depthTest, fog (false = no fog), specular (hex), shininess,
-##   flatShading, alphaTest, blending ("add" = THREE.AdditiveBlending).
+##   flatShading, alphaTest, blending ("add" = THREE.AdditiveBlending),
+##   receiveShadow (true = shadows fall on it, three.js mesh.receiveShadow; default false like three.js, see O3.receive).
 
 static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 	var m := LMat.new()

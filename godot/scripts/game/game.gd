@@ -134,7 +134,9 @@ func rebuildPlayerCar(pid := "", pcol := "") -> void:
 	car.tail = tail
 	for mi in car.g.find_children("*", "MeshInstance3D", true, false):
 		for k in mi.mesh.get_surface_count():
-			if mi.mesh.surface_get_material(k) == CarKit.tailMat:
+			var cur = mi.get_surface_override_material(k)
+			if cur == null: cur = mi.mesh.surface_get_material(k)
+			if cur == CarKit.tailMat:
 				mi.set_surface_override_material(k, tail)
 	if car.get("beam") != null:
 		car.beam.visible = false
@@ -1445,6 +1447,7 @@ func _ready() -> void:
 
 func update(dt: float) -> void:
 	clock += dt
+	lampsOn = CarKit.lampsOn
 	if shake > 0: shake = maxf(0, shake - dt)
 	if Env.me != null: Env.me.update(dt, camera)
 	for s in World.sailGroups:
