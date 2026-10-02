@@ -94,6 +94,16 @@ func run(host: Node) -> TestReport:
 	L.step(8)
 	r.check(Game.state == "over", "tijdrit: tijd is op", Game.state)
 	r.check(Game.distance > 50, "tijdrit: afstand gemeten", G.fmtKm(Game.distance))
+	# ---- quit a race at speed: no speed blur left in the menu
+	S.mode = "race"; S.bots = 1; S.laps = 3
+	Game.state = "over"; Game.overReady = true; Game.startRace()
+	L.step(4.5, false)
+	L.step(12)
+	Game.updateCamera(1.0 / 60)
+	var fxRace: float = Game.speedFx
+	Game.toMenu(-1)
+	Game.updateCamera(1.0 / 60)
+	r.check(fxRace > 0.3 and Game.speedFx == 0, "stoppen tijdens de race: geen snelheidseffect in het menu", "race %.2f, menu %.2f" % [fxRace, Game.speedFx])
 	Game.set_process(true)
 	Game.set_process_input(true)
 	return r

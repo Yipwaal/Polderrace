@@ -1043,8 +1043,9 @@ func lookHeld() -> bool:
 	return actHeld(activeP, "look") or padFor(activeP).look
 
 func updateCamera(dt: float) -> void:
-	if Menu.menuCamera(dt): return   # menus: podium, home fly-over, orbit round the car, garage (Menu.menuCamera)
+	# before the menu views, as in the JS: in the menus there is no speed blur (also after quitting a race at speed)
 	speedFx = clamp_((maxf(0, player.speed) - 20) / 50, 0, 1) if (state == "racing" or state == "finished") else 0.0
+	if Menu.menuCamera(dt): return   # menus: podium, home fly-over, orbit round the car, garage (Menu.menuCamera)
 	var c := camParams()
 	var back := PI if player.speed < -1 else 0.0
 	camHeading = MathX.lerp_angle_(camHeading, player.heading - drift * 0.5 + back, 1 - exp(-dt * 7))
