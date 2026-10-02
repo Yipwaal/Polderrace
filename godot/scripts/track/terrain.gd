@@ -214,7 +214,7 @@ static func groundMesh(pos: PackedVector3Array, cols: PackedColorArray, seg: int
 	arr[Mesh.ARRAY_INDEX] = I
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	m.surface_set_material(0, Mats.M(0xffffff, {"vertexColors": true}))
+	m.surface_set_material(0, Mats.M(0xffffff, {"vertexColors": true, "receiveShadow": true}))
 	var mi := O3.mesh(m, null, cx, 0, cz)
 	World.add(mi)
 	return mi
