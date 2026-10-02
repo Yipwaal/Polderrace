@@ -342,6 +342,15 @@ func _build_look() -> void:
 		openGarage()
 	numIn.text_submitted.connect(commit)
 	numIn.focus_exited.connect(commit)
+	# <input type=number>: only digits go in (a letter typed in between, like M, is not taken)
+	numIn.text_changed.connect(func(t: String) -> void:
+		var d := ""
+		for ch in t:
+			if ch >= "0" and ch <= "9": d += ch
+		if d == t: return
+		var cc := numIn.caret_column - (t.length() - d.length())
+		numIn.text = d
+		numIn.caret_column = clampi(cc, 0, d.length()))
 	exhRow = UiKit.opt(UiKit.optl("Uitlaat", "Alleen klasse B en A"), es[0], Vector4(18, 10, 12, 10))
 	var rows := [UiKit.opt(UiKit.optl("Velgen"), rs[0], Vector4(18, 10, 12, 10)), UiKit.opt(UiKit.optl("Velgmodel"), ms[0], Vector4(18, 10, 12, 10)),
 		UiKit.opt(UiKit.optl("Spoiler"), ws[0], Vector4(18, 10, 12, 10)), exhRow, UiKit.opt(UiKit.optl("Striping"), ss[0], Vector4(18, 10, 12, 10)),
