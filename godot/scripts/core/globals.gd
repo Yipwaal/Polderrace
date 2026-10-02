@@ -165,14 +165,27 @@ func addCredits(n: float) -> int:
 		Ach.unlockAch("rich")
 	return v
 
-# ------------------------------------------------------------------ formatting (JS fmtKm, fmtLap, fmtD)
+# ------------------------------------------------------------------ formatting (JS toFixed, fmtKm, fmtLap, fmtD)
+## JS Number.toFixed(f): the decimal closest to x; when x lies exactly halfway (2.25 with one decimal) the one away from
+## zero, where printf ("%.1f") rounds to even. Such a tie is x * 2^(f+1) being an odd whole number.
+static func toFixed(x: float, f: int) -> String:
+	var a := absf(x)
+	var p := a * pow(2.0, f + 1)
+	if p == floor(p) and fmod(p, 2.0) == 1.0 and p < 1e15:
+		var s := str(int(floor(a * pow(10.0, f))) + 1)
+		if f > 0:
+			s = s.lpad(f + 1, "0")
+			s = s.substr(0, s.length() - f) + "." + s.substr(s.length() - f)
+		return ("-" if x < 0 else "") + s
+	return ("%." + str(f) + "f") % x
+
 static func fmtKm(m: float) -> String:
-	return ("%.1f" % (m / 1000.0)).replace(".", ",") + " km"
+	return toFixed(m / 1000.0, 1).replace(".", ",") + " km"
 
 static func fmtLap(t: float) -> String:
 	var m := int(floor(t / 60.0))
 	var s := t - m * 60
-	return "%d:%s%s" % [m, "0" if s < 10 else "", ("%.1f" % s).replace(".", ",")]
+	return "%d:%s%s" % [m, "0" if s < 10 else "", toFixed(s, 1).replace(".", ",")]
 
 static func fmtD(t: float) -> String:
-	return ("−" if t < 0 else "+") + ("%.2f" % absf(t)).replace(".", ",")
+	return ("−" if t < 0 else "+") + toFixed(absf(t), 2).replace(".", ",")

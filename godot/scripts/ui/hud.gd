@@ -363,12 +363,13 @@ func tick() -> void:
 	if msgUntil and g.clock > msgUntil: msg.visible = false; msgUntil = 0
 	if countUntil and g.clock > countUntil: count.visible = false; countUntil = 0
 
-func _update_board() -> void:
+## JS boardRows: the best-lap board; in the ghost time trial you and the ghost (its lap time), else every racer by position
+func boardRows() -> Array:
 	var g := Game
-	var on: bool = (g.raceMode or g.mode == "ghost") and not g.split and (g.state == "racing" or g.state == "countdown" or g.state == "finished")
-	board.visible = on
-	if not on or g.clock < boardAt: return
-	boardAt = g.clock + 0.5
+	if g.mode == "ghost":
+		var gr := [{"name": "Jij", "best": g.raceBestLap, "me": true, "prog": 1}]
+		if Rep.ghostBest != null: gr.append({"name": "Ghost", "best": float(Rep.ghostBest.t), "prog": 0})
+		return gr
 	var rows := [{"name": "Jij", "best": g.raceBestLap, "me": true, "out": g.playerOut, "prog": -1e9 if g.playerOut else g.progressOf(g.player.lap, g.player.s, g.raceDone, g.raceFinishTime)}]
 	if Net.inRace():
 		for r in Net.net.remotes.values():
@@ -376,6 +377,15 @@ func _update_board() -> void:
 	for b in g.bots:
 		rows.append({"name": b.name, "best": b.bestLap, "out": b.out, "prog": -1e9 if b.out else g.progressOf(b.lap, b.s, b.finished, b.finishTime)})
 	rows.sort_custom(func(a, b): return a.prog > b.prog)
+	return rows
+
+func _update_board() -> void:
+	var g := Game
+	var on: bool = (g.raceMode or g.mode == "ghost") and not g.split and (g.state == "racing" or g.state == "countdown" or g.state == "finished")
+	board.visible = on
+	if not on or g.clock < boardAt: return
+	boardAt = g.clock + 0.5
+	var rows := boardRows()
 	var fastest := 1e9
 	for r in rows:
 		if r.best > 0: fastest = minf(fastest, r.best)
@@ -387,14 +397,14 @@ func _update_board() -> void:
 		var st := pill(DETOUR if me else Color(0, 0, 0, 0))
 		st.content_margin_top = 3; st.content_margin_bottom = 3; st.content_margin_left = 8; st.content_margin_right = 8; st.shadow_size = 0
 		pc.add_theme_stylebox_override("panel", st)
-		pc.modulate.a = 0.55 if r.out else 1.0
+		pc.modulate.a = 0.55 if r.get("out", false) else 1.0
 		var h := HBoxContainer.new()
 		pc.add_child(h)
 		var col := INK if me else SIGN_INK
 		var a := mk_label("%d." % (k + 1), "700 13px Nunito", col); a.custom_minimum_size = Vector2(20, 0)
 		var n := mk_label(r.name, "800 13px Nunito" if me else "700 13px Nunito", col); n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var fast: bool = r.best > 0 and r.best == fastest
-		var t := mk_label("eruit" if r.out else (G.fmtLap(r.best) if r.best > 0 else "–"), "800 13px Nunito",
+		var t := mk_label("eruit" if r.get("out", false) else (G.fmtLap(r.best) if r.best > 0 else "–"), "800 13px Nunito",
 			(Color("#5a2ea6") if me else Color("#c9a8ff")) if fast else (INK if me else SUB))
 		for c in [a, n, t]: h.add_child(c)
 		board_list.add_child(pc)

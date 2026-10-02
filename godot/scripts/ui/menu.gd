@@ -249,7 +249,7 @@ func netOpen() -> void:
 static func nTop(v: float) -> float: return clampf((v - 150) / (335 - 150), 0.05, 1)
 static func nA(a: float) -> float: return clampf((a - 12) / (23 - 12), 0.05, 1)
 static func nG(g: float) -> float: return clampf((g - 0.75) / (1.35 - 0.75), 0.05, 1)
-static func f1(v: float) -> String: return ("%.1f" % (v * 10)).replace(".", ",")
+static func f1(v: float) -> String: return G.toFixed(v * 10, 1).replace(".", ",")
 
 func isTuned(id: String) -> bool:
 	var c: Dictionary = Cars.CARS[id]
@@ -708,7 +708,7 @@ func buildResults() -> void:
 		var r: Dictionary = rows[k]
 		var tm: String
 		if g.mode == "elim": tm = "eruit" if r.out else ("winnaar" if k == 0 and not g.playerOut else "rijdt nog")
-		elif r.finished: tm = G.fmtLap(r.ft) if r == winner else "+" + ("%.1f" % (r.ft - winner.ft)).replace(".", ",") + " s"
+		elif r.finished: tm = G.fmtLap(r.ft) if r == winner else "+" + G.toFixed(r.ft - winner.ft, 1).replace(".", ",") + " s"
 		else: tm = "rijdt nog"
 		r.tm = tm
 		O.results.add_child(O.row(r.get("me", false), "%d." % (k + 1), r.name, r.car, tm, ("+%d" % (Champ.CHAMP_PTS[k] if k < Champ.CHAMP_PTS.size() else 0)) if g.mode == "champ" else null))

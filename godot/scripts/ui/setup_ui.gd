@@ -61,7 +61,7 @@ static func trackOutline(id: String) -> Dictionary:
 	return _outlines[id]
 
 static func km(id: String) -> String:
-	return ("%.1f" % (trackOutline(id).len / 1000.0)).replace(".", ",")
+	return G.toFixed(trackOutline(id).len / 1000.0, 1).replace(".", ",")
 
 func _init() -> void:
 	board = UiKit.board()
