@@ -13,27 +13,43 @@ class_name CarKit
 
 const X90 := PI / 2
 
+## car materials: like Mats.M / Mats.PM / Mats.phong, but no shadows fall on them (in three.js only meshes with receiveShadow
+## get shadows, and the cars never set it; with them a car darkens itself: pillars and wings shade the paint, the body the pipes)
+static func _M(c: int, o: Dictionary = {}) -> LMat:
+	return Mats.M(c, _nr(o))
+
+static func _PM(c: int, o: Dictionary = {}) -> LMat:
+	return Mats.PM(c, _nr(o))
+
+static func _phong(c: int, o: Dictionary = {}) -> LMat:
+	return Mats.phong(c, _nr(o))
+
+static func _nr(o: Dictionary) -> Dictionary:
+	var oo := o.duplicate()
+	oo["receiveShadow"] = false
+	return oo
+
 # ---------------------------------------------------------------- shared materials (JS: never disposed)
-static var tyreMat: LMat = Mats.M(0x1b1b1b)
-static var hubMat: LMat = Mats.PM(0xa1a4a8, {"specular": 0xd8d8d8, "shininess": 70})
-static var glassMat: LMat = Mats.M(0x2c3a48)
-static var tailMat: LMat = Mats.M(0x6e0b0b, {"emissive": 0xc81d1d})
-static var plateMat: LMat = Mats.M(0xf2c200)
-static var blk: LMat = Mats.M(0x1d1f24)
-static var lampMat: LMat = Mats.M(0xfff6d8, {"emissive": 0x807860})
-static var carGlass: LMat = Mats.PM(0x151d26, {"specular": 0x9aa6b2, "shininess": 80})
-static var trimMat: LMat = Mats.PM(0x16181c, {"specular": 0x2c2c2c, "shininess": 24})
-static var darkMetal: LMat = Mats.PM(0xffffff, {"vertexColors": true, "specular": 0x555555, "shininess": 40, "side": "double"})
-static var caliperMat: LMat = Mats.PM(0xc8302a, {"specular": 0x777777, "shininess": 50})
-static var chromeMat: LMat = Mats.phong(0xcfd3d6, {"specular": 0xffffff, "shininess": 90, "side": "double"})
-static var carbonMat: LMat = Mats.PM(0x23272c, {"specular": 0x6a6e74, "shininess": 70})
-static var darkChrome: LMat = Mats.PM(0x34373c, {"specular": 0x9a9a9a, "shininess": 80, "side": "double"})
+static var tyreMat: LMat = _M(0x1b1b1b)
+static var hubMat: LMat = _PM(0xa1a4a8, {"specular": 0xd8d8d8, "shininess": 70})
+static var glassMat: LMat = _M(0x2c3a48)
+static var tailMat: LMat = _M(0x6e0b0b, {"emissive": 0xc81d1d})
+static var plateMat: LMat = _M(0xf2c200)
+static var blk: LMat = _M(0x1d1f24)
+static var lampMat: LMat = _M(0xfff6d8, {"emissive": 0x807860})
+static var carGlass: LMat = _PM(0x151d26, {"specular": 0x9aa6b2, "shininess": 80})
+static var trimMat: LMat = _PM(0x16181c, {"specular": 0x2c2c2c, "shininess": 24})
+static var darkMetal: LMat = _PM(0xffffff, {"vertexColors": true, "specular": 0x555555, "shininess": 40, "side": "double"})
+static var caliperMat: LMat = _PM(0xc8302a, {"specular": 0x777777, "shininess": 50})
+static var chromeMat: LMat = _phong(0xcfd3d6, {"specular": 0xffffff, "shininess": 90, "side": "double"})
+static var carbonMat: LMat = _PM(0x23272c, {"specular": 0x6a6e74, "shininess": 70})
+static var darkChrome: LMat = _PM(0x34373c, {"specular": 0x9a9a9a, "shininess": 80, "side": "double"})
 ## car plate: Dutch yellow plate with the blue EU strip
-static var carPlate: LMat = Mats.M(0xffffff, {"map": Canvas2D.tex(128, 32, func(c, w, h):
+static var carPlate: LMat = _M(0xffffff, {"map": Canvas2D.tex(128, 32, func(c, w, h):
 	c.fillStyle = "#f2c200"; c.fillRect(0, 0, w, h); c.fillStyle = "#1d3f9e"; c.fillRect(0, 0, 14, h); c.fillStyle = "#161a22"
 	c.font = "800 22px Barlow Condensed"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("PR-3D-01", w / 2.0 + 7, h / 2.0 + 1)
 	c.strokeStyle = "#161a22"; c.lineWidth = 2; c.strokeRect(1, 1, w - 2, h - 2))})
-static var decoMat: LMat = Mats.PM(0xffffff, {"vertexColors": true, "specular": 0x555555, "shininess": 50})
+static var decoMat: LMat = _PM(0xffffff, {"vertexColors": true, "specular": 0x555555, "shininess": 50})
 ## soft headlight pool on the road in front of an AI car (made with the first beam, like the JS)
 static var beamMat: LMat = null
 static var lampsOn := false
@@ -1055,7 +1071,7 @@ static func buildCar(type: String, color, lite := false) -> Dictionary:
 	var K := carKit(type)
 	var S := K.S
 	var g := Node3D.new()
-	var paint := Mats.PM(0xffffff, {"specular": 0x606060, "shininess": 60})
+	var paint := _PM(0xffffff, {"specular": 0x606060, "shininess": 60})
 	paint.albedo_color = _col(color)
 	mesh(g, K.body, [paint, trimMat], true)
 	if K.cab != null: mesh(g, K.cab, [paint, carGlass, trimMat], true)
@@ -1066,7 +1082,7 @@ static func buildCar(type: String, color, lite := false) -> Dictionary:
 	var exd := mesh(g, K.G.exhD, trimMat)
 	g.set_meta("exh", {"meshes": [ex, exd].filter(func(o): return o != null)})
 	if K.G.stripe != null:
-		var stp := Mats.M(0xf7f7f2)
+		var stp := _M(0xf7f7f2)
 		stp.set_meta("stripe", true)
 		mesh(g, K.G.stripe, stp)
 	var wheels := []
@@ -1098,7 +1114,7 @@ static func _meshes_of(n: Node, out: Array) -> Array:
 ## rims, stripes, race number, wing and exhaust of a built car from the garage (id) or an upgrades Dictionary
 static func styleCar(m: Dictionary, id) -> void:
 	var u := carUp(id)
-	var rim := Mats.PM(Cars.RIMS[u.rim][1] if Cars.RIMS.has(u.rim) else 0xa1a4a8, {"specular": 0xd0d0d0, "shininess": 70})
+	var rim := _PM(Cars.RIMS[u.rim][1] if Cars.RIMS.has(u.rim) else 0xa1a4a8, {"specular": 0xd0d0d0, "shininess": 70})
 	styleExtras(m, u, rim)
 	setRims(m, u.rimStyle if Cars.RIMSTYLES.has(u.rimStyle) else "std", rim)
 	var K = m.get("kit", null)
@@ -1125,7 +1141,7 @@ static func styleCar(m: Dictionary, id) -> void:
 	if K == null: return
 	if K.stripes == null:
 		K.stripes = stripeGeo(K, CarAcc.new(), 0.1, 0.28).build()
-	mesh(m.g, stripeHoled(K) if hole != null else K.stripes, Mats.M(sc))
+	mesh(m.g, stripeHoled(K) if hole != null else K.stripes, _M(sc))
 
 static func styleExtras(m: Dictionary, u: Dictionary, rim: LMat) -> void:
 	var K = m.get("kit", null)
@@ -1133,11 +1149,11 @@ static func styleExtras(m: Dictionary, u: Dictionary, rim: LMat) -> void:
 	var S: Dictionary = K.S
 	var C = K.C
 	if u.num > 0:
-		var num := str(u.num)
+		var num := str(int(u.num))   # garage values come from JSON (floats); JS String(12) = "12"
 		var t := Canvas2D.tex(128, 128, func(g, _w, _h):
 			g.fillStyle = "#f7f7f2"; g.beginPath(); g.arc(64, 64, 60, 0, PI * 2); g.fill(); g.fillStyle = "#161a22"
 			g.font = "800 78px Barlow Condensed"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(num, 64, 70))
-		var dm := Mats.M(0xffffff, {"map": t, "transparent": true})
+		var dm := _M(0xffffff, {"map": t, "transparent": true})
 		# number roundels follow the door skin 2 cm out, and one on the roof (the bonnet on the open roadster)
 		var zA: float = S.wz[1] + K.ra + 0.08
 		var zB: float = S.wz[0] - K.ra - 0.08
@@ -1185,7 +1201,7 @@ static func styleExtras(m: Dictionary, u: Dictionary, rim: LMat) -> void:
 			var d := mesh(m.g, K.numGeo, dm)
 			d.sorting_offset = 0.01   # JS renderOrder 2
 	var col = m.get("paint", null)
-	if col == null: col = Mats.PM(0xffffff)
+	if col == null: col = _PM(0xffffff)
 	# a tuned spoiler replaces the factory one; wings, ducktails and exhaust tips are fitted per model (tuneParts)
 	if u.get("wing", "std") != "std" and m.has("stockWing"):
 		for o in m.stockWing: o.visible = false

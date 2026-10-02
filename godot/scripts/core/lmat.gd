@@ -35,6 +35,8 @@ var no_depth_test := false: set = _set_no_depth_test
 var disable_fog := false: set = _set_disable_fog
 var vertex_color_use_as_albedo := false: set = _set_vcol
 var flat_shading := false: set = _set_flat
+## false: no shadows fall on it (three.js meshes only receive shadows with receiveShadow = true; cars never do)
+var receive_shadows := true: set = _set_receive
 ## kept for code written against StandardMaterial3D; the shader ignores them
 var vertex_color_is_srgb := false
 var texture_filter := BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
@@ -51,7 +53,7 @@ func clone() -> LMat:
 	m._building = true
 	for p in ["kind", "albedo_color", "albedo_texture", "uv1_scale", "uv1_offset", "emission_enabled", "emission", "emission_energy_multiplier",
 			"specular", "shininess", "transparency", "alpha_scissor_threshold", "cull_mode", "blend_mode", "depth_draw_mode", "no_depth_test", "disable_fog",
-			"vertex_color_use_as_albedo", "flat_shading"]:
+			"vertex_color_use_as_albedo", "flat_shading", "receive_shadows"]:
 		m.set(p, get(p))
 	m._building = false
 	m.render_priority = render_priority
@@ -79,6 +81,7 @@ func _set_no_depth_test(v): no_depth_test = v; _rebuild()
 func _set_disable_fog(v): disable_fog = v; _rebuild()
 func _set_vcol(v): vertex_color_use_as_albedo = v; _rebuild()
 func _set_flat(v): flat_shading = v; _rebuild()
+func _set_receive(v): receive_shadows = v; _rebuild()
 
 func _push_emission() -> void:
 	var e := emission * emission_energy_multiplier if emission_enabled else Color.BLACK
@@ -87,8 +90,8 @@ func _push_emission() -> void:
 func _rebuild() -> void:
 	if _building:
 		return
-	var key := "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [kind, transparency, blend_mode, cull_mode, depth_draw_mode, int(no_depth_test), int(disable_fog),
-		int(vertex_color_use_as_albedo), int(flat_shading), int(albedo_texture != null)]
+	var key := "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [kind, transparency, blend_mode, cull_mode, depth_draw_mode, int(no_depth_test), int(disable_fog),
+		int(vertex_color_use_as_albedo), int(flat_shading), int(albedo_texture != null), int(receive_shadows)]
 	if not _cache.has(key):
 		var sh := Shader.new()
 		sh.code = _code()
@@ -121,6 +124,7 @@ func _code() -> String:
 	rm.append("fog_disabled")
 	rm.append("ambient_light_disabled")
 	if kind == Kind.BASIC: rm.append("unshaded")
+	if not receive_shadows: rm.append("shadows_disabled")
 	var d := []
 	if albedo_texture != null: d.append("#define TEX")
 	if vertex_color_use_as_albedo: d.append("#define VCOL")

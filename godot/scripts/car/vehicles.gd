@@ -4,8 +4,9 @@ class_name Vehicles
 ## (The JS objects of van and tractor have no `off`; here it is 0.0, which is what the JS gameplay reads for them: `off||0`.)
 ## makeTruck picks its colours with World.pick, i.e. the track's seeded random while a track is built (haven parks trucks).
 
+## vehicle materials take no shadows, like the cars (CarKit._M)
 static func M(c: int, o: Dictionary = {}) -> LMat:
-	return Mats.M(c, o)
+	return CarKit._M(c, o)
 
 static func buildHatchTraffic(color) -> Dictionary:
 	return CarKit.buildCar("city", color, true)

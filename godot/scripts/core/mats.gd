@@ -4,7 +4,8 @@ class_name Mats
 ## Options use the three.js names:
 ##   map (Texture), repeat (Vector2: three texture.repeat), emissive (hex), emissiveIntensity, transparent, opacity,
 ##   side ("double"/"back"), vertexColors, depthWrite, depthTest, fog (false = no fog), specular (hex), shininess,
-##   flatShading, alphaTest, blending ("add" = THREE.AdditiveBlending).
+##   flatShading, alphaTest, blending ("add" = THREE.AdditiveBlending),
+##   receiveShadow (false = no shadows fall on it; three.js has this on the mesh: the cars use it, see CarKit).
 
 static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 	var m := LMat.new()
@@ -41,6 +42,8 @@ static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 		m.disable_fog = true
 	if o.get("flatShading", false):
 		m.flat_shading = true
+	if o.get("receiveShadow", true) == false:
+		m.receive_shadows = false
 	if kind == LMat.Kind.PHONG:
 		m.specular = MathX.col(o.get("specular", 0x111111))
 		m.shininess = float(o.get("shininess", 30.0))
