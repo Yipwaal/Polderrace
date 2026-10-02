@@ -22,9 +22,7 @@ func use_store(path: String, data: Dictionary = {}) -> void:
 	careerEv = null
 	careerPrev = null
 	_load_settings()
-	var f := FileAccess.open(STORE_PATH, FileAccess.WRITE)
-	if f != null:
-		f.store_string(JSON.stringify(_store))
+	_write()
 	# the career/achievement records of the garage, the championship and the key bindings come from the store too
 	Career.initGarage()
 	Champ.reload()
@@ -35,10 +33,13 @@ var _defaults := {}
 
 func _init() -> void:
 	_defaults = {"settings": settings.duplicate(true), "prefs": prefs.duplicate(true), "garage": garage.duplicate(true)}
-	if FileAccess.file_exists(STORE_PATH):
-		var d = JSON.parse_string(FileAccess.get_file_as_string(STORE_PATH))
-		if d is Dictionary:
-			_store = d
+	# (a crash between writing the temporary file and renaming it leaves only that one)
+	for path in [STORE_PATH, STORE_PATH + ".tmp"]:
+		if FileAccess.file_exists(path):
+			var d = JSON.parse_string(FileAccess.get_file_as_string(path))
+			if d is Dictionary:
+				_store = d
+				break
 	_load_settings()
 
 func _ready() -> void:
@@ -50,9 +51,31 @@ func store_get(k: String, d = null):
 
 func store_set(k: String, v) -> void:
 	_store[k] = str(v)
-	var f := FileAccess.open(STORE_PATH, FileAccess.WRITE)
-	if f != null:
-		f.store_string(JSON.stringify(_store))
+	if not _dirty:
+		_dirty = true
+		_flush.call_deferred()
+
+## the save file holds everything (ghosts too) and a lap end sets several keys: write it at most once per frame, and on quit
+var _dirty := false
+
+func _flush() -> void:
+	if _dirty:
+		_dirty = false
+		_write()
+
+## via a temporary file, so a crash halfway through never leaves a broken save
+func _write() -> void:
+	var tmp := STORE_PATH + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify(_store))
+	f.close()
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(STORE_PATH))
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
+		_flush()
 
 func _json(k: String, d):
 	var s = store_get(k)

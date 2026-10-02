@@ -43,7 +43,7 @@ jobs:
         run: ~/godot/godot --headless --path godot --import || true
 
       - name: Tests
-        run: ~/godot/godot --headless --path godot res://tests/runner.tscn -- track build laps cars flow audio menus rules
+        run: ~/godot/godot --headless --path godot res://tests/runner.tscn -- track build laps cars flow audio menus rules memory
 
       - name: Playthrough with real keys and mouse clicks (own run: about 11 minutes)
         run: ~/godot/godot --headless --path godot res://tests/runner.tscn -- play

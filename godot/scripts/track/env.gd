@@ -183,6 +183,8 @@ func _make_rain() -> void:
 	_rain_mesh()
 	add_child(rain)
 
+## the rain streaks: one mesh, made once; update() moves the points and _upload_rain hands them to the GPU once a frame
+## (JS: rainGeo.attributes.position.needsUpdate)
 func _rain_mesh() -> void:
 	var arr := []
 	arr.resize(Mesh.ARRAY_MAX)
@@ -196,6 +198,11 @@ func _rain_mesh() -> void:
 	mat.disable_fog = true
 	m.surface_set_material(0, mat)
 	rain.mesh = m
+
+var _rain_dirty := false
+func _upload_rain() -> void:
+	_rain_dirty = false
+	(rain.mesh as ArrayMesh).surface_update_vertex_region(0, 0, rain_pos.to_byte_array())
 
 static func grey(c: Color, k: float) -> Color:
 	var g := (c.r + c.g + c.b) / 3.0
@@ -363,7 +370,9 @@ func update(dt: float, cam: Camera3D) -> void:
 			if y > cp.y + 20: y -= 26
 			rain_pos[i * 2] = Vector3(x, y, z)
 			rain_pos[i * 2 + 1] = Vector3(x + 0.05, y - 0.9, z)
-		_rain_mesh()
+		if not _rain_dirty:
+			_rain_dirty = true
+			_upload_rain.call_deferred()
 	stars.position = cp
 	if birds.visible:
 		for f in birds.get_children():
