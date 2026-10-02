@@ -327,7 +327,12 @@ static func css(s: String) -> Color:
 	return Color.MAGENTA
 
 ## [Font, pixel size] for a css font string like 'italic 800 84px "Barlow Condensed",sans-serif'
+## (cached per string: the HUD asks for its fonts every frame, and parsing compiles two regular expressions)
+static var _specs := {}
 static func font_of(spec: String) -> Array:
+	var hit = _specs.get(spec)
+	if hit != null:
+		return hit
 	var size := 10
 	var re := RegEx.create_from_string("(\\d+(?:\\.\\d+)?)px")
 	var m := re.search(spec)
@@ -357,7 +362,8 @@ static func font_of(spec: String) -> Array:
 				v.variation_transform = Transform2D(Vector2(1, 0.2), Vector2(0, 1), Vector2.ZERO)
 			f = v
 		_fonts[key] = f
-	return [_fonts[key], size]
+	_specs[spec] = [_fonts[key], size]
+	return _specs[spec]
 
 func _build_nodes(vp: SubViewport) -> void:
 	# consecutive plain commands share one node; gradients and clears get their own (with a shader)
@@ -398,6 +404,26 @@ static func _clear_material() -> ShaderMaterial:
 		_clear_mat.shader = sh
 	return _clear_mat
 
+## the gradient fill shader, compiled once (every gradient only sets its own parameters)
+static var _grad_sh: Shader
+static func _grad_shader() -> Shader:
+	if _grad_sh == null:
+		_grad_sh = Shader.new()
+		_grad_sh.code = """shader_type canvas_item;
+uniform sampler2D grad : filter_linear, repeat_disable;
+uniform vec2 p0; uniform vec2 p1; uniform float r0; uniform float r1; uniform bool radial; uniform float alpha;
+varying vec2 pos;
+void vertex(){ pos = VERTEX; }
+void fragment(){
+	float t;
+	if (radial) { t = (distance(pos, p1) - r0) / max(r1 - r0, 1e-4); }
+	else { vec2 d = p1 - p0; t = dot(pos - p0, d) / max(dot(d, d), 1e-6); }
+	vec4 c = texture(grad, vec2(clamp(t, 0.0, 1.0), 0.5));
+	COLOR = vec4(c.rgb, c.a * alpha);
+}
+"""
+	return _grad_sh
+
 class _Layer extends Node2D:
 	var items: Array = []
 	func _draw() -> void:
@@ -427,8 +453,9 @@ class _Layer extends Node2D:
 				p = hull
 			if tri.is_empty():
 				return
-		for i in range(0, tri.size(), 3):
-			draw_colored_polygon(PackedVector2Array([p[tri[i]], p[tri[i + 1]], p[tri[i + 2]]]), col)
+		# the triangles as they are, in one call (draw_colored_polygon per triangle triangulated each one again, and
+		# complained about the zero-area ones)
+		RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), tri, p, PackedColorArray([col]))
 
 class CanvasGrad extends RefCounted:
 	var radial := false
@@ -450,20 +477,7 @@ class CanvasGrad extends RefCounted:
 		var gt := GradientTexture1D.new()
 		gt.gradient = g
 		gt.width = 256
-		var sh := Shader.new()
-		sh.code = """shader_type canvas_item;
-uniform sampler2D grad : filter_linear, repeat_disable;
-uniform vec2 p0; uniform vec2 p1; uniform float r0; uniform float r1; uniform bool radial; uniform float alpha;
-varying vec2 pos;
-void vertex(){ pos = VERTEX; }
-void fragment(){
-	float t;
-	if (radial) { t = (distance(pos, p1) - r0) / max(r1 - r0, 1e-4); }
-	else { vec2 d = p1 - p0; t = dot(pos - p0, d) / max(dot(d, d), 1e-6); }
-	vec4 c = texture(grad, vec2(clamp(t, 0.0, 1.0), 0.5));
-	COLOR = vec4(c.rgb, c.a * alpha);
-}
-"""
+		var sh := Canvas2D._grad_shader()
 		var m := ShaderMaterial.new()
 		m.shader = sh
 		m.set_shader_parameter("grad", gt)

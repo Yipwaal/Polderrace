@@ -67,13 +67,23 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 
 ## Testen
 
-- `python godot/tests/run.py track build laps cars flow audio menus rules` — alle Godot-tests headless (±8 min). Elke test
+- `python godot/tests/run.py track build laps cars flow audio menus rules perf memory` — alle Godot-tests headless (±11 min). Elke test
   speelt op een eigen savebestand (`G.use_store`, in runner.gd) met een garage die alle auto's bezit, nooit op die van de speler.
   `python godot/tests/test_net.py` — online: host en speler als twee processen; `test_net_more.py` — tot 9 spelers (zie Online).
 - `rules`: de spelregels gelijk aan de HTML (golden/rules.json): credits per modus/plaats/ronden/niveau, kampioenschapspunten
   en stand (ook bij gelijke punten), de carrière (resultaat, bonus, wat opengaat, prestaties), prestaties na een race,
   meetunen van de tegenstanders, uitslagvolgorde, eliminatie, ronde- en checkpointmeldingen met de records die ze opslaan,
   opslagsleutels, getalnotatie (`G.toFixed` rondt af als JS `toFixed`), upgradeprijzen.
+- `memory`: drie rondes van alle banen heen en terug laden (dag/avond/nacht, droog/regen/mist), race met 7 bots tot podium en
+  replay, ghost, split screen, tijdrit met verkeer, garage en menu's in de echte spelscène; nodes, objecten, wezen
+  (orphans), SubViewports, shaders en geheugen moeten na ronde 2 en 3 gelijk zijn (met renderer ook video-/textuurgeheugen).
+- `perf`: laadtijd van elke baan, simulatie en frame met 7 bots, HUD (budgetten ruim). Met een renderer ook tekenaanroepen
+  en driehoeken per baan (beeld en spiegel): `xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot --rendering-driver
+  opengl3 --resolution 1280x720 res://tests/runner.tscn -- perf memory`. Meer meten (kwaliteit, nacht, regen, split screen,
+  verkeer): `res://tools/perf_render.tscn` (zie de kop van `tools/perf_render.gd`).
+- Godot-eigen versnelling (beeld blijft gelijk): `World.batch()` voegt na het bouwen de onderdelen van één decorobject
+  (boerderij, molen met wieken, schip, geparkeerde auto) per materiaal samen; `World.inst` gebruikt cellen van 300 m.
+  `build` telt de meshes vóór het samenvoegen (zoals de HTML).
 - `python godot/tests/run.py track build` — headless. `track`: baanberekening gelijk aan de HTML (golden/tracks.json).
   `build`: per geporte baan (fwd en rev) het aantal rnd()-aanroepen per fase, elk `inst()`-object (aantal, eerste en
   laatste positie) en het aantal meshes gelijk aan de HTML (golden/build.json). **Een builder is pas af als `build` groen is.**

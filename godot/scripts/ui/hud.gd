@@ -66,20 +66,28 @@ static func pill(bg: Color, radius := 999) -> StyleBoxFlat:
 
 ## the blue road-sign panel (CSS .sign: blue, rounded 20, a white line 3-5 px inside the edge)
 class SignBox extends PanelContainer:
-	var bg := Color("#1d4f9e")
+	## the sign's colour (blue, red when the time runs out): it redraws only when that changes
+	var bg := Color("#1d4f9e"):
+		set(v):
+			if v != bg:
+				bg = v
+				queue_redraw()
+	var _a: StyleBoxFlat
+	var _b: StyleBoxFlat
 	func _init(pad := Vector4(18, 14, 18, 14)) -> void:
 		var s := StyleBoxEmpty.new()
 		s.content_margin_left = pad.x; s.content_margin_top = pad.y; s.content_margin_right = pad.z; s.content_margin_bottom = pad.w
 		add_theme_stylebox_override("panel", s)
+		_a = StyleBoxFlat.new()
+		_a.set_corner_radius_all(20)
+		_a.shadow_color = Color(0.04, 0.08, 0.16, 0.5); _a.shadow_size = 12; _a.shadow_offset = Vector2(0, 8)
+		_b = StyleBoxFlat.new()
+		_b.draw_center = false; _b.border_color = Color("#f7f7f2"); _b.set_border_width_all(2); _b.set_corner_radius_all(17)
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
-		var a := StyleBoxFlat.new()
-		a.bg_color = bg; a.set_corner_radius_all(20)
-		a.shadow_color = Color(0.04, 0.08, 0.16, 0.5); a.shadow_size = 12; a.shadow_offset = Vector2(0, 8)
-		draw_style_box(a, r)
-		var b := StyleBoxFlat.new()
-		b.draw_center = false; b.border_color = Color("#f7f7f2"); b.set_border_width_all(2); b.set_corner_radius_all(17)
-		draw_style_box(b, r.grow(-3))
+		_a.bg_color = bg
+		draw_style_box(_a, r)
+		draw_style_box(_b, r.grow(-3))
 
 # ------------------------------------------------------------------ build
 func _ready() -> void:
@@ -354,7 +362,6 @@ func tick() -> void:
 		if l != _hL: _hL = l; lapT.text = l
 		if d != _hD: _hD = d; dist.text = d
 		time_sign.bg = ALERT if g.mode == "time" and g.timeLeft < 6 and st == "racing" else SIGN
-		time_sign.queue_redraw()
 		minimap.queue_redraw()
 		gauge.queue_redraw()
 	_update_board()
@@ -389,25 +396,49 @@ func _update_board() -> void:
 	var fastest := 1e9
 	for r in rows:
 		if r.best > 0: fastest = minf(fastest, r.best)
-	for c in board_list.get_children(): c.queue_free()
-	for k in mini(9, rows.size()):
+	for k in maxi(_rows.size(), mini(9, rows.size())):
+		if k >= mini(9, rows.size()):
+			_rows[k][0].visible = false
+			continue
 		var r: Dictionary = rows[k]
 		var me: bool = r.get("me", false)
+		var out: bool = r.get("out", false)   # online players' rows have no "out"
+		var fast: bool = r.best > 0 and r.best == fastest
+		var tt: String = "eruit" if out else (G.fmtLap(r.best) if r.best > 0 else "–")
+		var tc: Color = (Color("#5a2ea6") if me else Color("#c9a8ff")) if fast else (INK if me else SUB)
+		var row := _board_row(k)
+		row[0].visible = true
+		var key := "%s|%s|%s|%s|%s" % [me, r.name, tt, tc, out]
+		if row[5] == key: continue
+		row[5] = key
+		var col := INK if me else SIGN_INK
+		(row[1] as StyleBoxFlat).bg_color = DETOUR if me else Color(0, 0, 0, 0)
+		row[0].modulate.a = 0.55 if out else 1.0
+		row[2].add_theme_color_override("font_color", col)
+		row[3].text = r.name
+		row[3].add_theme_font_override("font", font("800 13px Nunito" if me else "700 13px Nunito")[0])
+		row[3].add_theme_color_override("font_color", col)
+		row[4].text = tt
+		row[4].add_theme_color_override("font_color", tc)
+
+## the rows of the board, made once and refilled every half second (rebuilding them cost a hitch each time):
+## [panel, its style, number, name, time, what it shows]
+var _rows: Array = []
+func _board_row(k: int) -> Array:
+	while _rows.size() <= k:
 		var pc := PanelContainer.new()
-		var st := pill(DETOUR if me else Color(0, 0, 0, 0))
+		var st := pill(Color(0, 0, 0, 0))
 		st.content_margin_top = 3; st.content_margin_bottom = 3; st.content_margin_left = 8; st.content_margin_right = 8; st.shadow_size = 0
 		pc.add_theme_stylebox_override("panel", st)
-		pc.modulate.a = 0.55 if r.get("out", false) else 1.0
 		var h := HBoxContainer.new()
 		pc.add_child(h)
-		var col := INK if me else SIGN_INK
-		var a := mk_label("%d." % (k + 1), "700 13px Nunito", col); a.custom_minimum_size = Vector2(20, 0)
-		var n := mk_label(r.name, "800 13px Nunito" if me else "700 13px Nunito", col); n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var fast: bool = r.best > 0 and r.best == fastest
-		var t := mk_label("eruit" if r.get("out", false) else (G.fmtLap(r.best) if r.best > 0 else "–"), "800 13px Nunito",
-			(Color("#5a2ea6") if me else Color("#c9a8ff")) if fast else (INK if me else SUB))
+		var a := mk_label("%d." % (_rows.size() + 1), "700 13px Nunito", SIGN_INK); a.custom_minimum_size = Vector2(20, 0)
+		var n := mk_label("", "700 13px Nunito", SIGN_INK); n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var t := mk_label("", "800 13px Nunito", SUB)
 		for c in [a, n, t]: h.add_child(c)
 		board_list.add_child(pc)
+		_rows.append([pc, st, a, n, t, ""])
+	return _rows[k]
 
 # ------------------------------------------------------------------ minimap (JS buildMinimap / drawMinimap)
 class MiniMap extends Control:

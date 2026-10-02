@@ -43,6 +43,7 @@ static func load_track(id: String, dir := "fwd") -> void:
 	if not TrackDefs.TRACKS.has(id): id = "polder"
 	if dir != "rev": dir = "fwd"
 	build_world(id, dir)
+	World.batch()   # fewer draw calls, same picture (see World.batch)
 	if Env.me != null:
 		Env.me.place_clouds()
 		Env.me.apply(Env.me.time, Env.me.weather, true)

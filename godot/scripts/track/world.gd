@@ -154,7 +154,11 @@ static func inst(geo: Geo, mat: Material, xfs: Array, colors = null, cast := fal
 		return null
 	if inst_log != null:
 		inst_log.append([xfs.size(), xfs[0].origin, xfs[-1].origin])
-	var CH := 150.0
+	# cells of 300 m (the JS uses 150): half the draw calls for ~8% more triangles, which the frustum culling now keeps.
+	# See-through ones keep 150 m: they are sorted per cell, so their order (and the picture) stays the JS one.
+	var lm := mat as LMat
+	var see := lm != null and (lm.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA or lm.blend_mode != BaseMaterial3D.BLEND_MODE_MIX)
+	var CH := 150.0 if see else 300.0
 	var cells := {}
 	for i in xfs.size():
 		var o: Vector3 = xfs[i].origin
@@ -184,6 +188,108 @@ static func inst(geo: Geo, mat: Material, xfs: Array, colors = null, cast := fal
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(mmi)
 	return true
+
+## Godot only, after building (TrackLoader.load_track; tests/test_build.gd counts the meshes before, like the HTML):
+## the boxes of one decor object (a farm, a windmill and its sails, a ship, a crane, ...) that share a material become one
+## mesh, so the object costs a draw call per material instead of one per box. The picture stays the same: same
+## triangles, same materials, normals turned the way LMat's shader turns them. Left alone: loose meshes, lines,
+## see-through materials, anything with children, metadata or its own draw settings, and the groups that move or
+## hide (windmill sails, checkpoint gates), which are joined within themselves.
+static func batch() -> void:
+	var own := {}
+	for g in sailGroups + cpGates:
+		own[g] = true
+	for c in root.get_children():
+		if c.get_class() == "Node3D" and c.visible:
+			_batch_scope(c, own)
+
+static func _batch_scope(scope: Node3D, own: Dictionary) -> void:
+	# the scope's own scale must be uniform, then its shader normal transform commutes with the one baked in
+	var b := scope.global_basis if scope.is_inside_tree() else scope.basis
+	if absf(b.x.length_squared() - b.y.length_squared()) > 1e-4 or absf(b.x.length_squared() - b.z.length_squared()) > 1e-4:
+		return
+	var parts := {}
+	_batch_collect(scope, scope, Transform3D.IDENTITY, own, parts)
+	for key in parts:
+		var list: Array = parts[key]
+		if list.size() < 2: continue
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		var V := PackedVector3Array(); var N := PackedVector3Array(); var U := PackedVector2Array(); var C := PackedColorArray(); var I := PackedInt32Array()
+		var has_u := false
+		var has_c := false
+		for e in list:
+			var a: Array = e[0]
+			var xf: Transform3D = e[1]
+			var off := V.size()
+			var v: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+			V.append_array(xf * v)
+			# LMat: nw = m * (NORMAL / (|m0|^2, |m1|^2, |m2|^2)), the same done here for the part's transform
+			var bb := xf.basis
+			var nb := Basis(bb.x / bb.x.length_squared(), bb.y / bb.y.length_squared(), bb.z / bb.z.length_squared())
+			N.append_array(Transform3D(nb, Vector3.ZERO) * (a[Mesh.ARRAY_NORMAL] as PackedVector3Array))
+			if a[Mesh.ARRAY_TEX_UV] != null:
+				has_u = true
+				U.append_array(a[Mesh.ARRAY_TEX_UV])
+			if a[Mesh.ARRAY_COLOR] != null:
+				has_c = true
+				C.append_array(a[Mesh.ARRAY_COLOR])
+			var ix = a[Mesh.ARRAY_INDEX]
+			var pi: PackedInt32Array = ix if ix != null else PackedInt32Array(range(v.size()))
+			for k in pi.size(): pi[k] += off
+			if bb.determinant() < 0.0:
+				# a mirrored part (the left wheels of a parked car): Godot turns its triangles round when it draws it
+				for k in range(0, pi.size(), 3):
+					var t := pi[k + 1]
+					pi[k + 1] = pi[k + 2]
+					pi[k + 2] = t
+			I.append_array(pi)
+		arr[Mesh.ARRAY_VERTEX] = V
+		arr[Mesh.ARRAY_NORMAL] = N
+		if has_u: arr[Mesh.ARRAY_TEX_UV] = U
+		if has_c: arr[Mesh.ARRAY_COLOR] = C
+		arr[Mesh.ARRAY_INDEX] = I
+		var m := ArrayMesh.new()
+		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		m.surface_set_material(0, list[0][2])
+		var mi := MeshInstance3D.new()
+		mi.mesh = m
+		mi.cast_shadow = list[0][3]
+		scope.add_child(mi)
+		for e in list:
+			var node: Node = e[4]
+			node.get_parent().remove_child(node)
+			node.free()
+
+## the meshes under n that can join (one surface each): [arrays, transform in scope space, material, cast shadow, node]
+static func _batch_collect(n: Node, scope: Node3D, xf: Transform3D, own: Dictionary, parts: Dictionary) -> void:
+	for c in n.get_children():
+		if not (c is Node3D) or not c.visible: continue
+		if own.has(c):
+			if c != scope: _batch_scope(c, own)
+			continue
+		var t: Transform3D = xf * c.transform
+		if c.get_class() == "Node3D":
+			if c.get_meta_list().is_empty() and c.get_script() == null: _batch_collect(c, scope, t, own, parts)
+			continue
+		if not (c is MeshInstance3D) or c.get_child_count() > 0 or c.get_script() != null or not (c.mesh is ArrayMesh) or c.mesh.get_surface_count() != 1: continue
+		var mi: MeshInstance3D = c
+		if mi.material_override != null or mi.transparency != 0.0 or mi.layers != 1 or mi.sorting_offset != 0.0 or mi.extra_cull_margin != 0.0 \
+				or mi.visibility_range_end != 0.0 or mi.mesh.surface_get_primitive_type(0) != Mesh.PRIMITIVE_TRIANGLES:
+			continue
+		# metadata marks something code looks up later; only CarKit's own ("geo", "rim": restyling a car) is fine here
+		if mi.get_meta_list().any(func(k): return k != &"geo" and k != &"rim"): continue
+		var mat := mi.get_active_material(0)
+		if not (mat is LMat): continue
+		var lm: LMat = mat
+		if lm.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA or lm.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS \
+				or lm.blend_mode != BaseMaterial3D.BLEND_MODE_MIX or lm.depth_draw_mode != BaseMaterial3D.DEPTH_DRAW_OPAQUE_ONLY or lm.no_depth_test:
+			continue
+		var a: Array = mi.mesh.surface_get_arrays(0)
+		if a[Mesh.ARRAY_NORMAL] == null: continue
+		var key := "%d|%d|%d|%d" % [lm.get_instance_id(), mi.cast_shadow, int(a[Mesh.ARRAY_TEX_UV] != null), int(a[Mesh.ARRAY_COLOR] != null)]
+		if not parts.has(key): parts[key] = []
+		parts[key].append([a, t, lm, mi.cast_shadow, mi])
 
 static func roadMat(tex: Texture2D, o: Dictionary = {}) -> LMat:
 	var oo := o.duplicate()
