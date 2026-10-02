@@ -39,6 +39,7 @@ var over_stats: Label
 var over_tag: Label
 var over_earn: Label
 var again_btn: Button
+var replay_btn: Button
 var menu_box: Control
 
 var msgUntil := 0.0
@@ -263,9 +264,11 @@ func _build_overlays() -> void:
 	o[1].add_child(orow)
 	again_btn = mk_button("Opnieuw racen")
 	again_btn.pressed.connect(func(): Game.onAgain())
+	replay_btn = mk_button("Replay", false)
+	replay_btn.pressed.connect(func(): Rep.replayOpen())
 	var menu := mk_button("Hoofdmenu", false)
 	menu.pressed.connect(func(): Game.toMenu(-1))
-	orow.add_child(again_btn); orow.add_child(menu)
+	orow.add_child(again_btn); orow.add_child(replay_btn); orow.add_child(menu)
 
 # ------------------------------------------------------------------ temporary start screen (until the menus port)
 var _m_track: Label
@@ -382,6 +385,7 @@ func _show_over(title: String) -> void:
 		("" if Game.mode == "time" else " · %d %s" % [Game.raceLaps, "ronde" if Game.raceLaps == 1 else "ronden"])
 	for o in [hud, msg, lights]: o.visible = false
 	over_box.visible = true
+	replay_btn.visible = Rep.canReplay()
 	again_btn.call_deferred("grab_focus")
 
 func showTimeTrialOver(distance: float, cps: int, bestLap: float, best: float, rec: bool, cr: int) -> void:
@@ -465,6 +469,15 @@ func tick() -> void:
 			l = "Ronde %d" % maxi(1, g.player.lap)
 			d = "Laatste valt af!" if not g.playerOut and g.playerPosition() == act and act > 1 else G.fmtLap(g.raceFinishTime if g.raceDone else g.raceTime)
 			if d == "Laatste valt af!": dc = Color("#ffd0cc")
+		elif g.mode == "ghost":
+			t = G.fmtLap(g.raceTime - g.lapStart) if g.player.lap >= 1 and not g.raceDone else (G.fmtLap(g.lapTimes[-1] if not g.lapTimes.is_empty() else 0.0) if g.raceDone else "0:00,0")
+			l = "Ronde %d/%d" % [clampi(maxi(1, g.player.lap), 1, g.raceLaps), g.raceLaps]
+			var gd = null if g.raceDone else Rep.ghostDelta()
+			if gd == null:
+				d = ("Ghost " + G.fmtLap(Rep.ghostBest.t)) if Rep.ghostBest != null else "Nog geen ghost"
+			else:
+				d = G.fmtD(gd) + " s"
+				dc = Color("#9df0a8") if gd <= 0 else Color("#ffb4ab")
 		elif g.raceMode:
 			t = "%d/%d" % [g.playerPosition(), g.bots.size() + 1 + Net.racers()]
 			l = "Ronde %d/%d" % [clampi(maxi(1, g.player.lap), 1, g.raceLaps), g.raceLaps]

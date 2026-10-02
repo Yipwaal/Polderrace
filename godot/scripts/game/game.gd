@@ -1089,6 +1089,7 @@ func resetPlayer(i: int, lat: float) -> void:
 func startRace() -> void:
 	if not (state == "menu" or (state == "over" and overReady)): return
 	Sfx.initAudio()
+	Rep.replayClear()
 	var S := G.settings
 	mode = S.mode
 	split = mode == "split"
@@ -1107,9 +1108,10 @@ func startRace() -> void:
 		placeGrid(); nextCp = 0
 		if netInRace(): Net.netPlace()
 	elif mode == "ghost":
-		clearTraffic(); clearBots(); placeGrid(); nextCp = 0
+		clearTraffic(); clearBots(); placeGrid(); nextCp = 0; Rep.ghostStart()
 	else:
 		clearBots(); buildTraffic(); resetPlayer(0, 0); nextCp = 1; timeLeft = Trk.TRK.startTime
+	if mode != "ghost": Rep.ghostHide()
 	snapCamera()
 	if Fx.me != null:
 		Fx.me.clearSkids(); Fx.me.clearParts()
@@ -1187,6 +1189,9 @@ func onAgain() -> void:
 	startRace()
 
 func toMenu(step := -1) -> void:
+	if Rep.rp != null: Rep.replayClose()
+	Rep.replayClear()
+	Rep.ghostHide()
 	Net.netAfterRace()
 	paused = false
 	Hud.toMenu()
@@ -1267,10 +1272,12 @@ func hitCheckpoint(k: int) -> void:
 	if player.lap == 1:
 		lapStart = raceTime
 		if not split: sectorLapStart()
+		if mode == "ghost": Rep.ghostLapStart()
 		return
 	var lt := raceTime - lapStart
 	lapStart = raceTime; recordLap(lt); lapTimes.append(lt)
 	if not split: sectorLapStart()
+	if mode == "ghost" and Rep.ghostLapDone(lt): ghostSaved = true
 	if mode != "elim" and player.lap > raceLaps:
 		finishPlayer(); return
 	var lbl := ("Ronde %d" % player.lap) if mode == "elim" else ("Laatste ronde" if player.lap == raceLaps else "Ronde %d/%d" % [player.lap, raceLaps])
@@ -1479,6 +1486,7 @@ func update(dt: float) -> void:
 			Hud.setLights(on)
 			if on > 0: Sfx.tone(440, 0.16, "square", 0.09)
 		if cd >= 3.5 + goDelay:
+			Rep.replayStart()
 			state = "racing"
 			lapStart = 0.0 if raceMode else clock
 			Hud.lightsGo()
@@ -1493,13 +1501,14 @@ func update(dt: float) -> void:
 			Hud.showRaceOver(resultRows, mode, playerOut, raceDone, raceFinishTime, raceBestLap, raceTopSpeed, lapRecordSet, -1)
 		return
 	raceTime += dt
+	Rep.replayRecord(dt)
 	if state == "finished":
 		autopilot(dt, 22)
 		if clock > finishAt: showResults()
 		return
 	updatePlayer(dt)
 	if netInRace(): Net.netCollide()
-	updateWind(dt); sectorUpdate(); elimCheck()
+	updateWind(dt); Rep.ghostRecord(dt); sectorUpdate(); elimCheck()
 	if mode == "time":
 		var before := timeLeft
 		timeLeft -= dt
@@ -1510,10 +1519,18 @@ func _process(delta: float) -> void:
 	if camera == null or Trk.NS <= 1: return
 	var dt := minf(0.1, delta)
 	readPad()
+	if state == "replay":
+		if not paused: Rep.replayUpdate(dt)
+		clock += dt
+		if Env.me != null: Env.me.update(dt, camera)
+		Sfx.updateAudio()
+		Hud.tick()
+		return
 	if not paused:
 		var n := mini(12, maxi(1, int(ceil(dt / 0.0085))))
 		for _k in n: update(dt / n)
 	if car != null: syncCar(0.0 if paused else dt)
+	Rep.ghostUpdate()
 	updateCamera(0.0 if paused else dt)
 	if Fx.me != null: Fx.me.updateMirror()
 	if fx_overlay != null: fx_overlay.tick(dt)
