@@ -1167,13 +1167,18 @@ func showResults() -> void:
 
 func onAgain() -> void:
 	if not (state == "over" and overReady): return
+	if Net.net != null:
+		# online: the host starts the next race for everyone; the others wait for it
+		if Net.isHost(): Net.netHostStart()
+		return
 	startRace()
 
-func toMenu(_step := -1) -> void:
+func toMenu(step := -1) -> void:
 	Net.netAfterRace()
 	paused = false
 	Hud.toMenu()
 	state = "menu"
+	if Net.net != null and step < 0: NetUi.open()
 
 func setPaused(p: bool) -> void:
 	if p and not (state == "racing" or state == "countdown" or state == "finished"): return
@@ -1464,6 +1469,11 @@ func update(dt: float) -> void:
 		return
 	if state == "over":
 		autopilot(dt, 22.0 if raceMode else 0.0)
+		# the others still driving: keep the results up to date (JS buildResults every 0.5 s)
+		if raceMode and mode != "champ" and overView == "results" and clock > resultsAt and Hud.over_box.visible:
+			resultsAt = clock + 0.5
+			resultRows = resultOrder()
+			Hud.showRaceOver(resultRows, mode, playerOut, raceDone, raceFinishTime, raceBestLap, raceTopSpeed, lapRecordSet, -1)
 		return
 	raceTime += dt
 	if state == "finished":

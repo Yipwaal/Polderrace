@@ -18,6 +18,7 @@ Sfx="*res://scripts/game/sfx.gd"
 Game="*res://scripts/game/game.gd"
 Net="*res://scripts/net/net.gd"
 Hud="*res://scripts/ui/hud.gd"
+NetUi="*res://scripts/ui/net_ui.gd"
 
 [display]
 

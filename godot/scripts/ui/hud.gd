@@ -301,6 +301,9 @@ func _build_menu() -> void:
 	var start := mk_button("Start")
 	start.pressed.connect(func(): menuNext())
 	m[1].add_child(start)
+	var online := mk_button("Online spelen", false)
+	online.pressed.connect(func(): NetUi.open())
+	m[1].add_child(online)
 	_menu_refresh()
 	menu_box.visible = true
 
@@ -410,9 +413,19 @@ func showRaceOver(rows: Array, mode: String, playerOut: bool, raceDone: bool, fi
 		G.fmtLap(bestLap) if bestLap else "–", int(round(topSpeed * 3.6))]
 	over_tag.text = "Nieuw klasserecord " + (G.fmtLap(bestLap) if bestLap else "")
 	over_tag.visible = rec
-	over_earn.text = "+" + G.fmtCr(cr) if cr > 0 else ""
-	over_earn.visible = cr > 0
+	if cr >= 0:
+		over_earn.text = "+" + G.fmtCr(cr) if cr > 0 else ""
+		over_earn.visible = cr > 0
 	again_btn.text = "Opnieuw racen"
+	if Net.net != null:
+		# online: only the host starts the next race; the others get it automatically
+		again_btn.text = "Nieuwe race"
+		again_btn.visible = Net.isHost()
+	else:
+		again_btn.visible = true
+	if over_box.visible and cr < 0:
+		over_title.text = ("Uitgeschakeld: %de" % pos) if mode == "elim" and playerOut else ("Gewonnen!" if pos == 1 else "Je werd %de" % pos)
+		return
 	_show_over(("Uitgeschakeld: %de" % pos) if mode == "elim" and playerOut else ("Gewonnen!" if pos == 1 else "Je werd %de" % pos))
 
 func _result_row(p: String, name: String, sub: String, tm: String, me: bool) -> Control:
