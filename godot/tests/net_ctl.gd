@@ -19,6 +19,7 @@ var grid_bots := []
 var last_state := ""
 var bot_track := []                ## per frame: how far bot 0's car moved (smooth or jumpy)
 var hitches := 0
+var ram_until := 0                 ## while ramming: steer for bot 0's lane instead of the middle
 var ts := 1.0                      ## Engine.time_scale while racing (the countdown runs at real speed)
 
 func say(seq: String, v) -> void:
@@ -93,7 +94,8 @@ func _drive() -> void:
 	g.keysDown["KeyW"] = true
 	var th := Trk.heading_of(Trk.T[g.player.idx])
 	var df := fposmod(th - g.player.heading + PI, TAU) - PI
-	var st := clampf(-df * 3 - g.player.lat * 0.15, -1, 1)
+	var aim: float = g.bots[0].lat if Time.get_ticks_msec() < ram_until and not g.bots.is_empty() else 0.0
+	var st := clampf(-df * 3 - (g.player.lat - aim) * 0.15, -1, 1)
 	if st > 0.15: g.keysDown["KeyD"] = true
 	elif st < -0.15: g.keysDown["KeyA"] = true
 	wrong = wrong + 1.0 / 60 if absf(df) > 2.1 else 0.0
@@ -243,6 +245,7 @@ func _run(line: String) -> void:
 			var i := int(round(fposmod(b.s - 6.5, Trk.TRACK_LEN) / Trk.SPC)) % Trk.NS
 			Game.resetPlayer(i, b.lat)
 			Game.player.speed = b.speed + 14
+			ram_until = Time.get_ticks_msec() + 1500
 			bot_track = []
 			say(seq, [snappedf(b.s, 0.1), snappedf(b.speed, 0.1)])
 			drive = true
