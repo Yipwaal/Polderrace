@@ -124,6 +124,7 @@ func replayStart() -> void:
 	var g := Game
 	var cars := [{"id": G.settings.car, "color": G.settings.color, "name": "Speler 1" if g.split else "Jij"}]
 	for b in g.bots: cars.append({"id": b.type, "color": b.color, "name": b.name})
+	if g.split and g.p2 != null: cars.append({"id": g.p2.carId, "color": g.p2.color, "name": "Speler 2"})
 	if Net.inRace():
 		for r in Net.net.remotes.values():
 			if r.car != null: cars.append({"id": r.carId, "color": r.color, "name": r.name, "peer": r.peer})
@@ -141,6 +142,7 @@ func replayRecord(dt: float) -> void:
 		f.append_array([snappedf(n.position.x, 0.01), snappedf(n.position.y, 0.01), snappedf(n.position.z, 0.01), snappedf(n.rotation.y, 0.001), snappedf(v, 0.1)])
 	push.call(g.car.g, g.player.speed)
 	for b in g.bots: push.call(b.m.g, 0.0 if b.out else b.speed)
+	if g.split and g.p2 != null and g.p2.car != null: push.call(g.p2.car.g, g.p2.pl.speed)
 	if Net.inRace():
 		for r in Net.net.remotes.values():
 			if r.car != null: push.call(r.car.g, r.st[4] if r.st != null else 0.0)
@@ -154,6 +156,7 @@ func replayOpen() -> void:
 	var g := Game
 	var meshes := [g.car]
 	for b in g.bots: meshes.append(b.m)
+	if g.split and g.p2 != null and g.p2.car != null: meshes.append(g.p2.car)
 	if Net.net != null:
 		for r in Net.net.remotes.values():
 			if r.car != null: meshes.append(r.car)

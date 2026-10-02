@@ -370,12 +370,13 @@ func tick() -> void:
 	if msgUntil and g.clock > msgUntil: msg.visible = false; msgUntil = 0
 	if countUntil and g.clock > countUntil: count.visible = false; countUntil = 0
 
-func _update_board() -> void:
+## JS boardRows: the best-lap board; in the ghost time trial you and the ghost (its lap time), else every racer by position
+func boardRows() -> Array:
 	var g := Game
-	var on: bool = (g.raceMode or g.mode == "ghost") and not g.split and (g.state == "racing" or g.state == "countdown" or g.state == "finished")
-	board.visible = on
-	if not on or g.clock < boardAt: return
-	boardAt = g.clock + 0.5
+	if g.mode == "ghost":
+		var gr := [{"name": "Jij", "best": g.raceBestLap, "me": true, "prog": 1}]
+		if Rep.ghostBest != null: gr.append({"name": "Ghost", "best": float(Rep.ghostBest.t), "prog": 0})
+		return gr
 	var rows := [{"name": "Jij", "best": g.raceBestLap, "me": true, "out": g.playerOut, "prog": -1e9 if g.playerOut else g.progressOf(g.player.lap, g.player.s, g.raceDone, g.raceFinishTime)}]
 	if Net.inRace():
 		for r in Net.net.remotes.values():
@@ -383,6 +384,15 @@ func _update_board() -> void:
 	for b in g.bots:
 		rows.append({"name": b.name, "best": b.bestLap, "out": b.out, "prog": -1e9 if b.out else g.progressOf(b.lap, b.s, b.finished, b.finishTime)})
 	rows.sort_custom(func(a, b): return a.prog > b.prog)
+	return rows
+
+func _update_board() -> void:
+	var g := Game
+	var on: bool = (g.raceMode or g.mode == "ghost") and not g.split and (g.state == "racing" or g.state == "countdown" or g.state == "finished")
+	board.visible = on
+	if not on or g.clock < boardAt: return
+	boardAt = g.clock + 0.5
+	var rows := boardRows()
 	var fastest := 1e9
 	for r in rows:
 		if r.best > 0: fastest = minf(fastest, r.best)
