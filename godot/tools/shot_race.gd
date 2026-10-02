@@ -9,6 +9,10 @@ func _ready() -> void:
 	for s in OS.get_cmdline_user_args():
 		var kv := s.split("=", true, 1)
 		if kv.size() == 2: a[kv[0]] = kv[1]
+	# own save file with every car (never the player's)
+	var owned := {}
+	for id in Cars.CARS: owned[id] = true
+	G.use_store("user://shot-race.json", {"polderrace3d-garage": {"owned": owned}})
 	var S := G.settings
 	S.track = a.track; S.mode = a.mode; S.bots = int(a.bots); S.car = a.car; S.laps = int(a.laps); S.time = a.time; S.weather = a.weather; S.dir = a.dir
 	var main: Node = load("res://scenes/main.tscn").instantiate()

@@ -43,7 +43,10 @@ jobs:
         run: ~/godot/godot --headless --path godot --import || true
 
       - name: Tests
-        run: ~/godot/godot --headless --path godot res://tests/runner.tscn -- track build laps cars flow
+        run: ~/godot/godot --headless --path godot res://tests/runner.tscn -- track build laps cars flow audio menus
+
+      - name: Online test (host and player as two processes)
+        run: PATH="$HOME/godot:$PATH" python3 godot/tests/test_net.py
 
       - name: Export Windows and Linux
         run: |

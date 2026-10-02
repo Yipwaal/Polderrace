@@ -1557,6 +1557,9 @@ func _input(e: InputEvent) -> void:
 	if not e.pressed:
 		keysDown.erase(code)
 		return
+	# typing in a text field (name, IP address, start number): leave every key to the field (JS: INPUT target)
+	var fo := get_viewport().gui_get_focus_owner()
+	if (fo is LineEdit or fo is TextEdit) and fo.is_visible_in_tree(): return
 	if code == "KeyM": Sfx.toggleMute()
 	if state == "menu": return    # the menus handle their keys themselves (Menu._input)
 	var ac = actionOf(code)

@@ -27,12 +27,27 @@ func _ready() -> void:
 	Game.fx_overlay = overlay
 	add_child(SplitView.new())
 	Game.applyPrefs()
+	if G.store_get("polderrace3d-window") == "full": setFullscreen(true)
 	env.time = G.settings.time
 	env.weather = G.settings.weather
 	await load_track(G.settings.track)
 	Game.rebuildPlayerCar()
 	await Canvas2D.flush(self)
 	Game.toMenu(-1)
+
+## PC version only (in the browser F11 is the browser's): F11 or Alt+Enter switches full screen in every screen; the main
+## scene gets key events before the autoloads, so the menus never see these keys
+func _input(e: InputEvent) -> void:
+	if not (e is InputEventKey and e.pressed and not e.echo): return
+	var k: Key = e.keycode
+	if k == KEY_F11 or (e.alt_pressed and (k == KEY_ENTER or k == KEY_KP_ENTER)):
+		get_viewport().set_input_as_handled()
+		var full := DisplayServer.window_get_mode() < DisplayServer.WINDOW_MODE_FULLSCREEN
+		setFullscreen(full)
+		G.store_set("polderrace3d-window", "full" if full else "win")
+
+func setFullscreen(on: bool) -> void:
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED)
 
 func load_track(id: String) -> void:
 	Game.clearBots()

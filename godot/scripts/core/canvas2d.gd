@@ -353,8 +353,8 @@ static func font_of(spec: String) -> Array:
 			# keys are OpenType tags as ints (a String key would be read as an axis *name*, e.g. "weight")
 			v.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
 			if italic:
-				# Nunito has no italic: like a browser, slant it (oblique)
-				v.variation_transform = Transform2D(Vector2(1, 0), Vector2(0.2, 1), Vector2.ZERO)
+				# Nunito has no italic: like a browser, slant it (oblique); FreeType matrix x' = x + 0.2 y (as UiKit.font)
+				v.variation_transform = Transform2D(Vector2(1, 0.2), Vector2(0, 1), Vector2.ZERO)
 			f = v
 		_fonts[key] = f
 	return [_fonts[key], size]

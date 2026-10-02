@@ -16,6 +16,8 @@ func _ready() -> void:
 		if kv.size() == 2: a[kv[0]] = kv[1]
 	role = a.role
 	get_tree().create_timer(120, true, false, true).timeout.connect(func(): say("timeout", true); get_tree().quit(1))
+	# own save file per role (never the player's), owning the two cars the test drives
+	G.use_store("user://test-net-%s.json" % role, {"polderrace3d-garage": {"owned": {"gt": true, "hatch": true}}})
 	G.prefs.nick = a.nick
 	G.settings.track = "polder"; G.settings.bots = 2; G.settings.laps = 1; G.settings.car = "gt" if role == "host" else "hatch"
 	var main: Node = load("res://scenes/main.tscn").instantiate()
