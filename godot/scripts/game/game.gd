@@ -580,6 +580,21 @@ func engineRpm() -> float:
 	var r := maxf(0, player.speed) / gearTop(player.gear)
 	return clamp_(maxf(r, (0.3 + player.gasIn * 0.1) if (player.gear == 1 and player.gasIn > 0.1) else 0.14), 0.14, 1)
 
+## JS gearInfo / skidAmount (audio section; also used by the HUD and the fx): the gear shown and the engine's rpm,
+## and how hard the tyres squeal
+func gearInfo() -> Dictionary:
+	var v := absf(player.speed)
+	var live := state == "racing" or state == "finished"
+	return {"gear": "R" if player.gear < 0 else ("N" if not live and v < 0.5 else str(player.gear)),
+		"rpm": (0.14 + player.gasIn * 0.6) if state == "countdown" else engineRpm()}
+
+func skidAmount() -> float:
+	if not (state == "racing" or state == "finished"): return 0.0
+	var v := absf(player.speed)
+	return (1.6 if player.gear == 1 and player.gasIn > 0.9 and v < 9 and Cars.CARS[G.settings.car].cls != "B" else 0.0) \
+		+ player.slide.length() * 0.6 + (2.5 if player.hand and v > 5 else 0.0) + maxf(0, absf(player.steer) * v - 48) * 0.06 \
+		+ (1.3 if player.brk > 0.5 and v > 18 else 0.0)
+
 func drive(dt: float, inp: Dictionary) -> void:
 	player.gasIn = inp.gas
 	updateGear(dt, inp.gas)
@@ -1543,6 +1558,7 @@ func _input(e: InputEvent) -> void:
 	if not e.pressed:
 		keysDown.erase(code)
 		return
+	if code == "KeyM": Sfx.toggleMute()
 	if state == "menu":
 		if code == "Enter" and not e.echo: Hud.menuNext()
 		return
