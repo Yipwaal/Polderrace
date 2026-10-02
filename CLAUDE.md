@@ -1,14 +1,12 @@
 # Polderrace 3D — projectgids voor Claude Code
 
-Arcade-racegame in de browser, Nederlands thema. Eén HTML-bestand, Three.js r128.
-Eigenaar: Yip. **Spreek Nederlands met Yip**; code-commentaar mag Engels blijven (zoals nu).
+Arcade-racegame, Nederlands thema. Eigenaar: Yip. **Spreek Nederlands met Yip**; code-commentaar mag Engels blijven (zoals nu).
 
-> **Fase: HTML-prototype.** Tot Yip zelf zegt dat hij de definitieve versie als echt spel wil, blijft Polderrace
-> een HTML-spel: elke wijziging is een nieuwe versie van `polderrace-3d.html`, net zoals tot nu toe in de chat.
-> Begin niet op eigen initiatief aan een Godot-/Unity-/desktopversie, geen andere engine of framework, geen
-> opsplitsing in modules of build-stap, geen TypeScript/React. Ook niet "alvast een beetje voorbereiden".
-> `tests/test_static.py` bewaakt dit: extra spelbestanden (.js/.css/.ts/extra .html, Godot-/Unity-bestanden) laten hem falen.
-> Die controle pas je pas aan als Yip expliciet de overstap naar het echte spel vraagt.
+> **Fase: overstap naar Godot (Yip vroeg dit expliciet op 2 oktober 2026).** Het echte pc-spel wordt gebouwd in
+> **Godot 4.7** in de map `godot/` (GDScript, Compatibility-renderer, met LAN- en online-spel). Plan en stand van zaken: `godot/PLAN.md`.
+> De HTML-versie `polderrace-3d.html` (één bestand, Three.js r128) blijft bestaan als gepubliceerde browserversie
+> én als naslagwerk: de Godot-versie is een getrouwe port ervan (zelfde banen, auto's, getallen en algoritmes).
+> Alles hieronder over het HTML-bestand blijft gelden voor dat bestand. Andere engines/frameworks (Unity, React, ...) niet.
 
 ## Werkafspraken (altijd)
 

@@ -5,7 +5,7 @@
 - only the allowed external script (three.js r128 from cdnjs)
 - the artifact capabilities the game relies on are still used (room, downloads)
 - JavaScript syntax check of the inline script with `node --check` (skipped when node is missing)
-- HTML phase: no extra game files next to polderrace-3d.html (.js/.css/.ts/extra .html, Godot/Unity project files)
+- no extra web files next to polderrace-3d.html (.js/.css/.ts/extra .html, Unity files); the Godot version lives in godot/ (Yip asked for it)
 """
 import re, shutil, subprocess, tempfile, pathlib
 from lib import GAME, ANCHOR, TEST_MARKERS, Report, ROOT
@@ -42,8 +42,8 @@ if node and scripts:
             rep.check(True, f'JS-syntax ({len(scripts)} inline script(s))')
 else:
     print('--   JS-syntaxcheck overgeslagen (node niet gevonden)')
-# HTML phase (see CLAUDE.md): the game stays one self-contained file until Yip asks for the "real" game
-SKIP = {'tests', 'node_modules', '.claude', '.git', 'docs'}
+# the browser game stays one self-contained file; the real PC game is the Godot project in godot/ (see CLAUDE.md)
+SKIP = {'tests', 'node_modules', '.claude', '.git', 'docs', 'godot', '.github'}
 extra = []
 for p in ROOT.rglob('*'):
     rel = p.relative_to(ROOT)
@@ -53,5 +53,5 @@ for p in ROOT.rglob('*'):
     if (p.suffix.lower() in {'.js', '.mjs', '.css', '.ts', '.tsx', '.jsx', '.gd', '.tscn', '.godot', '.unity', '.cs'} or
             (p.suffix.lower() == '.html' and p.resolve() != GAME.resolve()) or name in {'project.godot', 'vite.config.js', 'webpack.config.js', 'tsconfig.json'}):
         extra.append(str(rel))
-rep.check(not extra, 'HTML-fase: geen extra spelbestanden naast polderrace-3d.html', ', '.join(extra[:8]))
+rep.check(not extra, 'geen extra webbestanden naast polderrace-3d.html (Godot hoort in godot/)', ', '.join(extra[:8]))
 rep.finish()
