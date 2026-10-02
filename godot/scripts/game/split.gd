@@ -79,6 +79,7 @@ func _ready() -> void:
 	gauge2.size = Vector2(132, 132)
 	hud2.add_child(gauge2)
 	msg2 = PanelContainer.new()
+	msg2.mouse_filter = Control.MOUSE_FILTER_IGNORE    # CSS pointer-events:none
 	msg2_label = Hud.mk_label("", "900 22px Nunito", Hud.INK)
 	msg2.add_child(msg2_label)
 	msg2.visible = false

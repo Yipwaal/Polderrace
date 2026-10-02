@@ -185,6 +185,13 @@ func _build_hud() -> void:
 		light_dots.append(d)
 	lights.visible = false
 	root.add_child(lights)
+	for n in [msg, toast, lights]: no_mouse(n)
+
+## CSS pointer-events:none: the control and everything in it let clicks through to what lies below (the toast stands
+## above the menus and must not catch the click on a menu button)
+static func no_mouse(n: Node) -> void:
+	if n is Control: n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for c in n.get_children(): no_mouse(c)
 
 func _toast_style() -> StyleBoxFlat:
 	var s := pill(Color(0.086, 0.1, 0.133, 0.85))
