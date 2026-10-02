@@ -23,6 +23,7 @@ var minimap: MiniMap
 var board: SignBox
 var board_list: VBoxContainer
 var gauge: Gauge
+var topbtns: HBoxContainer
 var msg: PanelContainer
 var msg_label: Label
 var toast: PanelContainer
@@ -137,6 +138,17 @@ func _build_hud() -> void:
 	board_list.add_theme_constant_override("separation", 1)
 	bv.add_child(board_list)
 	hud.add_child(board)
+	# round buttons at the top (JS .topbtns): pause, back on the track, sound
+	topbtns = HBoxContainer.new()
+	topbtns.add_theme_constant_override("separation", 8)
+	for kind in ["pause", "reset", "sound"]:
+		var b := IconBtn.new()
+		b.kind = kind
+		b.custom_minimum_size = Vector2(42, 42)
+		b.focus_mode = Control.FOCUS_NONE
+		b.pressed.connect(_icon_pressed.bind(kind))
+		topbtns.add_child(b)
+	hud.add_child(topbtns)
 	gauge = Gauge.new()
 	gauge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	gauge.size = Vector2(184, 184)
@@ -183,6 +195,31 @@ func _toast_style() -> StyleBoxFlat:
 	s.content_margin_left = 16; s.content_margin_right = 16; s.content_margin_top = 8; s.content_margin_bottom = 8
 	s.shadow_size = 0
 	return s
+
+## a round icon button of the HUD (CSS .iconbtn): blue glass with a white ring, the icon drawn
+class IconBtn extends BaseButton:
+	var kind := "pause"
+	func _draw() -> void:
+		var c := size / 2
+		var r := size.x / 2
+		var ink := Color("#f7f7f2")
+		draw_circle(c, r, Color(0.114, 0.31, 0.62, 0.9 if is_hovered() else 0.72))
+		draw_arc(c, r - 1, 0, TAU, 32, ink, 2, true)
+		match kind:
+			"pause":
+				draw_rect(Rect2(c + Vector2(-6, -7), Vector2(4, 14)), ink)
+				draw_rect(Rect2(c + Vector2(2, -7), Vector2(4, 14)), ink)
+			"reset":
+				draw_arc(c, 6, -PI * 0.75, PI * 0.95, 20, ink, 2.2, true)
+				draw_colored_polygon(PackedVector2Array([c + Vector2(-7, -8), c + Vector2(-1, -5), c + Vector2(-7, -1)]), ink)
+			"sound":
+				draw_colored_polygon(PackedVector2Array([c + Vector2(-8, -3), c + Vector2(-4, -3), c + Vector2(0, -7), c + Vector2(0, 7), c + Vector2(-4, 3), c + Vector2(-8, 3)]), ink)
+				if Sfx.muted:
+					draw_line(c + Vector2(3, -3), c + Vector2(8, 3), ink, 2, true)
+					draw_line(c + Vector2(8, -3), c + Vector2(3, 3), ink, 2, true)
+				else:
+					draw_arc(c + Vector2(1, 0), 4, -0.9, 0.9, 10, ink, 1.8, true)
+					draw_arc(c + Vector2(1, 0), 7.5, -0.9, 0.9, 12, ink, 1.8, true)
 
 class LightDot extends Control:
 	var on := false
@@ -328,6 +365,14 @@ func menuNext() -> void:
 		menu_box.visible = false
 		Game.startRace()
 
+func _icon_pressed(kind: String) -> void:
+	match kind:
+		"pause": Game.setPaused(not Game.paused)
+		"reset": Game.resetToTrack()
+		"sound":
+			Sfx.toggleMute()
+			for c in topbtns.get_children(): c.queue_redraw()
+
 # ------------------------------------------------------------------ API used by Game
 func showMsg(text: String, kind: String, dur: float) -> void:
 	if Game.split and Game.p2 != null and Game.activeP == 2 and SplitView.me != null:
@@ -461,6 +506,7 @@ func tick() -> void:
 	var hh: float = vp.y / 2 if g.split and g.p2 != null else vp.y
 	gauge.size = Vector2(132, 132) if hh < vp.y else Vector2(184, 184)
 	map_sign.position = Vector2(vp.x - 16 - map_sign.size.x, 16)
+	topbtns.position = Vector2((vp.x - topbtns.size.x) / 2, 16)
 	gauge.position = Vector2(vp.x - 16 - gauge.size.x, hh - (10 if hh < vp.y else 16) - gauge.size.y)
 	if st == "racing" or st == "countdown" or st == "finished":
 		var t: String
@@ -579,6 +625,8 @@ class MiniMap extends Control:
 		for c in g.traffic: dot.call(c.m.g.position.x, c.m.g.position.z, 2.2 * u, Color("#9fb0c8"), false)
 		for b in g.bots:
 			if b.m.g.visible: dot.call(b.m.g.position.x, b.m.g.position.z, 3.2 * u, Color(b.color), true)
+		if Rep.ghostCar != null and Rep.ghostCar.g.visible:
+			dot.call(Rep.ghostCar.g.position.x, Rep.ghostCar.g.position.z, 3.2 * u, Color(1, 1, 1, 0.6), true)
 		if g.mode == "time":
 			var cp: Vector3 = Trk.P[Trk.cps[g.nextCp]]
 			dot.call(cp.x, cp.z, 4 * u, Color("#f2c200"), false)
