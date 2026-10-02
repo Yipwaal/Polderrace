@@ -19,8 +19,20 @@ func step(sec: float, steer := true) -> void:
 			wrong = wrong + 1.0 / 120 if absf(df) > 2.1 else 0.0
 			if wrong > 1.5:
 				wrong = 0; resets += 1; g.resetToTrack()
+		if g.split and g.p2 != null:
+			# player 2 (split screen): gas and steering keys of the P2 key set, steered bang-bang by the same autopilot
+			g.keysDown["ArrowUp"] = true
+			g.keysDown.erase("ArrowLeft"); g.keysDown.erase("ArrowRight")
+			if steer:
+				var st: float = g.asP2(func():
+					var th2 := Trk.heading_of(Trk.T[g.player.idx])
+					var df2 := fposmod(th2 - g.player.heading + PI, TAU) - PI
+					return clampf(-df2 * 3 - g.player.lat * 0.15, -1, 1))
+				if st > 0.15: g.keysDown["ArrowRight"] = true
+				elif st < -0.15: g.keysDown["ArrowLeft"] = true
 		g.update(1.0 / 120)
 	g.keysDown.erase("KeyW")
+	g.keysDown.erase("ArrowUp"); g.keysDown.erase("ArrowLeft"); g.keysDown.erase("ArrowRight")
 
 func run(host: Node) -> TestReport:
 	var r := TestReport.new("rijden zoals de HTML-versie (autopiloot-ronde)")

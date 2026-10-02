@@ -173,7 +173,7 @@ func updateFx(dt: float) -> void:
 # ------------------------------------------------------------------ mirror (JS renderMirror)
 func mirrorOn() -> bool:
 	var g := Game
-	return bool(G.prefs.get("mirror", true)) and not g.split and not g.paused and g.car != null and not Hud.lights.visible and (g.state == "racing" or g.state == "finished")
+	return bool(G.prefs.get("mirror", true)) and not (g.split and g.p2 != null) and not g.paused and g.car != null and not Hud.lights.visible and (g.state == "racing" or g.state == "finished")
 
 func updateMirror() -> void:
 	var on := mirrorOn()

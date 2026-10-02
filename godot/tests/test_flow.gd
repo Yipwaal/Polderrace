@@ -59,13 +59,28 @@ func run(host: Node) -> TestReport:
 	_drive_until(func(): return Game.state == "over" or Game.playerOut, 260)
 	var outs := Game.bots.filter(func(b): return b.out).size() + (1 if Game.playerOut else 0)
 	r.check(outs >= 1, "eliminatie: er valt iemand af", "%d eruit" % outs)
+	# ---- split screen: 2 players, 2 bots, 1 lap
+	S.mode = "split"; S.bots = 2; S.laps = 1; S.p2car = "hatch"
+	Game.state = "over"; Game.overReady = true; Game.startRace()
+	r.check(Game.split and Game.p2 != null and Game.p2.car != null, "2 spelers: tweede speler met eigen auto")
+	r.check(Game.bots.size() == 2, "2 spelers: 2 bots")
+	var p1s: float = Game.player.s
+	L.step(4.5, false)
+	L.step(20)
+	r.check(Game.player.s != p1s and Game.p2.pl.speed > 5, "2 spelers: allebei rijden", "p1 %.0f m/s, p2 %.0f m/s" % [Game.player.speed, Game.p2.pl.speed])
+	r.check(Game.otherProgress() != null, "2 spelers: voortgang van speler 2 telt mee")
+	_drive_until(func(): return Game.state == "over", 220)
+	r.check(Game.state == "over", "2 spelers: uitslag na de finish", Game.state)
+	r.check(Game.resultRows.filter(func(x): return x.get("me", false)).size() == 2, "2 spelers: allebei in de uitslag")
+	Game.toMenu(-1)
+	r.check(not Game.split and Game.p2 == null, "2 spelers: opgeruimd na het menu")
 	# ---- time trial: runs out of time
 	S.mode = "time"
 	Game.state = "over"; Game.overReady = true; Game.startRace()
 	r.check(Game.traffic.size() == int(Trk.TRK.get("traffic", 0)), "tijdrit: verkeer op de baan", str(Game.traffic.size()))
-	L.step(4.5, false)
-	Game.timeLeft = 3.0
-	L.step(5)
+	L.step(5.5, false)
+	Game.timeLeft = 6.0
+	L.step(8)
 	r.check(Game.state == "over", "tijdrit: tijd is op", Game.state)
 	r.check(Game.distance > 50, "tijdrit: afstand gemeten", G.fmtKm(Game.distance))
 	Game.set_process(true)

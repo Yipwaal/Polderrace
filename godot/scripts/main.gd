@@ -25,6 +25,7 @@ func _ready() -> void:
 	overlay = load("res://scripts/ui/fx_overlay.gd").new()
 	add_child(overlay)
 	Game.fx_overlay = overlay
+	add_child(SplitView.new())
 	env.time = G.settings.time
 	env.weather = G.settings.weather
 	await load_track(G.settings.track)

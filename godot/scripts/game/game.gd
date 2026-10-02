@@ -57,6 +57,11 @@ var resultsAt := 0.0
 var resultRows: Array = []
 var split := false
 var activeP := 1
+## split screen: the other player's context (JS p2), swapped in by asP2 (swapCtx); inP2 while swapped
+var p2 = null
+var inP2 := false
+var splitFirstDone := 0.0
+var splitEndAt := 0.0
 var raceContacts := 0
 var racePits := 0
 
@@ -438,6 +443,7 @@ func updateBots(dt: float) -> void:
 			for o in bots:
 				if o != b and not o.out: others.append({"s": o.s, "lat": o.lat, "len": o.m.len})
 			others.append({"s": player.s, "lat": player.lat, "len": car.len if car != null else 4.4})
+			if split and p2 != null: others.append({"s": p2.pl.s, "lat": p2.pl.lat, "len": p2.car.len if p2.car != null else 4.4})
 			for o in others:
 				var ds := Trk.wrapD(o.s - b.s)
 				var dl2: float = b.lat - o.lat
@@ -1094,6 +1100,7 @@ func startRace() -> void:
 	mode = S.mode
 	split = mode == "split"
 	if split: mode = "race"
+	if not split and p2 != null: splitTeardown()
 	if mode == "race" and int(S.bots) < 1 and not split: mode = "time"
 	if mode == "elim" and int(S.bots) < 2: S.bots = 2
 	raceMode = mode == "race" or mode == "elim" or mode == "champ"
@@ -1106,6 +1113,7 @@ func startRace() -> void:
 		clearTraffic()
 		setupBots(0, Net.net.botDefs if netInRace() and Net.net.botDefs != null else makeBotDefs(mini(int(S.bots), 5) if split else int(S.bots)))
 		placeGrid(); nextCp = 0
+		if split: splitSetup()
 		if netInRace(): Net.netPlace()
 	elif mode == "ghost":
 		clearTraffic(); clearBots(); placeGrid(); nextCp = 0; Rep.ghostStart()
@@ -1120,6 +1128,8 @@ func startRace() -> void:
 	clearKeys()
 
 func finishPlayer(_win := false) -> void:
+	if split:
+		splitFinish(); return
 	raceDone = true; raceFinishTime = raceTime; state = "finished"; finishAt = clock + 3
 	var pos := playerPosition()
 	Hud.showMsg("Finish!" if mode == "ghost" else ("Finish! Gewonnen" if pos == 1 else "Finish! %de plaats" % pos), "ok", 3)
@@ -1165,6 +1175,9 @@ func resultOrder() -> Array:
 	var rows := [{"name": "Speler 1" if split else "Jij", "car": Cars.CARS[G.settings.car].name, "me": true, "finished": raceDone and not playerOut, "ft": raceFinishTime,
 		"out": playerOut, "elimPos": elimPos, "prog": -1e9 if playerOut else progressOf(player.lap, player.s, raceDone, raceFinishTime), "best": raceBestLap}]
 	rows += Net.resultRows()
+	if split and p2 != null:
+		rows.append({"name": "Speler 2", "car": Cars.CARS[p2.carId].name, "me": true, "finished": p2.raceDone, "ft": p2.raceFinishTime, "out": false,
+			"elimPos": 0, "prog": otherProgress(), "best": p2.raceBestLap})
 	for b in bots:
 		rows.append({"name": b.name, "car": Cars.CARS[b.type].name, "finished": b.finished, "ft": b.finishTime, "out": b.out, "elimPos": b.elimPos,
 			"prog": -1e9 if b.out else progressOf(b.lap, b.s, b.finished, b.finishTime), "best": b.bestLap})
@@ -1192,6 +1205,7 @@ func toMenu(step := -1) -> void:
 	if Rep.rp != null: Rep.replayClose()
 	Rep.replayClear()
 	Rep.ghostHide()
+	if split or p2 != null: splitTeardown()
 	Net.netAfterRace()
 	paused = false
 	Hud.toMenu()
@@ -1297,7 +1311,128 @@ func netInRace() -> bool: return Net.inRace()
 func netIsHost() -> bool: return Net.isHost()
 func netAheadCount(me: float) -> int: return Net.aheadCount(me)
 func netKick(i: int, dvx: float, dvz: float, sp: float) -> void: Net.netKick(i, dvx, dvz, sp)
-func otherProgress() -> Variant: return null
+func otherProgress() -> Variant:
+	if not split or p2 == null: return null
+	var o: PlayerState = p2.pl
+	return progressOf(o.lap, o.s, p2.raceDone, p2.raceFinishTime)
+
+## the other human player in split screen (for the minimap): {pl, color} or null
+func otherPlayer() -> Variant:
+	if not split or p2 == null: return null
+	return {"pl": p2.pl, "color": p2.color}
+
+# ================================================================== split screen (JS split section)
+func newP2() -> Dictionary:
+	return {"pl": PlayerState.new(), "car": null, "carId": G.settings.get("p2car", "hatch"), "color": G.settings.get("p2color", "#1d4f9e"),
+		"MAXV": 0.0, "ACC": 0.0, "BRAKE": 0.0, "GRIP": 0.0, "nextCp": 0, "wrongT": 0.0, "wallT": 0.0, "lapStart": 0.0, "raceBestLap": 0.0,
+		"raceDone": false, "raceFinishTime": 0.0, "lapTimes": [], "drift": 0.0, "camHeading": 0.0, "camY": 0.0, "camLift": 0.0, "resetT": -9.0,
+		"hitT": -9.0, "cam": 0, "activeP": 2}
+
+## every per-player global changes place with the other player's copy (also camLift: see CLAUDE.md)
+func swapCtx(c: Dictionary) -> void:
+	var t
+	t = car; car = c.car; c.car = t
+	t = MAXV; MAXV = c.MAXV; c.MAXV = t
+	t = ACC; ACC = c.ACC; c.ACC = t
+	t = BRAKE; BRAKE = c.BRAKE; c.BRAKE = t
+	t = GRIP; GRIP = c.GRIP; c.GRIP = t
+	t = nextCp; nextCp = c.nextCp; c.nextCp = t
+	t = wrongT; wrongT = c.wrongT; c.wrongT = t
+	t = wallT; wallT = c.wallT; c.wallT = t
+	t = lapStart; lapStart = c.lapStart; c.lapStart = t
+	t = raceBestLap; raceBestLap = c.raceBestLap; c.raceBestLap = t
+	t = raceDone; raceDone = c.raceDone; c.raceDone = t
+	t = raceFinishTime; raceFinishTime = c.raceFinishTime; c.raceFinishTime = t
+	t = lapTimes; lapTimes = c.lapTimes; c.lapTimes = t
+	t = drift; drift = c.drift; c.drift = t
+	t = camHeading; camHeading = c.camHeading; c.camHeading = t
+	t = camY; camY = c.camY; c.camY = t
+	t = camLift; camLift = c.camLift; c.camLift = t
+	t = resetT; resetT = c.resetT; c.resetT = t
+	t = hitT; hitT = c.hitT; c.hitT = t
+	t = G.settings.car; G.settings.car = c.carId; c.carId = t
+	t = G.settings.color; G.settings.color = c.color; c.color = t
+	t = G.prefs.cam; G.prefs.cam = c.cam; c.cam = t
+	t = activeP; activeP = c.activeP; c.activeP = t
+	t = player; player = c.pl; c.pl = t
+
+func asP2(fn: Callable) -> Variant:
+	if not split or p2 == null or inP2: return fn.call()
+	swapCtx(p2)
+	inP2 = true
+	var r = fn.call()
+	inP2 = false
+	swapCtx(p2)
+	return r
+
+func runFor(pi: int, fn: Callable) -> Variant:
+	return asP2(fn) if pi == 2 and split else fn.call()
+
+func splitSetup() -> void:
+	if p2 != null and p2.car != null: p2.car.g.queue_free()
+	p2 = newP2()
+	splitFirstDone = 0; splitEndAt = 0
+	asP2(func():
+		rebuildPlayerCar()
+		var n := bots.size()
+		var g := gridSlot(n + 1 if n + 1 > 0 else 1)
+		resetPlayer(int(round(g.s / Trk.SPC)) % Trk.NS, g.lat)
+		player.lap = 0; nextCp = 0; lapTimes = []; raceDone = false
+		snapCamera())
+
+func splitTeardown() -> void:
+	if p2 != null and p2.car != null: p2.car.g.queue_free()
+	p2 = null
+	split = false
+
+## collisions between the two human players, same solver as everything else
+func collidePlayers() -> void:
+	if not split or p2 == null or p2.car == null: return
+	var A := playerBody()
+	var o: PlayerState = p2.pl
+	var f2x := sin(o.heading); var f2z := cos(o.heading)
+	var po: float = p2.car.get("off", 0.0)
+	var h2: float = o.heading - p2.drift
+	var B := {"x": o.pos.x + sin(h2) * po, "z": o.pos.z + cos(h2) * po, "h": h2, "len": p2.car.len, "wid": p2.car.wid, "rc": p2.car.get("rc", 0.0),
+		"m": Cars.CARS[p2.carId].mass, "vx": f2x * o.speed + o.slide.x, "vz": f2z * o.speed + o.slide.y}
+	var ct = pairContact(A, B)
+	if ct == null: return
+	var tot: float = A.m + B.m
+	var pc := maxf(0, ct.pen - 0.02) * POS_K
+	player.pos.x += ct.nx * pc * B.m / tot; player.pos.z += ct.nz * pc * B.m / tot
+	o.pos.x -= ct.nx * pc * A.m / tot; o.pos.z -= ct.nz * pc * A.m / tot
+	var im = pairImpulse(playerBody(), B, ct)
+	if im == null: return
+	var apply := func(pl: PlayerState, body: Dictionary, dvx: float, dvz: float, sp: float, grip: float) -> void:
+		var fx := sin(pl.heading); var fz := cos(pl.heading)
+		var vx: float = body.vx + dvx
+		var vz: float = body.vz + dvz
+		pl.speed = vx * fx + vz * fz
+		pl.slide = Vector2(vx - fx * pl.speed, vz - fz * pl.speed)
+		pl.spin = clamp_(pl.spin + yawKick(sp, grip), -6, 6)
+	apply.call(player, playerBody(), im.FAx / A.m, im.FAz / A.m, im.sA, GRIP * gripFactor())
+	apply.call(o, B, -im.FAx / B.m, -im.FAz / B.m, im.sB, p2.GRIP * gripFactor())
+	hitFx(im.j, true)
+
+func splitUpdate(dt: float) -> void:
+	var step := func():
+		if raceDone: autopilot(dt, 22)
+		else: updatePlayer(dt)
+	step.call()
+	asP2(step)
+	collidePlayers()
+	if not splitFirstDone and (raceDone or p2.raceDone): splitFirstDone = clock
+	if not splitEndAt and raceDone and p2.raceDone: splitEndAt = clock + 2.5
+	if not splitEndAt and splitFirstDone and clock > splitFirstDone + 30: splitEndAt = clock
+	if splitEndAt and clock > splitEndAt:
+		splitEndAt = 0
+		showResults()
+
+func splitFinish() -> void:
+	raceDone = true; raceFinishTime = raceTime
+	var pos := playerPosition()
+	Hud.showMsg("Speler %d finisht als %de!" % [activeP, pos], "ok", 2.5)
+	Sfx.tone(880, 0.2, "triangle", 0.18); Sfx.tone(1320, 0.3, "triangle", 0.18, 0.18)
 func unlockAch(_id: String) -> void: pass
 func achPit() -> void:
 	racePits += 1
@@ -1342,8 +1477,14 @@ func actionOf(code: String) -> Variant:
 			if codesFor("p2" if pi == 2 else "p1", a).has(code): return [pi, a]
 	return null
 
-func padFor(_pi: int) -> Dictionary:
-	return pad
+var padStates: Array = []
+
+## with two gamepads in split screen: pad 1 is player 1, pad 2 player 2; with one pad it is player 2's
+func padFor(pi: int) -> Dictionary:
+	if not split: return pad
+	if padStates.size() >= 2: return padStates[0] if pi == 1 else padStates[1]
+	if pi == 2 and padStates.size() == 1: return padStates[0]
+	return {"steer": 0.0, "gas": 0.0, "brake": 0.0, "hand": false, "look": false}
 
 func input() -> Dictionary:
 	var pi := activeP
@@ -1415,11 +1556,12 @@ func _input(e: InputEvent) -> void:
 	if state == "over" and overReady and code == "Escape": toMenu(-1)
 	if ac != null and not e.echo and not paused:
 		var a: String = ac[1]
-		if a == "reset": resetToTrack()
-		if a == "cam": cycleCam()
-		if G.prefs.gearbox == "manual" and (state == "racing" or state == "finished"):
-			if a == "shiftUp": shiftUp()
-			if a == "shiftDown": shiftDown()
+		runFor(ac[0], func():
+			if a == "reset": resetToTrack()
+			if a == "cam": cycleCam()
+			if G.prefs.gearbox == "manual" and (state == "racing" or state == "finished"):
+				if a == "shiftUp": shiftUp()
+				if a == "shiftDown": shiftDown())
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
@@ -1430,6 +1572,7 @@ func _notification(what: int) -> void:
 func readPad() -> void:
 	pad = {"steer": 0.0, "gas": 0.0, "brake": 0.0, "hand": false, "look": false}
 	var now := {}
+	padStates = []
 	for dev in Input.get_connected_joypads():
 		var ax := Input.get_joy_axis(dev, JOY_AXIS_LEFT_X)
 		pad.steer = ax if absf(ax) > 0.14 else 0.0
@@ -1442,7 +1585,9 @@ func readPad() -> void:
 		pad.look = btn.call(JOY_BUTTON_RIGHT_STICK)
 		now = {"a": btn.call(JOY_BUTTON_A), "b": btn.call(JOY_BUTTON_B), "start": btn.call(JOY_BUTTON_START), "y": btn.call(JOY_BUTTON_Y),
 			"lb": btn.call(JOY_BUTTON_LEFT_SHOULDER), "rb": btn.call(JOY_BUTTON_RIGHT_SHOULDER), "sel": btn.call(JOY_BUTTON_BACK)}
-		break
+		padStates.append(pad.duplicate())
+		# one player: the first pad; split screen: every pad (padFor hands them out)
+		if not split: break
 	var edge := func(k: String) -> bool: return now.get(k, false) and not padPrev.get(k, false)
 	if state == "menu":
 		if edge.call("a") or edge.call("start"): Hud.menuNext()
@@ -1506,6 +1651,8 @@ func update(dt: float) -> void:
 		autopilot(dt, 22)
 		if clock > finishAt: showResults()
 		return
+	if split and p2 != null:
+		splitUpdate(dt); updateWind(dt); return
 	updatePlayer(dt)
 	if netInRace(): Net.netCollide()
 	updateWind(dt); Rep.ghostRecord(dt); sectorUpdate(); elimCheck()
@@ -1530,9 +1677,11 @@ func _process(delta: float) -> void:
 		var n := mini(12, maxi(1, int(ceil(dt / 0.0085))))
 		for _k in n: update(dt / n)
 	if car != null: syncCar(0.0 if paused else dt)
+	if split and p2 != null: asP2(func(): syncCar(0.0 if paused else dt))
 	Rep.ghostUpdate()
 	updateCamera(0.0 if paused else dt)
 	if Fx.me != null: Fx.me.updateMirror()
 	if fx_overlay != null: fx_overlay.tick(dt)
+	if SplitView.me != null: SplitView.me.tick(dt)
 	Sfx.updateAudio()
 	Hud.tick()
