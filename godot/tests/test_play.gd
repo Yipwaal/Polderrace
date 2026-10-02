@@ -11,13 +11,16 @@ extends RefCounted
 
 var D
 var r: TestReport
+## the save files of this run (PLAY_STORE: another name, so two runs at once do not share them)
+var save := "user://test-play"
 
 func run(host: Node) -> TestReport:
 	r = TestReport.new("doorspelen met echte invoer (toetsen, muis)")
 	D = load("res://tests/play_driver.gd").new(host.get_tree(), r)
 	var only := OS.get_environment("PLAY_ONLY")
+	if OS.get_environment("PLAY_STORE") != "": save = "user://" + OS.get_environment("PLAY_STORE")
 	var parts := ["home", "setup", "race", "pause", "modes", "replay", "keys", "split", "garage", "settings", "career", "champ", "sizes", "pad", "rich"]
-	await D.boot("user://test-play.json", {"polderrace3d-garage": {"owned": {"hatch": true}}})
+	await D.boot(save + ".json", {"polderrace3d-garage": {"owned": {"hatch": true}}})
 	D.check_errors("opstarten")
 	for p in parts:
 		if only != "" and not p in only.split(","): continue
@@ -622,7 +625,7 @@ func part_champ() -> void:
 				# halfway: back to the menu, and the game is closed and started again
 				await D.click(Menu.overUI.menuBtn, "Hoofdmenu")
 				r.check(Menu.home.visible and Menu.homeUI.hResume.visible, "hoofdmenu: Verder racen")
-				await D.relaunch("user://test-play-2.json")
+				await D.relaunch(save + "-2.json")
 				r.check(Menu.homeUI.hResume.visible and Menu.homeUI.playTitle.text == "Kampioenschap", "na opnieuw starten: kampioenschap bewaard", Menu.homeUI.playTitle.text)
 				await D.click(Menu.homeUI.hResume, "Verder racen")
 				r.check(Game.mode == "champ" and int(Champ.champ.round) == k + 1 and Trk.TRACK_ID == Champ.CR()[k + 1].track, "verder met race %d" % (k + 2), "%s %s" % [Game.mode, Trk.TRACK_ID])
@@ -779,7 +782,7 @@ func part_rich() -> void:
 	for e in Career.CAREER_EVS: cups[e.id] = {"best": 1, "won": true}
 	var bonus := {}
 	for c in Career.CHAPTERS: bonus[c.id] = true
-	G.use_store("user://test-play-rich.json", {"polderrace3d-garage": {"credits": 60000, "owned": owned, "career": {"cups": cups, "bonus": bonus}},
+	G.use_store(save + "-rich.json", {"polderrace3d-garage": {"credits": 60000, "owned": owned, "career": {"cups": cups, "bonus": bonus}},
 		"polderrace3d-settings": {"car": "v12", "color": "#f36f21", "mode": "race", "bots": 3, "laps": 1}})
 	Game.toMenu(-1)
 	await D.frames(3)

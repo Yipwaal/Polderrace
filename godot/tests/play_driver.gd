@@ -65,6 +65,7 @@ func boot(store: String, data: Dictionary, size := Vector2i(1280, 720)) -> void:
 
 ## "start the game again" on what it saved: the save file read back like a fresh start (G.use_store), home screen anew
 func relaunch(store: String) -> void:
+	G._flush()     # what closing the window does (NOTIFICATION_WM_CLOSE_REQUEST)
 	var d = JSON.parse_string(FileAccess.get_file_as_string(G.STORE_PATH))
 	G.use_store(store, d if d is Dictionary else {})
 	Game.toMenu(-1)
