@@ -285,6 +285,7 @@ func apply(t: String, w: String, force := false) -> void:
 	rain.visible = wet
 	lamps_on = t != "day" or fog or wet
 	CarKit.applyEnv(t, lamps_on)   # car lamp glass, tail lights, headlight pools (JS lampMat/tailMat/beamMat)
+	if Fx.me != null: Fx.me.applyEnv(t, lamps_on)   # the player's headlight (JS headL)
 	for m in World.lampMats:
 		if L.lamp > 0.0:
 			m.emission_enabled = true

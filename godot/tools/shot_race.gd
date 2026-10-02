@@ -28,6 +28,8 @@ func _ready() -> void:
 		Game.syncCar(1.0 / 60)
 		Game.updateCamera(1.0 / 60)
 		Hud.tick()
+		Fx.me.updateMirror()
+		Game.fx_overlay.tick(1.0 / 60)
 		await Canvas2D.flush(self)
 		for _i in 4: await RenderingServer.frame_post_draw
 		var p: String = "%s/race_%s_%s_%d.png" % [a.out, a.track, a.mode, int(at)]

@@ -9,6 +9,7 @@ const START_I := 6
 
 # ------------------------------------------------------------------ scene objects (set by main.gd)
 var camera: Camera3D
+var fx_overlay: CanvasLayer                ## screen effects (blur, speed lines, mirror), set by main.gd
 var car = null                       ## the player's car model (Dictionary from CarKit.buildCar)
 
 # ------------------------------------------------------------------ player (JS: player section)
@@ -140,6 +141,7 @@ func rebuildPlayerCar(pid := "", pcol := "") -> void:
 				mi.set_surface_override_material(k, tail)
 	if car.get("beam") != null:
 		car.beam.visible = false
+	if Fx.me != null: Fx.me.attachCar(car)
 	var c := G.effStats(id)
 	MAXV = c.vmax / 3.6
 	ACC = c.acc * G.ACC_K
@@ -559,6 +561,13 @@ func shiftDown() -> void:
 	if maxf(0, player.speed) / gearTop(player.gear - 1) > 1.04:
 		Hud.showToast("Toerental te hoog"); return
 	player.gear -= 1; player.shiftT = 0.12
+
+## how hard the tyres are working (skid marks, smoke, squeal) (JS skidAmount)
+func skidAmount() -> float:
+	if not (state == "racing" or state == "finished"): return 0.0
+	var v := absf(player.speed)
+	return (1.6 if player.gear == 1 and player.gasIn > 0.9 and v < 9 and Cars.CARS[G.settings.car].cls != "B" else 0.0) + player.slide.length() * 0.6 + \
+		(2.5 if player.hand and v > 5 else 0.0) + maxf(0, absf(player.steer) * v - 48) * 0.06 + (1.3 if player.brk > 0.5 and v > 18 else 0.0)
 
 func engineRpm() -> float:
 	if player.gear < 1: return clamp_(0.18 + absf(player.speed) / 12, 0.18, 0.6)
@@ -1102,6 +1111,8 @@ func startRace() -> void:
 	else:
 		clearBots(); buildTraffic(); resetPlayer(0, 0); nextCp = 1; timeLeft = Trk.TRK.startTime
 	snapCamera()
+	if Fx.me != null:
+		Fx.me.clearSkids(); Fx.me.clearParts()
 	state = "countdown"; cd = 0; lastCount = -1; goDelay = 0.4 + randf() * 0.8
 	Hud.raceStart(raceMode, mode)
 	clearKeys()
@@ -1179,6 +1190,8 @@ func toMenu(step := -1) -> void:
 	Net.netAfterRace()
 	paused = false
 	Hud.toMenu()
+	if Fx.me != null:
+		Fx.me.clearSkids(); Fx.me.clearParts()
 	state = "menu"
 	if Net.net != null and step < 0: NetUi.open()
 
@@ -1449,6 +1462,7 @@ func update(dt: float) -> void:
 	clock += dt
 	lampsOn = CarKit.lampsOn
 	if shake > 0: shake = maxf(0, shake - dt)
+	if Fx.me != null: Fx.me.updateFx(dt)
 	if Env.me != null: Env.me.update(dt, camera)
 	for s in World.sailGroups:
 		s.rotation.z += dt * float(s.get_meta("speed", 0.8))
@@ -1501,5 +1515,7 @@ func _process(delta: float) -> void:
 		for _k in n: update(dt / n)
 	if car != null: syncCar(0.0 if paused else dt)
 	updateCamera(0.0 if paused else dt)
+	if Fx.me != null: Fx.me.updateMirror()
+	if fx_overlay != null: fx_overlay.tick(dt)
 	Sfx.updateAudio()
 	Hud.tick()
