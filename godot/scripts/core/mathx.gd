@@ -63,3 +63,22 @@ static func mono(pts: Array) -> Callable:
 ## colour from a JS hex int (0xRRGGBB)
 static func col(hex: int) -> Color:
 	return Color8((hex >> 16) & 255, (hex >> 8) & 255, hex & 255)
+
+## three Color.setHSL(h, s, l) (h wraps, s and l clamped)
+static func hsl(h: float, s: float, l: float) -> Color:
+	h = fposmod(h, 1.0)
+	s = clampf(s, 0.0, 1.0)
+	l = clampf(l, 0.0, 1.0)
+	if s == 0.0:
+		return Color(l, l, l)
+	var p := l * (1.0 + s) if l <= 0.5 else l + s - l * s
+	var q := 2.0 * l - p
+	return Color(_hue2rgb(q, p, h + 1.0 / 3.0), _hue2rgb(q, p, h), _hue2rgb(q, p, h - 1.0 / 3.0))
+
+static func _hue2rgb(p: float, q: float, t: float) -> float:
+	if t < 0.0: t += 1.0
+	if t > 1.0: t -= 1.0
+	if t < 1.0 / 6.0: return p + (q - p) * 6.0 * t
+	if t < 1.0 / 2.0: return q
+	if t < 2.0 / 3.0: return p + (q - p) * 6.0 * (2.0 / 3.0 - t)
+	return p

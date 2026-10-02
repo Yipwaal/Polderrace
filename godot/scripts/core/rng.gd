@@ -3,6 +3,7 @@ class_name Rng
 ## (Math.imul(s,1664525)+1013904223 >>> 0), so a seeded track builds exactly the same decor.
 
 var s: int = 0
+var calls := 0                       ## number of next() calls (tests compare it with the HTML game)
 var unseeded := false
 
 static func seeded(seed: int) -> Rng:
@@ -19,6 +20,7 @@ static func random() -> Rng:
 func next() -> float:
 	if unseeded:
 		return randf()
+	calls += 1
 	s = (s * 1664525 + 1013904223) & 0xFFFFFFFF
 	return float(s) / 4294967296.0
 

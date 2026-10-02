@@ -27,3 +27,30 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 anti_aliasing/quality/msaa_3d=2
 textures/default_filters/anisotropic_filtering_level=3
+
+[shader_globals]
+
+pr_hemi_sky={
+"type": "vec4",
+"value": Vector4(0.691, 0.716, 0.75, 0)
+}
+pr_hemi_ground={
+"type": "vec4",
+"value": Vector4(0.278, 0.355, 0.196, 0)
+}
+pr_sun={
+"type": "vec4",
+"value": Vector4(0.95, 0.894, 0.789, 1)
+}
+pr_sun_dir={
+"type": "vec4",
+"value": Vector4(-0.455, 0.826, 0.331, 0)
+}
+pr_fog={
+"type": "vec4",
+"value": Vector4(0.863, 0.839, 0.761, 0)
+}
+pr_fog_range={
+"type": "vec4",
+"value": Vector4(160, 1150, 0, 0)
+}
