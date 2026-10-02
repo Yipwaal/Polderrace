@@ -1092,8 +1092,9 @@ func startRace() -> void:
 	gustT = 9; gustPhase = 0; gustWarn = false; elimPos = 0; lapTimes = []; player.lap = 0; overView = "results"
 	if raceMode:
 		clearTraffic()
-		setupBots(0, makeBotDefs(mini(int(S.bots), 5) if split else int(S.bots)))
+		setupBots(0, Net.net.botDefs if netInRace() and Net.net.botDefs != null else makeBotDefs(mini(int(S.bots), 5) if split else int(S.bots)))
 		placeGrid(); nextCp = 0
+		if netInRace(): Net.netPlace()
 	elif mode == "ghost":
 		clearTraffic(); clearBots(); placeGrid(); nextCp = 0
 	else:
@@ -1148,6 +1149,7 @@ func endTimeTrial() -> void:
 func resultOrder() -> Array:
 	var rows := [{"name": "Speler 1" if split else "Jij", "car": Cars.CARS[G.settings.car].name, "me": true, "finished": raceDone and not playerOut, "ft": raceFinishTime,
 		"out": playerOut, "elimPos": elimPos, "prog": -1e9 if playerOut else progressOf(player.lap, player.s, raceDone, raceFinishTime), "best": raceBestLap}]
+	rows += Net.resultRows()
 	for b in bots:
 		rows.append({"name": b.name, "car": Cars.CARS[b.type].name, "finished": b.finished, "ft": b.finishTime, "out": b.out, "elimPos": b.elimPos,
 			"prog": -1e9 if b.out else progressOf(b.lap, b.s, b.finished, b.finishTime), "best": b.bestLap})
@@ -1168,6 +1170,7 @@ func onAgain() -> void:
 	startRace()
 
 func toMenu(_step := -1) -> void:
+	Net.netAfterRace()
 	paused = false
 	Hud.toMenu()
 	state = "menu"
@@ -1263,10 +1266,10 @@ func awardCredits(pos: int) -> int:
 	return G.addCredits(base * p * (1.0 if mode == "elim" else clamp_(0.6 + raceLaps * 0.2, 0.8, 1.6)))
 
 # ------------------------------------------------------------------ hooks (filled in by later ports)
-func netInRace() -> bool: return false
-func netIsHost() -> bool: return false
-func netAheadCount(_me: float) -> int: return 0
-func netKick(_i: int, _dvx: float, _dvz: float, _sp: float) -> void: pass
+func netInRace() -> bool: return Net.inRace()
+func netIsHost() -> bool: return Net.isHost()
+func netAheadCount(me: float) -> int: return Net.aheadCount(me)
+func netKick(i: int, dvx: float, dvz: float, sp: float) -> void: Net.netKick(i, dvx, dvz, sp)
 func otherProgress() -> Variant: return null
 func unlockAch(_id: String) -> void: pass
 func achPit() -> void:
@@ -1467,7 +1470,9 @@ func update(dt: float) -> void:
 		autopilot(dt, 22)
 		if clock > finishAt: showResults()
 		return
-	updatePlayer(dt); updateWind(dt); sectorUpdate(); elimCheck()
+	updatePlayer(dt)
+	if netInRace(): Net.netCollide()
+	updateWind(dt); sectorUpdate(); elimCheck()
 	if mode == "time":
 		var before := timeLeft
 		timeLeft -= dt

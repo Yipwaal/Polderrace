@@ -58,6 +58,10 @@ static func pending_count() -> int:
 static func flush(host: Node) -> void:
 	if _pending.is_empty():
 		return
+	if DisplayServer.get_name() == "headless":
+		# no renderer (tests, dedicated runs): nothing can be drawn, the textures keep their grey placeholder
+		_pending = []
+		return
 	var batch: Array = _pending
 	_pending = []
 	var vps: Array = []

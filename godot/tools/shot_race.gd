@@ -13,6 +13,7 @@ func _ready() -> void:
 	S.track = a.track; S.mode = a.mode; S.bots = int(a.bots); S.car = a.car; S.laps = int(a.laps); S.time = a.time; S.weather = a.weather; S.dir = a.dir
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	get_tree().root.add_child.call_deferred(main)
+	await get_tree().process_frame
 	get_tree().current_scene = main
 	while Game.state != "menu" or Game.car == null:
 		await get_tree().process_frame

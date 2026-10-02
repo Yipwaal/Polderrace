@@ -453,7 +453,7 @@ func tick() -> void:
 			d = "Laatste valt af!" if not g.playerOut and g.playerPosition() == act and act > 1 else G.fmtLap(g.raceFinishTime if g.raceDone else g.raceTime)
 			if d == "Laatste valt af!": dc = Color("#ffd0cc")
 		elif g.raceMode:
-			t = "%d/%d" % [g.playerPosition(), g.bots.size() + 1]
+			t = "%d/%d" % [g.playerPosition(), g.bots.size() + 1 + Net.racers()]
 			l = "Ronde %d/%d" % [clampi(maxi(1, g.player.lap), 1, g.raceLaps), g.raceLaps]
 			d = G.fmtLap(g.raceFinishTime if g.raceDone else g.raceTime)
 		else:
@@ -481,6 +481,9 @@ func _update_board() -> void:
 	if not on or g.clock < boardAt: return
 	boardAt = g.clock + 0.5
 	var rows := [{"name": "Jij", "best": g.raceBestLap, "me": true, "out": g.playerOut, "prog": -1e9 if g.playerOut else g.progressOf(g.player.lap, g.player.s, g.raceDone, g.raceFinishTime)}]
+	if Net.inRace():
+		for r in Net.net.remotes.values():
+			if r.st != null: rows.append({"name": r.name, "best": 0, "prog": Net.netRemoteProg(r)})
 	for b in g.bots:
 		rows.append({"name": b.name, "best": b.bestLap, "out": b.out, "prog": -1e9 if b.out else g.progressOf(b.lap, b.s, b.finished, b.finishTime)})
 	rows.sort_custom(func(a, b): return a.prog > b.prog)
