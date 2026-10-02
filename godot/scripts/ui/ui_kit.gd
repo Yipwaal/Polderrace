@@ -550,7 +550,9 @@ static func scroller(content: Control) -> ScrollContainer:
 	var fit := func() -> void:
 		if not is_instance_valid(m) or not is_instance_valid(s): return
 		m.remove_meta("fit_q")
-		var want := maxi(0, 10 - int(round(s.size.x - m.size.x)))
+		# at most the 10 px: in a window too narrow for the content, m is wider than the scroll area, and a margin that
+		# grew with it would widen m again, re-queue this, and loop until the message queue overflows (a crash)
+		var want := clampi(10 - int(round(s.size.x - m.size.x)), 0, 10)
 		if m.get_theme_constant("margin_right") != want: m.add_theme_constant_override("margin_right", want)
 	var queue := func() -> void:
 		if not is_instance_valid(m) or m.has_meta("fit_q"): return
