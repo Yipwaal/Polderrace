@@ -49,15 +49,21 @@ func stop() -> void:
 	_serving = false
 	_browsing = false
 
-## where to send the question: the global broadcast, the /24 broadcast of every local IPv4 address, and this PC
+## where to send the question: the global broadcast, the broadcast address of every local IPv4 network, and this PC.
+## Windows sends 255.255.255.255 out of one network card only (with VirtualBox, Hyper-V or a VPN often the wrong one);
+## a network's own broadcast address goes out of the card on that network. Godot does not tell the netmask, so the
+## usual sizes are all tried (/24 at home, /23 or /22 and /16 on bigger LANs, /8 for 10.x); a wrong guess goes nowhere.
 static func targets() -> Array:
 	var out := ["255.255.255.255", "127.0.0.1"]
 	for a in IP.get_local_addresses():
 		if a.count(".") == 3 and not a.begins_with("127.") and not a.begins_with("169.254."):
 			var p := a.split(".")
-			var b := "%s.%s.%s.255" % [p[0], p[1], p[2]]
-			if not b in out:
-				out.append(b)
+			var ip: int = (int(p[0]) << 24) | (int(p[1]) << 16) | (int(p[2]) << 8) | int(p[3])
+			for bits in ([24, 23, 22, 16, 8] if p[0] == "10" else [24, 23, 22, 16]):
+				var bc: int = ip | ((1 << (32 - bits)) - 1)
+				var b := "%d.%d.%d.%d" % [(bc >> 24) & 255, (bc >> 16) & 255, (bc >> 8) & 255, bc & 255]
+				if not b in out:
+					out.append(b)
 	return out
 
 func _process(dt: float) -> void:
@@ -92,6 +98,8 @@ func _process(dt: float) -> void:
 				var addr: String = ip if (not known.has("ip") or known.ip == "127.0.0.1") else known.ip
 				d.ip = addr
 				d.seen = Time.get_ticks_msec()
-				var changed: bool = not lobbies.has(key) or known.get("n") != d.get("n") or known.get("open") != d.get("open") or known.get("track") != d.get("track")
+				var changed := not lobbies.has(key)
+				for f in ["n", "open", "track", "race", "name"]:
+					if known.get(f) != d.get(f): changed = true
 				lobbies[key] = d
 				if changed: lobbies_changed.emit()
