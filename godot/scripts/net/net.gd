@@ -110,7 +110,7 @@ func netEnter(room: NetRoom, host: bool) -> void:
 	if net != null:
 		netLeave()
 	net = {"game": room, "host": host, "inRace": false, "remotes": {}, "lastSend": 0, "raceId": 0, "kicks": [], "kickSeq": 0, "seen": {},
-		"botDefs": null, "order": [], "startAt": 0, "botUpd": -1, "botAt": 0, "sentCar": G.settings.car + G.settings.color, "addr": ""}
+		"botDefs": null, "order": [], "startAt": 0, "botUpd": -1, "botAt": 0, "sentCar": G.settings.car + G.settings.color, "addr": "", "hostGo": -1e12}
 	room.presence({"nick": G.prefs.nick, "car": G.settings.car, "color": G.settings.color, "host": host, "st": null, "b": null, "k": [], "race": null})
 	room.peers_changed.connect(func():
 		if net != null and net.game == room and netSyncRemotes(): changed.emit())
@@ -210,6 +210,7 @@ func netHostStart() -> void:
 
 func netBegin(race: Dictionary) -> void:
 	net.startAt = Time.get_ticks_msec()
+	net.hostGo = -1e12
 	net.inRace = true
 	net.botDefs = race.bots
 	net.order = race.order
@@ -309,6 +310,9 @@ func netTick() -> void:
 				r.upd = p.updatedAt; r.prev = r.st; r.st = st; r.t = now; r.lap = int(st[6])
 				if st[7] and not r.done:
 					r.done = true; r.ft = float(st[8])
+				if r.host and st.size() > 10:
+					# how long ago the host started this race (a start message that had to be sent again came late)
+					net.hostGo = float(st[10]) * 1000.0 - now
 		elif st == null and r.st != null and net.inRace and not r.out:
 			# back to the menu during the race: the car goes; who finished keeps his place in the results
 			r.out = true
@@ -337,12 +341,12 @@ func netTick() -> void:
 	# the start lights follow the time since the race was started, the same on every PC: a game that was busy (loading
 	# the track, a hitch) does not start later than the others
 	if Game.state == "countdown" and int(net.startAt) > 0:
-		Game.cd = maxf(Game.cd, (now - int(net.startAt)) / 1000.0)
+		Game.cd = maxf(Game.cd, maxf(now - int(net.startAt), now + float(net.hostGo)) / 1000.0)
 	if now - net.lastSend > 50:
 		net.lastSend = now
 		var pl := Game.player
 		var st := [snappedf(pl.pos.x, 0.01), snappedf(pl.y, 0.01), snappedf(pl.pos.z, 0.01), snappedf(pl.heading, 0.001), snappedf(pl.speed, 0.01),
-			snappedf(pl.s, 0.1), pl.lap, 1 if Game.raceDone else 0, snappedf(Game.raceFinishTime, 0.01), net.raceId]
+			snappedf(pl.s, 0.1), pl.lap, 1 if Game.raceDone else 0, snappedf(Game.raceFinishTime, 0.01), net.raceId, snappedf((now - int(net.startAt)) / 1000.0, 0.001)]
 		var patch := {"st": st}
 		if net.host:
 			var bs := []

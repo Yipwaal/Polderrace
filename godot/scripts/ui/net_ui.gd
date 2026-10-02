@@ -224,7 +224,12 @@ func open() -> void:
 	if Net.net == null:
 		Net.browse()
 	refresh()
-	# keyboard and gamepad: start on the main button of this screen
+	_focus_main()
+
+## keyboard and gamepad: on the main button of this screen (when it opens, and when the focused button went away,
+## like Nieuwe game maken or Meedoen once you are in a game)
+func _focus_main() -> void:
+	if not ov.visible: return
 	var f: Control = (start_btn if Net.net.host else car_btn) if Net.net != null else create_btn
 	f.grab_focus()
 
@@ -290,6 +295,8 @@ func refresh() -> void:
 		upnp_note.text = Net.upnp_status
 		upnp_note.visible = Net.upnp_status != ""
 	scroll.custom_minimum_size = Vector2(504, minf(box.get_combined_minimum_size().y, get_viewport().get_visible_rect().size.y - 190))
+	var fnow := get_viewport().gui_get_focus_owner()
+	if fnow == null or not fnow.is_visible_in_tree(): _focus_main.call_deferred()
 
 ## this PC's IPv4 addresses, the real network first: VirtualBox, Hyper-V, VPN and other virtual adapters last,
 ## with the adapter's name when there are several ("192.168.1.20 (Wi-Fi)")
