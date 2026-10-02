@@ -1019,6 +1019,14 @@ func _input(e: InputEvent) -> void:
 			elif menuStep < 0: padFocus(d)
 		return
 	if Game.paused or (st == "over" and overOv.visible):
+		# Tab with nothing focused in the pause or results screen (the browser starts at the first button): its first
+		# button, or the last with Shift; from a focused button Godot's own focus navigation goes on
+		var ov: Control = pauseOv if Game.paused else overOv
+		if code == "Tab" and not (f != null and f.is_visible_in_tree() and ov.is_ancestor_of(f)):
+			get_viewport().set_input_as_handled()
+			var list := _buttons(ov).filter(func(b): return b.is_visible_in_tree() and not b.disabled and (b.radio == null or b.checked))
+			if not list.is_empty(): UiKit.focus(list[-1] if e.shift_pressed else list[0], true)
+			return
 		if (enter or code == "Space") and onBtn:
 			get_viewport().set_input_as_handled()
 			if not e.echo: f.press()
