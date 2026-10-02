@@ -73,7 +73,10 @@ def main():
         shot('menu_auto', "showMenu(0)")
         shot('menu_baan', "showMenu(1)")
         shot('menu_champ', "toMenu(-1);homePanel('play');$('hChamp').click();showMenu(3)")
-        if not ONLY or any(n in ONLY for n in ('pause', 'pause_settings', 'results', 'standings', 'timetrial')):
+        shot('podium', "toMenu(-1);enterPodium([{name:'Henk',sub:'0:53,4',carId:'muscle',color:'#f36f21'},{name:'Jij',sub:'+0,9 s',carId:'gt',color:'#d62a2a',me:true},"
+             "{name:'Daan',sub:'+1,1 s',carId:'sedan',color:'#1d4f9e'}],'HAVENRACE');$('home').hidden=true;podiumT=0", 2500)
+        ev("leavePodium();toMenu(-1);0")
+        if not ONLY or any(n in ONLY for n in ('pause', 'pause_settings', 'results', 'champ_results', 'standings', 'timetrial')):
             ev("toMenu(-1);menuFlow='quick';leaveChampMode();settings.mode='race';settings.bots=3;settings.laps=1;startRace();0")
             pg.evaluate('([s,st])=>__step(s,st)', [6, True])
             shot('pause', "setPaused(true)")

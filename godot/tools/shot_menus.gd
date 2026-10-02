@@ -43,6 +43,14 @@ func _ready() -> void:
 	await shot("menu_auto", func(): Menu.showMenu(0))
 	await shot("menu_baan", func(): Menu.showMenu(1))
 	await shot("menu_champ", func(): Game.toMenu(-1); Menu.homePanel("play"); Menu.homeUI.hChamp.press(); Menu.showMenu(3))
+	# the podium on its own (as tests/screenshots.py podium.png), the camera at its start
+	await shot("podium", func():
+		Game.toMenu(-1)
+		Podium.enterPodium([{"name": "Henk", "sub": "0:53,4", "carId": "muscle", "color": "#f36f21"}, {"name": "Jij", "sub": "+0,9 s", "carId": "gt", "color": "#d62a2a", "me": true},
+			{"name": "Daan", "sub": "+1,1 s", "carId": "sedan", "color": "#1d4f9e"}], "HAVENRACE")
+		Menu.home.visible = false, 30)
+	Podium.leavePodium()
+	Game.toMenu(-1)
 	if _want(["pause", "pause_settings", "results", "champ_results", "standings", "timetrial"]):
 		var stepper = load("res://tests/test_laps.gd").new()
 		Game.toMenu(-1)
@@ -102,6 +110,7 @@ func _sync() -> void:
 	Game.syncCar(1.0 / 60)
 	Game.updateCamera(1.0 / 60)
 	Hud.tick()
+	if Game.fx_overlay != null: Game.fx_overlay.tick(1.0 / 60)
 
 func _frames(n: int) -> void:
 	for _i in n:
@@ -117,6 +126,7 @@ func shot(name: String, fn: Callable, frames := 12) -> void:
 			Game.syncCar(1.0 / 60)
 			Game.updateCamera(1.0 / 60)
 			Hud.tick()
+			if Game.fx_overlay != null: Game.fx_overlay.tick(1.0 / 60)
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	var p := "%s/%s.png" % [out, name]

@@ -301,7 +301,7 @@ func _build_look() -> void:
 		pickPopup.popup(Rect2i(int(r.position.x), int(r.end.y + 6), 0, 0)))
 	ph.add_child(paintPick)
 	row.add_child(pick)
-	row.grow_first = false
+	row.min_first = 290    # .paintrow .colors{flex:1 1 290px}
 	pv.add_child(row)
 	look.add_child(pv)
 	var rs := _look_seg(G.RIMS, "rim"); rimRadio = rs[1]

@@ -379,6 +379,7 @@ func showMenu(step: int) -> void:
 
 ## the chosen car or track in view (six cars a class, ten tracks)
 func _reveal_checked() -> void:
+	for _i in 2: await get_tree().process_frame
 	var f := setupUI.first_focus()
 	if f != null and f.is_visible_in_tree() and f != setupUI.nextBtn: setupUI.scroll.ensure_control_visible(f)
 

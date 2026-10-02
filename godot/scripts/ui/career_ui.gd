@@ -227,6 +227,9 @@ func openCareer() -> void:
 		_reveal.call_deferred(selBtn, info)
 
 func _reveal(b: Control, info: Control) -> void:
+	# after the new list has its layout (JS scrollIntoView({block:'nearest'}))
+	for _i in 2: await Menu.get_tree().process_frame
+	if not is_instance_valid(b): return
 	var sc := _scroller(b)
 	if sc == null: return
 	if is_instance_valid(b): sc.ensure_control_visible(b)

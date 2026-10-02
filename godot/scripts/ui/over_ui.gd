@@ -38,6 +38,7 @@ func _init() -> void:
 	var head := UiKit.FlexRow.new(16, 16)
 	head.grow_first = false
 	head.align_center = false
+	head.auto_basis = true
 	var hv := UiKit.vbox(6)
 	overSub = UiKit.eyebrow("")
 	overTitle = UiKit.lbl("Tijd is op", 900, 48, UiKit.SIGN_INK, true, -1, true, 1.0)

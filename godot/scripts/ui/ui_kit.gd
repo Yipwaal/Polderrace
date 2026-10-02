@@ -298,6 +298,8 @@ class FlexRow extends Container:
 	var grow_first := true
 	var min_first := 80.0
 	var align_center := true
+	## items as wide as their content (CSS flex-basis auto: a long title takes its own line), not their minimum
+	var auto_basis := false
 	func _init(g := 12.0, vg := 10.0) -> void:
 		gap = g
 		vgap = vg
@@ -306,6 +308,7 @@ class FlexRow extends Container:
 		return get_children().filter(func(c): return c is Control and c.visible and not c.top_level)
 	func _mw(c: Control, first: bool) -> float:
 		var mw: float = c.get_combined_minimum_size().x
+		if auto_basis: mw = minf(maxf(mw, UiKit.pref_w(c)), maxf(size.x, mw))
 		if first and grow_first: mw = maxf(mw, min_first)
 		return mw
 	func _layout(w: float) -> Array:
@@ -343,26 +346,70 @@ class FlexRow extends Container:
 			for ln in lines:
 				var lh := 0.0
 				var tw := 0.0
-				for c in ln:
-					var ms: Vector2 = c.get_combined_minimum_size()
-					lh = maxf(lh, ms.y); tw += ms.x
+				var ws := []
+				for k in ln.size():
+					var c: Control = ln[k]
+					var w: float = c.get_combined_minimum_size().x
+					if auto_basis: w = minf(maxf(w, UiKit.pref_w(c)), maxf(size.x, w))
+					ws.append(w)
+					tw += w
 				tw += gap * (ln.size() - 1)
 				var free := maxf(0.0, size.x - tw)
 				var x := 0.0
 				for k in ln.size():
 					var c: Control = ln[k]
-					var ms: Vector2 = c.get_combined_minimum_size()
-					var w: float = ms.x
+					var w: float = ws[k]
 					if k == 0 and grow_first and ln.size() > 1: w += free
 					elif ln.size() == 1 and (c.size_flags_horizontal & Control.SIZE_EXPAND): w = size.x
-					elif k == 0 and not grow_first and ln.size() > 1: pass
 					if k == ln.size() - 1 and k > 0 and not grow_first: x = size.x - w
-					var yy := y + ((lh - ms.y) / 2.0 if align_center else 0.0)
-					fit_child_in_rect(c, Rect2(x, yy, w, ms.y))
+					var mh: float = c.get_combined_minimum_size().y
+					lh = maxf(lh, mh)
+					fit_child_in_rect(c, Rect2(x, y, w, mh))
 					x += w + gap
+				if align_center:
+					for c in ln:
+						var mh2: float = c.get_combined_minimum_size().y
+						c.position.y = y + (lh - mh2) / 2.0
 				y += lh + vgap
 		elif what == NOTIFICATION_RESIZED:
 			update_minimum_size()
+
+## the width a control would like (CSS max-content): wrapped labels on one line, boxes the sum or the widest of their items
+static func pref_w(c: Control) -> float:
+	var mw: float = c.get_combined_minimum_size().x
+	if c is Label:
+		var l: Label = c
+		if l.autowrap_mode == TextServer.AUTOWRAP_OFF: return mw
+		var f := l.get_theme_font("font")
+		var s := l.get_theme_font_size("font_size")
+		var w := 0.0
+		for line in l.text.split("\n"):
+			w = maxf(w, f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, s).x)
+		return maxf(mw, ceilf(w) + 1)
+	if c is BoxContainer:
+		var vert := c is VBoxContainer
+		var sep: int = c.get_theme_constant("separation")
+		var w := 0.0
+		var n := 0
+		for k in c.get_children():
+			if k is Control and k.visible and not k.top_level:
+				var pw := pref_w(k)
+				w = maxf(w, pw) if vert else w + pw
+				n += 1
+		if not vert: w += sep * maxi(0, n - 1)
+		return maxf(mw, w)
+	if c is MarginContainer or c is PanelContainer:
+		var pad := 0.0
+		if c is MarginContainer:
+			pad = c.get_theme_constant("margin_left") + c.get_theme_constant("margin_right")
+		else:
+			var sb: StyleBox = c.get_theme_stylebox("panel")
+			if sb != null: pad = sb.get_margin(SIDE_LEFT) + sb.get_margin(SIDE_RIGHT)
+		var w := 0.0
+		for k in c.get_children():
+			if k is Control and k.visible: w = maxf(w, pref_w(k))
+		return maxf(mw, w + pad)
+	return mw
 
 ## a grid of equal columns (CSS grid-template-columns: repeat(n, minmax(0, 1fr))); a row is as high as its tallest item.
 ## min_col > 0: as many columns of at least that width as fit, but no more than there are items (repeat(auto-fit, minmax()))
@@ -576,14 +623,17 @@ class Backdrop extends Control:
 			g.set_color(0, Color(15 / 255.0, 28 / 255.0, 50 / 255.0, 0.15))
 			g.set_color(1, Color(15 / 255.0, 28 / 255.0, 50 / 255.0, 0.6))
 			_grad(g, r, true)
+	var _tex := {}
+	## a smooth gradient as a small texture stretched over the screen (made right away, so the first frame has it)
 	func _grad(g: Gradient, r: Rect2, vertical: bool) -> void:
-		var t := GradientTexture2D.new()
-		t.gradient = g
-		t.width = 2 if vertical else 256
-		t.height = 256 if vertical else 2
-		t.fill_from = Vector2.ZERO
-		t.fill_to = Vector2(0, 1) if vertical else Vector2(1, 0)
-		draw_texture_rect(t, r, false)
+		if not _tex.has(mode):
+			var img := Image.create(1 if vertical else 256, 256 if vertical else 1, false, Image.FORMAT_RGBA8)
+			for k in 256:
+				var c := g.sample(k / 255.0)
+				if vertical: img.set_pixel(0, k, c)
+				else: img.set_pixel(k, 0, c)
+			_tex[mode] = ImageTexture.create_from_image(img)
+		draw_texture_rect(_tex[mode], r, false)
 
 static var _blur: Shader
 static func blur_shader() -> Shader:
