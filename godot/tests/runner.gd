@@ -22,6 +22,11 @@ func _ready() -> void:
 			print("FOUT test compileert niet: ", path)
 			failed += 1
 			continue
+		# every test plays on a fresh save file of its own, never the player's: a garage that owns every car (stock), like
+		# the HTML tests (tests/lib.py), since you only race cars you own
+		var owned := {}
+		for id in Cars.CARS: owned[id] = true
+		G.use_store("user://test-%s.json" % n, {"polderrace3d-garage": {"owned": owned}})
 		var t = sc.new()
 		var rep: TestReport = await t.run(self)
 		rep.finish()

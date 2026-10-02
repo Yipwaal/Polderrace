@@ -90,6 +90,7 @@ static func ribbon(latA, latB, mat: Material, vRep: float, yOff: float, filter =
 		for k in g.pos.size():
 			g.pos[k].y += 0.02
 	var m := O3.mesh(g, mat)
+	O3.receive(m)
 	root.add_child(m)
 	return m
 
@@ -119,6 +120,7 @@ static func vribbon(lat, y0: float, y1: float, mat: Material, vRep: float, filte
 	g.compute_vertex_normals()
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var m := O3.mesh(g, mat)
+	O3.receive(m)
 	root.add_child(m)
 	return m
 
@@ -163,6 +165,9 @@ static func inst(geo: Geo, mat: Material, xfs: Array, colors = null, cast := fal
 	if colors != null:
 		use_mat = mat.clone()
 		use_mat.vertex_color_use_as_albedo = true
+		# the environment changes materials through these lists (lit windows at night, wet roads, ...): the clone follows
+		for lst in [roadMats, lampMats, hillMats, winMats, reflMats, beaconMats]:
+			if lst.has(mat): lst.append(use_mat)
 	var mesh := geo.to_mesh(use_mat)
 	for idxs in cells.values():
 		var mm := MultiMesh.new()
@@ -193,6 +198,7 @@ static func groundPlane(tex: Texture2D, rep: float) -> MeshInstance3D:
 	var m := O3.mesh(g, Mats.M(0xffffff, {"map": tex, "repeat": Vector2(rep, rep)}))
 	O3.rot(m, -PI / 2, 0, 0)
 	m.position = Vector3((Trk.BX0 + Trk.BX1) / 2.0, 0.0, (Trk.BZ0 + Trk.BZ1) / 2.0)
+	O3.receive(m)
 	root.add_child(m)
 	return m
 
@@ -209,6 +215,7 @@ static func checkerTex() -> ImageTexture:
 static func startLine() -> void:
 	var line := O3.mesh(Geo.plane(Trk.ROAD_HALF * 2, 1.8), Mats.M(0xffffff, {"map": checkerTex()}))
 	O3.rot(line, -PI / 2, 0, 0)
+	O3.receive(line)
 	var g := Node3D.new()
 	g.add_child(line)
 	place(g, Trk.START_I, 0, 0.09)

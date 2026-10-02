@@ -16,11 +16,14 @@ G="*res://scripts/core/globals.gd"
 Trk="*res://scripts/track/track.gd"
 Sfx="*res://scripts/game/sfx.gd"
 Game="*res://scripts/game/game.gd"
+Net="*res://scripts/net/net.gd"
 Hud="*res://scripts/ui/hud.gd"
 Champ="*res://scripts/game/champ.gd"
 Career="*res://scripts/game/career.gd"
 Ach="*res://scripts/game/ach.gd"
 Menu="*res://scripts/ui/menu.gd"
+NetUi="*res://scripts/ui/net_ui.gd"
+Rep="*res://scripts/game/replay.gd"
 
 [display]
 

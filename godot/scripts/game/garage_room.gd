@@ -125,6 +125,7 @@ static func stage(bg: int, fogNear: float, fogFar: float, hs: int, hg: int, hi: 
 	e.stars.visible = false; e.rain.visible = false; e.birds.visible = false
 	if e.pools != null: e.pools.visible = false
 	e.sky_dome.visible = false; e.sun_sprite.visible = false
+	if Fx.me != null: Fx.me.headL.visible = false
 	e.environment.background_color = MathX.col(bg)
 	var fc := MathX.col(bg)
 	RenderingServer.global_shader_parameter_set("pr_fog", Vector4(fc.r, fc.g, fc.b, 0))

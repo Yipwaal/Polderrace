@@ -10,20 +10,23 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 |---|---|
 | G0 project, testrunner | klaar |
 | G1 fundament (rng, CatmullRom, baanberekening, Geo, LMat, Canvas2D, World, Env) | klaar; baan exact gelijk (test `track`) |
-| G2 banen | polder klaar (decor exact gelijk, test `build`; beeld gelijk, zie `tools/compare.py`); overige 9 in bewerking |
-| G3 auto's (modellen, tuning, verkeer) | open |
-| G4 gameplay (rijden, botsingen, bots, verkeer, race, camera, HUD, audio, fx, invoer) | open |
-| G5 menu's | open |
-| G6 online: LAN-lobby (automatisch vinden), join via IP, internet | open |
-| G7 split screen | open |
-| G8 export (Windows/Linux, GitHub Actions) | open |
+| G2 alle 10 banen + terrein + dag/nacht/weer | klaar; decor exact gelijk (test `build`, 120/120), beeld gelijk (`tools/compare.py`) |
+| G3 auto's (18 modellen, tuning, verkeer) | klaar; elke mesh gelijk (test `cars`), beeld gelijk (`tools/compare_car.py`) |
+| G4 gameplay (rijden, botsingen, bots, verkeer, race, camera, HUD, audio, fx, spiegel, ghost, replay, invoer) | klaar; autopiloot-ronde gelijk (test `laps`), spelverloop (test `flow`), geluid (test `audio`) |
+| G5 menu's (hoofdscherm, race-opzet, garage, carrière, kampioenschap, prestaties, records, instellingen, podium) | in bewerking (tijdelijk eenvoudig startscherm) |
+| G6 online: LAN zonder codes (automatisch vinden), meedoen via IP, UPnP | klaar; `tests/test_net.py` (host + speler als 2 processen) |
+| G7 split screen | klaar (test `flow`) |
+| G8 export (Windows .exe en Linux, GitHub Actions) | klaar; zie `README.md` en `.github/workflows/godot.yml` |
 | G9 QA | open |
 
 ## Opzet
 
 - Godot **4.7**, GDScript, renderer **Compatibility** (OpenGL 3): draait op oude laptops en in de cloud-container
   (software-OpenGL), zodat we hier screenshots kunnen maken.
-- Autoloads: `G` (globals), `Trk` (baanstatus, `scripts/track/track.gd`). Later: `Net`, `Audio`.
+- Autoloads: `G` (opslag, instellingen, garage), `Trk` (baanstatus), `Sfx` (geluid), `Game` (de race: speler, bots,
+  verkeer, natuurkunde, camera, spelverloop, invoer), `Net` (online), `Hud` (race-HUD), `NetUi` (online-scherm),
+  `Rep` (ghost en replay). In de spelscène (`scripts/main.gd`): `Env` (omgeving), `Fx` (remsporen, rook, koplamp,
+  spiegel), de schermeffecten (`ui/fx_overlay.gd`) en `SplitView` (2 spelers).
 - Mappen: `scripts/core` (rng, mathx, cr_curve, geo, mats, lmat, o3, canvas2d), `scripts/track` (track, track_defs,
   world, env, dress, common, loader, `builders/<baan>.gd`), `scripts/car`, `scripts/game`, `scripts/ui`, `scripts/net`.
 - `tests/` (Godot-tests + golden data uit de HTML-versie), `tools/` (export van golden data, vergelijkingstool).
@@ -37,10 +40,12 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
    `Canvas2D.tex(...)` voert de tekenfunctie direct uit (net als JS `canvasTex`), dus rnd() daarin telt mee.
 3. **three.js → Godot:**
    - `new THREE.Mesh(geo, mat)` + position → `O3.mesh(Geo.box(...), mat, x, y, z, parent, cast)`; `castShadow` = `cast`.
+   - `receiveShadow = true` → `O3.receive(mesh)` (zet `LMat.receive_shadow` op zijn materialen; zonder die vlag valt er, net als
+     in three, geen schaduw op). `ribbon`, `vribbon`, `groundPlane`, `startLine`, `waterPlane` en `landPlane` doen dat al zelf.
    - `rotation.set(x,y,z)` (volgorde XYZ) → `O3.rot(node, x, y, z)`; `scale.set` → `node.scale = Vector3(...)`.
    - `M(c,o)` → `Mats.M(c,o)` (Lambert), de HTML-`PM(c,o)` → `Mats.PM(c,o)` (Phong, specular 0x3a3a3a/38),
      `new THREE.MeshPhongMaterial({...})` → `Mats.phong(c,o)` (three-defaults 0x111111/30),
-     `MeshBasicMaterial` → `Mats.basic(c,o)`. Opties met three-namen: map, repeat, emissive, transparent, opacity, side,
+     `MeshBasicMaterial` → `Mats.basic(c,o)`. Opties met three-namen: map, repeat, emissive, emissiveMap, transparent, opacity, side,
      depthWrite, depthTest, fog, alphaTest, vertexColors, flatShading, blending:"add".
    - Een texture die met `.clone()` + eigen `repeat` wordt gebruikt: geef `"repeat": Vector2(...)` aan de materiaal-opties.
    - Geometrie: `Geo.box/cylinder/cone/plane/sphere/torus/circle/ring/lathe/extrude/icosahedron` (zelfde parameters als three),
@@ -62,6 +67,8 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 
 ## Testen
 
+- `python godot/tests/run.py track build laps cars flow audio` — alle Godot-tests headless (±5 min).
+  `python godot/tests/test_net.py` — online: host en speler als twee processen.
 - `python godot/tests/run.py track build` — headless. `track`: baanberekening gelijk aan de HTML (golden/tracks.json).
   `build`: per geporte baan (fwd en rev) het aantal rnd()-aanroepen per fase, elk `inst()`-object (aantal, eerste en
   laatste positie) en het aantal meshes gelijk aan de HTML (golden/build.json). **Een builder is pas af als `build` groen is.**

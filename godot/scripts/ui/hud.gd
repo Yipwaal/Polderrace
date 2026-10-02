@@ -188,8 +188,27 @@ class LightDot extends Control:
 		draw_circle(c, size.x / 2, Color("#0b0d12"))
 		draw_circle(c, size.x / 2 - 3, col)
 
+## a plain pill button (the online screen NetUi uses it)
+static func mk_button(text: String, cta := true) -> Button:
+	var b := Button.new()
+	b.text = text
+	var f := font("900 18px Nunito")
+	b.add_theme_font_override("font", f[0])
+	b.add_theme_font_size_override("font_size", int(f[1]))
+	var n := pill(DETOUR if cta else Color(1, 1, 1, 0.1))
+	n.content_margin_top = 10; n.content_margin_bottom = 10; n.shadow_size = 0
+	var h := n.duplicate(); h.bg_color = Color("#ffd83d") if cta else Color(1, 1, 1, 0.2)
+	var fo := h.duplicate(); fo.border_color = SIGN_INK; fo.set_border_width_all(3)
+	for st in [["normal", n], ["hover", h], ["pressed", h], ["focus", fo]]:
+		b.add_theme_stylebox_override(st[0], st[1])
+	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(st, INK if cta else SIGN_INK)
+	return b
+
 # ------------------------------------------------------------------ API used by Game
 func showMsg(text: String, kind: String, dur: float) -> void:
+	if Game.split and Game.p2 != null and Game.activeP == 2 and SplitView.me != null:
+		SplitView.me.showMsg2(text, kind, dur); return
 	msg_label.text = text
 	msg_label.add_theme_color_override("font_color", Color.WHITE if kind == "bad" else (SIGN_INK if kind == "sec" else INK))
 	msg.add_theme_stylebox_override("panel", pill(ALERT if kind == "bad" else (SIGN if kind == "sec" else DETOUR)))
@@ -249,8 +268,10 @@ func tick() -> void:
 	msg.position = Vector2((vp.x - msg.size.x) / 2, vp.y * 0.22)
 	toast.position = Vector2((vp.x - toast.size.x) / 2, vp.y * 0.78 - toast.size.y)
 	lights.position = Vector2((vp.x - lights.size.x) / 2, vp.y * 0.15)
+	var hh: float = vp.y / 2 if g.split and g.p2 != null else vp.y
+	gauge.size = Vector2(132, 132) if hh < vp.y else Vector2(184, 184)
 	map_sign.position = Vector2(vp.x - 16 - map_sign.size.x, 16)
-	gauge.position = Vector2(vp.x - 16 - gauge.size.x, vp.y - 16 - gauge.size.y)
+	gauge.position = Vector2(vp.x - 16 - gauge.size.x, hh - (10 if hh < vp.y else 16) - gauge.size.y)
 	if st == "racing" or st == "countdown" or st == "finished":
 		var t: String
 		var l: String
@@ -262,8 +283,17 @@ func tick() -> void:
 			l = "Ronde %d" % maxi(1, g.player.lap)
 			d = "Laatste valt af!" if not g.playerOut and g.playerPosition() == act and act > 1 else G.fmtLap(g.raceFinishTime if g.raceDone else g.raceTime)
 			if d == "Laatste valt af!": dc = Color("#ffd0cc")
+		elif g.mode == "ghost":
+			t = G.fmtLap(g.raceTime - g.lapStart) if g.player.lap >= 1 and not g.raceDone else (G.fmtLap(g.lapTimes[-1] if not g.lapTimes.is_empty() else 0.0) if g.raceDone else "0:00,0")
+			l = "Ronde %d/%d" % [clampi(maxi(1, g.player.lap), 1, g.raceLaps), g.raceLaps]
+			var gd = null if g.raceDone else Rep.ghostDelta()
+			if gd == null:
+				d = ("Ghost " + G.fmtLap(Rep.ghostBest.t)) if Rep.ghostBest != null else "Nog geen ghost"
+			else:
+				d = G.fmtD(gd) + " s"
+				dc = Color("#9df0a8") if gd <= 0 else Color("#ffb4ab")
 		elif g.raceMode:
-			t = "%d/%d" % [g.playerPosition(), g.bots.size() + 1]
+			t = "%d/%d" % [g.playerPosition(), g.bots.size() + 1 + Net.racers() + (1 if g.split and g.p2 != null else 0)]
 			l = "Ronde %d/%d" % [clampi(maxi(1, g.player.lap), 1, g.raceLaps), g.raceLaps]
 			d = G.fmtLap(g.raceFinishTime if g.raceDone else g.raceTime)
 		else:
@@ -291,6 +321,9 @@ func _update_board() -> void:
 	if not on or g.clock < boardAt: return
 	boardAt = g.clock + 0.5
 	var rows := [{"name": "Jij", "best": g.raceBestLap, "me": true, "out": g.playerOut, "prog": -1e9 if g.playerOut else g.progressOf(g.player.lap, g.player.s, g.raceDone, g.raceFinishTime)}]
+	if Net.inRace():
+		for r in Net.net.remotes.values():
+			if r.st != null: rows.append({"name": r.name, "best": 0, "prog": Net.netRemoteProg(r)})
 	for b in g.bots:
 		rows.append({"name": b.name, "best": b.bestLap, "out": b.out, "prog": -1e9 if b.out else g.progressOf(b.lap, b.s, b.finished, b.finishTime)})
 	rows.sort_custom(func(a, b): return a.prog > b.prog)
@@ -319,6 +352,7 @@ func _update_board() -> void:
 
 # ------------------------------------------------------------------ minimap (JS buildMinimap / drawMinimap)
 class MiniMap extends Control:
+	var p2 := false                ## split screen: draw from player 2's point of view
 	var pts := PackedVector2Array()
 	var S := 1.0
 	var ox := 0.0
@@ -340,6 +374,9 @@ class MiniMap extends Control:
 			pts.append(Vector2(p.x * S + ox, p.z * S + oz))
 			i += 4
 	func _draw() -> void:
+		if p2: Game.asP2(paint)
+		else: paint()
+	func paint() -> void:
 		if pts.size() < 2: return
 		var W := custom_minimum_size.x
 		var u := W / 132.0
@@ -362,12 +399,24 @@ class MiniMap extends Control:
 		draw_colored_polygon(tri, Color(G.settings.color))
 		tri.append(tri[0])
 		draw_polyline(tri, Color("#161a22"), 1.5 * u, true)
+		var o = g.otherPlayer()
+		if o != null:
+			var c1 := Vector2(o.pl.pos.x * S + ox, o.pl.pos.z * S + oz)
+			var t2 := PackedVector2Array([Vector2(0, -7 * u), Vector2(5 * u, 5 * u), Vector2(-5 * u, 5 * u)])
+			for k in 3: t2[k] = c1 + t2[k].rotated(-o.pl.heading + PI)
+			draw_colored_polygon(t2, Color(o.color))
+			t2.append(t2[0])
+			draw_polyline(t2, Color("#161a22"), 1.5 * u, true)
 
 # ------------------------------------------------------------------ gauge (JS drawGauge)
 class Gauge extends Control:
 	var needle := 0.0
 	var rpm := 0.14
+	var p2 := false                ## split screen: player 2's gauge
 	func _draw() -> void:
+		if p2: Game.asP2(paint)
+		else: paint()
+	func paint() -> void:
 		var g := Game
 		var W := size.x
 		var c := Vector2(W / 2, W / 2)

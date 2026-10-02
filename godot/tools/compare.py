@@ -40,7 +40,7 @@ def main():
         data = s.ev(f"(()=>{{const v={json.dumps(v)};const c=renderer.domElement;"
                     "for(const o of [player&&player.mesh,...(typeof bots!=='undefined'?bots:[]).map(b=>b.mesh),...(typeof traffic!=='undefined'?traffic:[]).map(t=>t.mesh)])if(o)o.visible=false;"
                     "camera.fov=62;camera.clearViewOffset();camera.aspect=c.width/c.height;camera.position.set(v[0],v[1],v[2]);camera.lookAt(v[3],v[4],v[5]);camera.updateProjectionMatrix();"
-                    "updateEnv(0);skyDome.position.copy(camera.position);"
+                    "updateEnv(0);skyDome.position.copy(camera.position);sun.position.copy(camera.position).addScaledVector(SUN_DIR,160);sun.target.position.copy(camera.position);sun.target.updateMatrixWorld();"
                     "renderer.render(scene,camera);return c.toDataURL('image/png');})()")
         import base64
         hp.write_bytes(base64.b64decode(data.split(',', 1)[1]))

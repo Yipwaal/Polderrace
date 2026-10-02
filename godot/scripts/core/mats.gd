@@ -2,9 +2,10 @@ class_name Mats
 ## Materials like the HTML game's: M(color, opts) = MeshLambertMaterial, PM(...) = MeshPhongMaterial, basic = MeshBasicMaterial.
 ## All are LMat (one shader that lights the three.js way, see lmat.gd). Colours are JS hex ints (0xRRGGBB).
 ## Options use the three.js names:
-##   map (Texture), repeat (Vector2: three texture.repeat), emissive (hex), emissiveIntensity, transparent, opacity,
+##   map (Texture), repeat (Vector2: three texture.repeat), emissive (hex), emissiveMap (Texture), emissiveIntensity, transparent, opacity,
 ##   side ("double"/"back"), vertexColors, depthWrite, depthTest, fog (false = no fog), specular (hex), shininess,
-##   flatShading, alphaTest, blending ("add" = THREE.AdditiveBlending).
+##   flatShading, alphaTest, blending ("add" = THREE.AdditiveBlending),
+##   receiveShadow (true = shadows fall on it, three.js mesh.receiveShadow; default false like three.js, see O3.receive).
 
 static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 	var m := LMat.new()
@@ -17,6 +18,8 @@ static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 			set_repeat(m, o.repeat)
 	if o.get("vertexColors", false):
 		m.vertex_color_use_as_albedo = true
+	if o.has("emissiveMap") and o.emissiveMap != null:
+		m.emission_texture = o.emissiveMap
 	if o.has("emissive") and int(o.emissive) != 0:
 		m.emission_enabled = true
 		m.emission = MathX.col(o.emissive)
@@ -41,6 +44,8 @@ static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 		m.disable_fog = true
 	if o.get("flatShading", false):
 		m.flat_shading = true
+	if o.get("receiveShadow", false):
+		m.receive_shadow = true
 	if kind == LMat.Kind.PHONG:
 		m.specular = MathX.col(o.get("specular", 0x111111))
 		m.shininess = float(o.get("shininess", 30.0))

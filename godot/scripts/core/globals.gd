@@ -16,23 +16,34 @@ func use_store(path: String, data: Dictionary = {}) -> void:
 	_store = {}
 	for k in data:
 		_store[k] = data[k] if data[k] is String else JSON.stringify(data[k])
-	settings = {"car": "gt", "color": "#f36f21", "track": "polder", "dir": "fwd", "bots": 5, "diff": "normal", "laps": 3, "grid": "back", "mode": "race",
-		"time": "day", "weather": "dry", "p2car": "hatch", "p2color": "#1d4f9e"}
-	prefs = {"sound": true, "fx": true, "cam": 0, "damage": true, "gearbox": "auto", "mirror": true}
-	garage = {"credits": 500, "cars": {}}
+	settings = _defaults.settings.duplicate(true)
+	prefs = _defaults.prefs.duplicate(true)
+	garage = _defaults.garage.duplicate(true)
 	careerEv = null
 	careerPrev = null
 	_load_settings()
 	var f := FileAccess.open(STORE_PATH, FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(_store))
+	# the career/achievement records of the garage, the championship and the key bindings come from the store too
+	Career.initGarage()
+	Champ.reload()
+	Game.binds = Game.DEFAULT_BINDS.duplicate(true)
+	Game._load_binds()
+
+var _defaults := {}
 
 func _init() -> void:
+	_defaults = {"settings": settings.duplicate(true), "prefs": prefs.duplicate(true), "garage": garage.duplicate(true)}
 	if FileAccess.file_exists(STORE_PATH):
 		var d = JSON.parse_string(FileAccess.get_file_as_string(STORE_PATH))
 		if d is Dictionary:
 			_store = d
 	_load_settings()
+
+func _ready() -> void:
+	# the car module styles cars from the garage entry (JS carUp)
+	CarKit.up_of = carUp
 
 func store_get(k: String, d = null):
 	return _store.get(k, d)

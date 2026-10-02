@@ -9,6 +9,7 @@ const START_I := 6
 
 # ------------------------------------------------------------------ scene objects (set by main.gd)
 var camera: Camera3D
+var fx_overlay: CanvasLayer                ## screen effects (blur, speed lines, mirror), set by main.gd
 var car = null                       ## the player's car model (Dictionary from CarKit.buildCar)
 
 # ------------------------------------------------------------------ player (JS: player section)
@@ -56,6 +57,11 @@ var resultsAt := 0.0
 var resultRows: Array = []
 var split := false
 var activeP := 1
+## split screen: the other player's context (JS p2), swapped in by asP2 (swapCtx); inP2 while swapped
+var p2 = null
+var inP2 := false
+var splitFirstDone := 0.0
+var splitEndAt := 0.0
 var raceContacts := 0
 var racePits := 0
 
@@ -134,10 +140,13 @@ func rebuildPlayerCar(pid := "", pcol := "") -> void:
 	car.tail = tail
 	for mi in car.g.find_children("*", "MeshInstance3D", true, false):
 		for k in mi.mesh.get_surface_count():
-			if mi.mesh.surface_get_material(k) == CarKit.tailMat:
+			var cur = mi.get_surface_override_material(k)
+			if cur == null: cur = mi.mesh.surface_get_material(k)
+			if cur == CarKit.tailMat:
 				mi.set_surface_override_material(k, tail)
 	if car.get("beam") != null:
 		car.beam.visible = false
+	if Fx.me != null: Fx.me.attachCar(car)
 	var c := G.effStats(id)
 	MAXV = c.vmax / 3.6
 	ACC = c.acc * G.ACC_K
@@ -434,6 +443,7 @@ func updateBots(dt: float) -> void:
 			for o in bots:
 				if o != b and not o.out: others.append({"s": o.s, "lat": o.lat, "len": o.m.len})
 			others.append({"s": player.s, "lat": player.lat, "len": car.len if car != null else 4.4})
+			if split and p2 != null: others.append({"s": p2.pl.s, "lat": p2.pl.lat, "len": p2.car.len if p2.car != null else 4.4})
 			for o in others:
 				var ds := Trk.wrapD(o.s - b.s)
 				var dl2: float = b.lat - o.lat
@@ -562,6 +572,21 @@ func engineRpm() -> float:
 	if player.gear < 1: return clamp_(0.18 + absf(player.speed) / 12, 0.18, 0.6)
 	var r := maxf(0, player.speed) / gearTop(player.gear)
 	return clamp_(maxf(r, (0.3 + player.gasIn * 0.1) if (player.gear == 1 and player.gasIn > 0.1) else 0.14), 0.14, 1)
+
+## JS gearInfo / skidAmount (audio section; also used by the HUD and the fx): the gear shown and the engine's rpm,
+## and how hard the tyres squeal
+func gearInfo() -> Dictionary:
+	var v := absf(player.speed)
+	var live := state == "racing" or state == "finished"
+	return {"gear": "R" if player.gear < 0 else ("N" if not live and v < 0.5 else str(player.gear)),
+		"rpm": (0.14 + player.gasIn * 0.6) if state == "countdown" else engineRpm()}
+
+func skidAmount() -> float:
+	if not (state == "racing" or state == "finished"): return 0.0
+	var v := absf(player.speed)
+	return (1.6 if player.gear == 1 and player.gasIn > 0.9 and v < 9 and Cars.CARS[G.settings.car].cls != "B" else 0.0) \
+		+ player.slide.length() * 0.6 + (2.5 if player.hand and v > 5 else 0.0) + maxf(0, absf(player.steer) * v - 48) * 0.06 \
+		+ (1.3 if player.brk > 0.5 and v > 18 else 0.0)
 
 func drive(dt: float, inp: Dictionary) -> void:
 	player.gasIn = inp.gas
@@ -1068,10 +1093,12 @@ func startRace() -> void:
 	Sfx.initAudio()
 	Menu.beforeRace()                                    # menus: garage room and podium off, menu screens hidden
 	if not Champ.active(): Career.ensureOwnedCars()     # you only race cars you own
+	Rep.replayClear()
 	var S := G.settings
 	mode = "champ" if Champ.active() else S.mode
 	split = mode == "split"
 	if split: mode = "race"
+	if not split and p2 != null: splitTeardown()
 	if mode == "race" and int(S.bots) < 1 and not split: mode = "time"
 	if mode == "elim" and int(S.bots) < 2: S.bots = 2
 	raceMode = mode == "race" or mode == "elim" or mode == "champ"
@@ -1082,19 +1109,27 @@ func startRace() -> void:
 	gustT = 9; gustPhase = 0; gustWarn = false; elimPos = 0; lapTimes = []; player.lap = 0; overView = "results"
 	if raceMode:
 		clearTraffic()
-		# a championship races its fixed field, a career event its own (with the rival)
-		setupBots(0, Champ.champ.bots if mode == "champ" else (G.careerEv.defs if G.careerEv != null else makeBotDefs(mini(int(S.bots), 5) if split else int(S.bots))))
+		# a championship races its fixed field, an online race the host's, a career event its own (with the rival)
+		setupBots(0, Champ.champ.bots if mode == "champ" else (Net.net.botDefs if netInRace() and Net.net.botDefs != null else
+			(G.careerEv.defs if G.careerEv != null else makeBotDefs(mini(int(S.bots), 5) if split else int(S.bots)))))
 		placeGrid(); nextCp = 0
+		if split: splitSetup()
+		if netInRace(): Net.netPlace()
 	elif mode == "ghost":
-		clearTraffic(); clearBots(); placeGrid(); nextCp = 0
+		clearTraffic(); clearBots(); placeGrid(); nextCp = 0; Rep.ghostStart()
 	else:
 		clearBots(); buildTraffic(); resetPlayer(0, 0); nextCp = 1; timeLeft = Trk.TRK.startTime
+	if mode != "ghost": Rep.ghostHide()
 	snapCamera()
+	if Fx.me != null:
+		Fx.me.clearSkids(); Fx.me.clearParts()
 	state = "countdown"; cd = 0; lastCount = -1; goDelay = 0.4 + randf() * 0.8
 	Hud.raceStart(raceMode, mode)
 	clearKeys()
 
 func finishPlayer(_win := false) -> void:
+	if split:
+		splitFinish(); return
 	raceDone = true; raceFinishTime = raceTime; state = "finished"; finishAt = clock + 3
 	var pos := playerPosition()
 	Hud.showMsg("Finish!" if mode == "ghost" else ("Finish! Gewonnen" if pos == 1 else "Finish! %de plaats" % pos), "ok", 3)
@@ -1139,6 +1174,10 @@ func endTimeTrial() -> void:
 func resultOrder() -> Array:
 	var rows := [{"name": "Speler 1" if split else "Jij", "car": Cars.CARS[G.settings.car].name, "me": true, "finished": raceDone and not playerOut, "ft": raceFinishTime,
 		"out": playerOut, "elimPos": elimPos, "prog": -1e9 if playerOut else progressOf(player.lap, player.s, raceDone, raceFinishTime), "best": raceBestLap}]
+	rows += Net.resultRows()
+	if split and p2 != null:
+		rows.append({"name": "Speler 2", "car": Cars.CARS[p2.carId].name, "me": true, "finished": p2.raceDone, "ft": p2.raceFinishTime, "out": false,
+			"elimPos": 0, "prog": otherProgress(), "best": p2.raceBestLap})
 	for b in bots:
 		rows.append({"name": b.name, "car": Cars.CARS[b.type].name, "finished": b.finished, "ft": b.finishTime, "out": b.out, "elimPos": b.elimPos,
 			"prog": -1e9 if b.out else progressOf(b.lap, b.s, b.finished, b.finishTime), "best": b.bestLap})
@@ -1153,14 +1192,26 @@ func showResults() -> void:
 
 func onAgain() -> void:
 	if not (state == "over" and overReady): return
+	if Net.net != null:
+		# online: the host starts the next race for everyone; the others wait for it
+		if Net.isHost(): Net.netHostStart()
+		return
 	if Menu.onAgain(): return    # menus: championship standings / next round, on to the next career event
 	startRace()
 
 func toMenu(step := -1) -> void:
+	if Rep.rp != null: Rep.replayClose()
+	Rep.replayClear()
+	Rep.ghostHide()
+	if split or p2 != null: splitTeardown()
+	Net.netAfterRace()
 	paused = false
 	Hud.toMenu()
+	if Fx.me != null:
+		Fx.me.clearSkids(); Fx.me.clearParts()
 	state = "menu"
 	Menu.toMenu(step)       # menus: championship and career clean-up, then the menu (step -1 = home screen)
+	if Net.net != null and step < 0: Menu.netOpen()    # back in the online game's screen
 
 ## after a career race or cup: back to the career screen; otherwise to the menu
 func toCareerOr(step := -1) -> void:
@@ -1172,6 +1223,17 @@ func setPaused(p: bool) -> void:
 	paused = p
 	Hud.setPaused(p)
 	clearKeys()
+
+## JS applyPrefs: picture quality (low: no shadows, lower 3D resolution; mid: smaller shadow map) and sound on/off.
+## The settings menu calls this after changing a preference.
+func applyPrefs() -> void:
+	var q: String = G.prefs.get("quality", "high")
+	if Env.me != null: Env.me.set_shadows(q != "low")
+	RenderingServer.directional_shadow_atlas_set_size(4096 if q == "high" else 2048, true)
+	var vp := get_viewport()
+	vp.scaling_3d_scale = 0.75 if q == "low" else 1.0
+	vp.msaa_3d = Viewport.MSAA_DISABLED if q == "low" else Viewport.MSAA_2X
+	Sfx.muted = not bool(G.prefs.get("sound", true))
 
 func bestKey(id: String, cls := "") -> String:
 	return "polderrace3d-best-" + tv(id) + "-" + (cls if cls != "" else Cars.CARS[G.settings.car].cls)
@@ -1238,10 +1300,12 @@ func hitCheckpoint(k: int) -> void:
 	if player.lap == 1:
 		lapStart = raceTime
 		if not split: sectorLapStart()
+		if mode == "ghost": Rep.ghostLapStart()
 		return
 	var lt := raceTime - lapStart
 	lapStart = raceTime; recordLap(lt); lapTimes.append(lt)
 	if not split: sectorLapStart()
+	if mode == "ghost" and Rep.ghostLapDone(lt): ghostSaved = true
 	if mode != "elim" and player.lap > raceLaps:
 		finishPlayer(); return
 	var lbl := ("Ronde %d" % player.lap) if mode == "elim" else ("Laatste ronde" if player.lap == raceLaps else "Ronde %d/%d" % [player.lap, raceLaps])
@@ -1257,11 +1321,132 @@ func awardCredits(pos: int) -> int:
 	return G.addCredits(base * p * (1.0 if mode == "elim" else clamp_(0.6 + raceLaps * 0.2, 0.8, 1.6)))
 
 # ------------------------------------------------------------------ hooks (filled in by later ports)
-func netInRace() -> bool: return false
-func netIsHost() -> bool: return false
-func netAheadCount(_me: float) -> int: return 0
-func netKick(_i: int, _dvx: float, _dvz: float, _sp: float) -> void: pass
-func otherProgress() -> Variant: return null
+func netInRace() -> bool: return Net.inRace()
+func netIsHost() -> bool: return Net.isHost()
+func netAheadCount(me: float) -> int: return Net.aheadCount(me)
+func netKick(i: int, dvx: float, dvz: float, sp: float) -> void: Net.netKick(i, dvx, dvz, sp)
+func otherProgress() -> Variant:
+	if not split or p2 == null: return null
+	var o: PlayerState = p2.pl
+	return progressOf(o.lap, o.s, p2.raceDone, p2.raceFinishTime)
+
+## the other human player in split screen (for the minimap): {pl, color} or null
+func otherPlayer() -> Variant:
+	if not split or p2 == null: return null
+	return {"pl": p2.pl, "color": p2.color}
+
+# ================================================================== split screen (JS split section)
+func newP2() -> Dictionary:
+	return {"pl": PlayerState.new(), "car": null, "carId": G.settings.get("p2car", "hatch"), "color": G.settings.get("p2color", "#1d4f9e"),
+		"MAXV": 0.0, "ACC": 0.0, "BRAKE": 0.0, "GRIP": 0.0, "nextCp": 0, "wrongT": 0.0, "wallT": 0.0, "lapStart": 0.0, "raceBestLap": 0.0,
+		"raceDone": false, "raceFinishTime": 0.0, "lapTimes": [], "drift": 0.0, "camHeading": 0.0, "camY": 0.0, "camLift": 0.0, "resetT": -9.0,
+		"hitT": -9.0, "cam": 0, "activeP": 2}
+
+## every per-player global changes place with the other player's copy (also camLift: see CLAUDE.md)
+func swapCtx(c: Dictionary) -> void:
+	var t
+	t = car; car = c.car; c.car = t
+	t = MAXV; MAXV = c.MAXV; c.MAXV = t
+	t = ACC; ACC = c.ACC; c.ACC = t
+	t = BRAKE; BRAKE = c.BRAKE; c.BRAKE = t
+	t = GRIP; GRIP = c.GRIP; c.GRIP = t
+	t = nextCp; nextCp = c.nextCp; c.nextCp = t
+	t = wrongT; wrongT = c.wrongT; c.wrongT = t
+	t = wallT; wallT = c.wallT; c.wallT = t
+	t = lapStart; lapStart = c.lapStart; c.lapStart = t
+	t = raceBestLap; raceBestLap = c.raceBestLap; c.raceBestLap = t
+	t = raceDone; raceDone = c.raceDone; c.raceDone = t
+	t = raceFinishTime; raceFinishTime = c.raceFinishTime; c.raceFinishTime = t
+	t = lapTimes; lapTimes = c.lapTimes; c.lapTimes = t
+	t = drift; drift = c.drift; c.drift = t
+	t = camHeading; camHeading = c.camHeading; c.camHeading = t
+	t = camY; camY = c.camY; c.camY = t
+	t = camLift; camLift = c.camLift; c.camLift = t
+	t = resetT; resetT = c.resetT; c.resetT = t
+	t = hitT; hitT = c.hitT; c.hitT = t
+	t = G.settings.car; G.settings.car = c.carId; c.carId = t
+	t = G.settings.color; G.settings.color = c.color; c.color = t
+	t = G.prefs.cam; G.prefs.cam = c.cam; c.cam = t
+	t = activeP; activeP = c.activeP; c.activeP = t
+	t = player; player = c.pl; c.pl = t
+
+func asP2(fn: Callable) -> Variant:
+	if not split or p2 == null or inP2: return fn.call()
+	swapCtx(p2)
+	inP2 = true
+	var r = fn.call()
+	inP2 = false
+	swapCtx(p2)
+	return r
+
+func runFor(pi: int, fn: Callable) -> Variant:
+	return asP2(fn) if pi == 2 and split else fn.call()
+
+func splitSetup() -> void:
+	if p2 != null and p2.car != null: p2.car.g.queue_free()
+	p2 = newP2()
+	splitFirstDone = 0; splitEndAt = 0
+	asP2(func():
+		rebuildPlayerCar()
+		var n := bots.size()
+		var g := gridSlot(n + 1 if n + 1 > 0 else 1)
+		resetPlayer(int(round(g.s / Trk.SPC)) % Trk.NS, g.lat)
+		player.lap = 0; nextCp = 0; lapTimes = []; raceDone = false
+		snapCamera())
+
+func splitTeardown() -> void:
+	if p2 != null and p2.car != null: p2.car.g.queue_free()
+	p2 = null
+	split = false
+
+## collisions between the two human players, same solver as everything else
+func collidePlayers() -> void:
+	if not split or p2 == null or p2.car == null: return
+	var A := playerBody()
+	var o: PlayerState = p2.pl
+	var f2x := sin(o.heading); var f2z := cos(o.heading)
+	var po: float = p2.car.get("off", 0.0)
+	var h2: float = o.heading - p2.drift
+	var B := {"x": o.pos.x + sin(h2) * po, "z": o.pos.z + cos(h2) * po, "h": h2, "len": p2.car.len, "wid": p2.car.wid, "rc": p2.car.get("rc", 0.0),
+		"m": Cars.CARS[p2.carId].mass, "vx": f2x * o.speed + o.slide.x, "vz": f2z * o.speed + o.slide.y}
+	var ct = pairContact(A, B)
+	if ct == null: return
+	var tot: float = A.m + B.m
+	var pc := maxf(0, ct.pen - 0.02) * POS_K
+	player.pos.x += ct.nx * pc * B.m / tot; player.pos.z += ct.nz * pc * B.m / tot
+	o.pos.x -= ct.nx * pc * A.m / tot; o.pos.z -= ct.nz * pc * A.m / tot
+	var im = pairImpulse(playerBody(), B, ct)
+	if im == null: return
+	var apply := func(pl: PlayerState, body: Dictionary, dvx: float, dvz: float, sp: float, grip: float) -> void:
+		var fx := sin(pl.heading); var fz := cos(pl.heading)
+		var vx: float = body.vx + dvx
+		var vz: float = body.vz + dvz
+		pl.speed = vx * fx + vz * fz
+		pl.slide = Vector2(vx - fx * pl.speed, vz - fz * pl.speed)
+		pl.spin = clamp_(pl.spin + yawKick(sp, grip), -6, 6)
+	apply.call(player, playerBody(), im.FAx / A.m, im.FAz / A.m, im.sA, GRIP * gripFactor())
+	apply.call(o, B, -im.FAx / B.m, -im.FAz / B.m, im.sB, p2.GRIP * gripFactor())
+	hitFx(im.j, true)
+
+func splitUpdate(dt: float) -> void:
+	var step := func():
+		if raceDone: autopilot(dt, 22)
+		else: updatePlayer(dt)
+	step.call()
+	asP2(step)
+	collidePlayers()
+	if not splitFirstDone and (raceDone or p2.raceDone): splitFirstDone = clock
+	if not splitEndAt and raceDone and p2.raceDone: splitEndAt = clock + 2.5
+	if not splitEndAt and splitFirstDone and clock > splitFirstDone + 30: splitEndAt = clock
+	if splitEndAt and clock > splitEndAt:
+		splitEndAt = 0
+		showResults()
+
+func splitFinish() -> void:
+	raceDone = true; raceFinishTime = raceTime
+	var pos := playerPosition()
+	Hud.showMsg("Speler %d finisht als %de!" % [activeP, pos], "ok", 2.5)
+	Sfx.tone(880, 0.2, "triangle", 0.18); Sfx.tone(1320, 0.3, "triangle", 0.18, 0.18)
 func unlockAch(id: String) -> void: Ach.unlockAch(id)
 func achPit() -> void:
 	racePits += 1
@@ -1306,8 +1491,14 @@ func actionOf(code: String) -> Variant:
 			if codesFor("p2" if pi == 2 else "p1", a).has(code): return [pi, a]
 	return null
 
-func padFor(_pi: int) -> Dictionary:
-	return pad
+var padStates: Array = []
+
+## with two gamepads in split screen: pad 1 is player 1, pad 2 player 2; with one pad it is player 2's
+func padFor(pi: int) -> Dictionary:
+	if not split: return pad
+	if padStates.size() >= 2: return padStates[0] if pi == 1 else padStates[1]
+	if pi == 2 and padStates.size() == 1: return padStates[0]
+	return {"steer": 0.0, "gas": 0.0, "brake": 0.0, "hand": false, "look": false}
 
 func input() -> Dictionary:
 	var pi := activeP
@@ -1366,6 +1557,7 @@ func _input(e: InputEvent) -> void:
 	if not e.pressed:
 		keysDown.erase(code)
 		return
+	if code == "KeyM": Sfx.toggleMute()
 	if state == "menu": return    # the menus handle their keys themselves (Menu._input)
 	var ac = actionOf(code)
 	if ac != null: keysDown[code] = true
@@ -1377,11 +1569,12 @@ func _input(e: InputEvent) -> void:
 	if state == "over" and overReady and code == "Escape": toCareerOr(-1)
 	if ac != null and not e.echo and not paused:
 		var a: String = ac[1]
-		if a == "reset": resetToTrack()
-		if a == "cam": cycleCam()
-		if G.prefs.gearbox == "manual" and (state == "racing" or state == "finished"):
-			if a == "shiftUp": shiftUp()
-			if a == "shiftDown": shiftDown()
+		runFor(ac[0], func():
+			if a == "reset": resetToTrack()
+			if a == "cam": cycleCam()
+			if G.prefs.gearbox == "manual" and (state == "racing" or state == "finished"):
+				if a == "shiftUp": shiftUp()
+				if a == "shiftDown": shiftDown())
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
@@ -1392,6 +1585,7 @@ func _notification(what: int) -> void:
 func readPad() -> void:
 	pad = {"steer": 0.0, "gas": 0.0, "brake": 0.0, "hand": false, "look": false}
 	var now := {}
+	padStates = []
 	for dev in Input.get_connected_joypads():
 		var ax := Input.get_joy_axis(dev, JOY_AXIS_LEFT_X)
 		pad.steer = ax if absf(ax) > 0.14 else 0.0
@@ -1407,7 +1601,9 @@ func readPad() -> void:
 			"lb": btn.call(JOY_BUTTON_LEFT_SHOULDER), "rb": btn.call(JOY_BUTTON_RIGHT_SHOULDER), "sel": btn.call(JOY_BUTTON_BACK),
 			"l": btn.call(JOY_BUTTON_DPAD_LEFT) or ax < -0.6, "r": btn.call(JOY_BUTTON_DPAD_RIGHT) or ax > 0.6,
 			"up": btn.call(JOY_BUTTON_DPAD_UP) or ay < -0.6, "down": btn.call(JOY_BUTTON_DPAD_DOWN) or ay > 0.6}
-		break
+		padStates.append(pad.duplicate())
+		# one player: the first pad; split screen: every pad (padFor hands them out)
+		if not split: break
 	var edge := func(k: String) -> bool: return now.get(k, false) and not padPrev.get(k, false)
 	if Menu.padNav(now, padPrev):    # menus, pause and results screen (Menu.padNav)
 		pass
@@ -1427,7 +1623,9 @@ func _ready() -> void:
 
 func update(dt: float) -> void:
 	clock += dt
+	lampsOn = CarKit.lampsOn
 	if shake > 0: shake = maxf(0, shake - dt)
+	if Fx.me != null: Fx.me.updateFx(dt)
 	if Env.me != null: Env.me.update(dt, camera)
 	for s in World.sailGroups:
 		s.rotation.z += dt * float(s.get_meta("speed", 0.8))
@@ -1444,6 +1642,7 @@ func update(dt: float) -> void:
 			Hud.setLights(on)
 			if on > 0: Sfx.tone(440, 0.16, "square", 0.09)
 		if cd >= 3.5 + goDelay:
+			Rep.replayStart()
 			state = "racing"
 			lapStart = 0.0 if raceMode else clock
 			Hud.lightsGo()
@@ -1454,11 +1653,16 @@ func update(dt: float) -> void:
 		Menu.overTick()    # the results list keeps up while the bots finish
 		return
 	raceTime += dt
+	Rep.replayRecord(dt)
 	if state == "finished":
 		autopilot(dt, 22)
 		if clock > finishAt: showResults()
 		return
-	updatePlayer(dt); updateWind(dt); sectorUpdate(); elimCheck()
+	if split and p2 != null:
+		splitUpdate(dt); updateWind(dt); return
+	updatePlayer(dt)
+	if netInRace(): Net.netCollide()
+	updateWind(dt); Rep.ghostRecord(dt); sectorUpdate(); elimCheck()
 	if mode == "time":
 		var before := timeLeft
 		timeLeft -= dt
@@ -1469,10 +1673,22 @@ func _process(delta: float) -> void:
 	if camera == null or Trk.NS <= 1: return
 	var dt := minf(0.1, delta)
 	readPad()
+	if state == "replay":
+		if not paused: Rep.replayUpdate(dt)
+		clock += dt
+		if Env.me != null: Env.me.update(dt, camera)
+		Sfx.updateAudio()
+		Hud.tick()
+		return
 	if not paused:
 		var n := mini(12, maxi(1, int(ceil(dt / 0.0085))))
 		for _k in n: update(dt / n)
 	if car != null: syncCar(0.0 if paused else dt)
+	if split and p2 != null: asP2(func(): syncCar(0.0 if paused else dt))
+	Rep.ghostUpdate()
 	updateCamera(0.0 if paused else dt)
+	if Fx.me != null: Fx.me.updateMirror()
+	if fx_overlay != null: fx_overlay.tick(dt)
+	if SplitView.me != null: SplitView.me.tick(dt)
 	Sfx.updateAudio()
 	Hud.tick()

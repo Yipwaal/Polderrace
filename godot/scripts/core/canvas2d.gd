@@ -58,6 +58,10 @@ static func pending_count() -> int:
 static func flush(host: Node) -> void:
 	if _pending.is_empty():
 		return
+	if DisplayServer.get_name() == "headless":
+		# no renderer (tests, dedicated runs): nothing can be drawn, the textures keep their grey placeholder
+		_pending = []
+		return
 	var batch: Array = _pending
 	_pending = []
 	var vps: Array = []
@@ -416,8 +420,13 @@ class _Layer extends Node2D:
 			return
 		var tri := Geometry2D.triangulate_polygon(p)
 		if tri.is_empty():
-			draw_colored_polygon(p, col)
-			return
+			# degenerate (self-touching or zero-area) path: its convex hull, like a browser fills it, minus the error spam
+			var hull := Geometry2D.convex_hull(p)
+			if hull.size() >= 4:
+				tri = Geometry2D.triangulate_polygon(hull)
+				p = hull
+			if tri.is_empty():
+				return
 		for i in range(0, tri.size(), 3):
 			draw_colored_polygon(PackedVector2Array([p[tri[i]], p[tri[i + 1]], p[tri[i + 2]]]), col)
 

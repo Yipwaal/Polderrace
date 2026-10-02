@@ -249,6 +249,8 @@ static func leavePodium() -> void:
 	World.root.visible = true
 	if Env.me != null: Env.me.sky_dome.visible = true
 	if Game.car != null: Game.car.g.visible = true
+	# the podium view was shifted beside the results board (Menu._setViewOff): a plain camera again
+	if Game.camera != null: Game.camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	if Env.me != null: Env.me.apply(Env.me.time, Env.me.weather, true)
 
 ## podium entries for the rows of a results list (race) or standings (championship)

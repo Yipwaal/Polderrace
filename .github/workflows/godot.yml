@@ -1,0 +1,65 @@
+# Polderrace 3D (Godot): run the Godot tests and build the game for Windows and Linux on every push that touches godot/.
+# The builds are attached to the run as artifacts ("Polderrace-Windows", "Polderrace-Linux"); see godot/README.md.
+name: Godot build
+
+on:
+  push:
+    paths:
+      - "godot/**"
+      - ".github/workflows/godot.yml"
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot and export templates
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-stable
+
+      - name: Download Godot and export templates
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          cd ~/godot
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && rm godot.zip && mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot
+          curl -sSL -o tpl.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q -j tpl.tpz "templates/windows_release_x86_64.exe" "templates/linux_release.x86_64" "templates/version.txt" \
+            -d ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+          rm tpl.tpz
+
+      - name: Import project
+        run: ~/godot/godot --headless --path godot --import || true
+
+      - name: Tests
+        run: ~/godot/godot --headless --path godot res://tests/runner.tscn -- track build laps cars flow
+
+      - name: Export Windows and Linux
+        run: |
+          mkdir -p godot/build/windows godot/build/linux
+          ~/godot/godot --headless --path godot --export-release "Windows Desktop" build/windows/Polderrace.exe
+          ~/godot/godot --headless --path godot --export-release "Linux" build/linux/Polderrace.x86_64
+          cp godot/README.md godot/build/windows/LEESMIJ.md
+          cp godot/README.md godot/build/linux/LEESMIJ.md
+          ls -la godot/build/windows godot/build/linux
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Polderrace-Windows
+          path: godot/build/windows/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Polderrace-Linux
+          path: godot/build/linux/

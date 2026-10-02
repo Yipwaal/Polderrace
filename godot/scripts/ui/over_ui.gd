@@ -106,8 +106,11 @@ func _tile(g: Control, label: String, unit := "") -> Label:
 
 func _build_pause() -> void:
 	pauseBoard = UiKit.board(Vector4(32, 30, 32, 30), false)
+	# the board holds pauseMain, or the settings panel (Menu.openPauseSettings moves it in here)
+	var pv := UiKit.vbox(18)
+	pauseBoard.add_child(pv)
 	pauseMain = UiKit.vbox(18)
-	pauseBoard.add_child(pauseMain)
+	pv.add_child(pauseMain)
 	var hv := UiKit.vbox(6)
 	hv.add_child(UiKit.h2("Pauze"))
 	pauseSub = UiKit.lbl("", 700, 14, UiKit.SUB, true)

@@ -25,7 +25,6 @@ var bindCapture := Callable()
 ## orbit round the car in the garage and the car step: drag to turn it, it turns slowly by itself when left alone
 var orb := {"a": 0.5, "h": 1.9, "vel": 0.0, "idle": 99.0, "drag": null}
 var _viewOff := 0.0
-var _prefsApplied := false
 var _resumeGo := Callable()
 var _overMenu := false
 
@@ -76,6 +75,7 @@ func _ready() -> void:
 	_build_pause()
 	_build_pop()
 	_wire()
+	Sfx.mute_changed.connect(func(_m) -> void: settingsUI.syncToggles())
 	for o in [home, menuOv, overOv, pauseOv]: o.visible = false
 	get_viewport().size_changed.connect(_on_resize)
 	_on_resize()
@@ -228,8 +228,7 @@ func _wire() -> void:
 	var O := overUI
 	O.againBtn.pressed.connect(func() -> void: Game.onAgain())
 	O.menuBtn.pressed.connect(func() -> void: Game.toCareerOr(-1))
-	O.replayBtn.pressed.connect(func() -> void:
-		if Game.has_method("replayOpen"): Game.call("replayOpen"))
+	O.replayBtn.pressed.connect(func() -> void: Rep.replayOpen())
 	O.resumeBtn.pressed.connect(func() -> void: Game.setPaused(false))
 	O.restartBtn.pressed.connect(func() -> void:
 		if not Game.paused: return
@@ -241,10 +240,10 @@ func _wire() -> void:
 	O.pSettings.pressed.connect(openPauseSettings)
 	O.quitBtn.pressed.connect(func() -> void: Game.toCareerOr(-1))
 
-## the Online card: the online screen is its own port; it provides Game.netOpen() (until then the empty NetStub)
+## the Online card (and back in an online game after a race): the online screen NetUi, over the menus
 func netOpen() -> void:
-	if Game.has_method("netOpen"): Game.call("netOpen")
-	else: NetStub.netOpen()
+	NetUi.layer = layer + 5
+	NetUi.open()
 
 # ------------------------------------------------------------------ helpers (JS stat bars, car lines)
 static func nTop(v: float) -> float: return clampf((v - 150) / (335 - 150), 0.05, 1)
@@ -276,21 +275,12 @@ func loadTrack(id: String, dir := "") -> void:
 func applyEnv(t: String, w: String) -> void:
 	if Env.me != null: Env.me.apply(t, w)
 
-## JS applyPrefs: sound, shadows (quality)
+## JS applyPrefs after a setting changed: sound and picture quality (Game.applyPrefs)
 func applyPrefs() -> void:
-	_prefsApplied = true
-	var q: String = G.prefs.get("quality", "high")
-	Sfx.muted = not bool(G.prefs.get("sound", true))
-	# (Env.set_shadows reads a global shader parameter back, which Godot only allows in the editor: re-apply instead)
-	if Env.me != null and Env.me.sun.shadow_enabled != (q != "low"):
-		Env.me.sun.shadow_enabled = q != "low"
-		if not GarageRoom.inGarage and not Podium.inPodium: Env.me.apply(Env.me.time, Env.me.weather, true)
-	RenderingServer.directional_shadow_atlas_set_size(2048 if q == "high" else 1024, true)
+	Game.applyPrefs()
 
 func toggleMute() -> void:
-	Sfx.muted = not Sfx.muted
-	G.prefs.sound = not Sfx.muted
-	G.savePrefs()
+	Sfx.toggleMute()
 	settingsUI.syncToggles()
 
 # ------------------------------------------------------------------ the car being edited (player 1, or player 2 in split screen)
@@ -368,7 +358,6 @@ func showMenu(step: int) -> void:
 		editP = 1
 		Game.rebuildPlayerCar()
 	menuStep = step
-	if not _prefsApplied: applyPrefs()
 	if step == 0: Career.ensureOwnedCars()
 	if step < 0:
 		menuScene()
@@ -581,6 +570,8 @@ func beforeRace() -> void:
 	Podium.leavePodium()
 	closePauseSettings()
 	hideAll()
+	if NetUi.is_open(): NetUi.ov.visible = false    # the online screen is a home panel in the HTML: it goes too
+	syncOverMode()
 	_setViewOff(Game.camera, 0, -1)
 
 func hideAll() -> void:
@@ -667,7 +658,7 @@ func setEarned(n: int, label := "") -> void:
 func showOver() -> void:
 	var O := overUI
 	var g := Game
-	O.replayBtn.visible = g.has_method("replayAvailable") and bool(g.call("replayAvailable"))
+	O.replayBtn.visible = Rep.canReplay()
 	for n in [Hud.hud, Hud.msg, Hud.lights]: n.visible = false
 	overOv.visible = true
 	g.clearKeys()
@@ -678,6 +669,11 @@ func showOver() -> void:
 	UiKit.btn_text(O.againBtn, "Tussenstand" if g.mode == "champ" else (("Verder" if ce.passed else "Nog een keer") if ce != null else "Opnieuw racen"))
 	UiKit.btn_text(O.menuBtn, "Carrière" if G.careerEv != null or (Champ.champ != null and Champ.champ.get("career")) else "Hoofdmenu")
 	O.menuBtn.visible = true
+	O.againBtn.visible = true
+	if Net.net != null:
+		# online: only the host starts the next race; the others get it automatically
+		UiKit.btn_text(O.againBtn, "Nieuwe race")
+		O.againBtn.visible = Net.isHost()
 	get_tree().create_timer(0.7, true, false, true).timeout.connect(func() -> void:
 		if Game.state == "over" and overOv.visible: UiKit.focus(O.againBtn))
 
@@ -768,6 +764,7 @@ func showResults() -> void:
 		var cup = Career.cupById(Champ.champ.career) if g.mode == "champ" and Champ.champ != null and Champ.champ.get("career") else null
 		var tr: Dictionary = TrackDefs.TRACKS[Trk.TRACK_ID]
 		Podium.enterPodium(Podium.podiumEntries(g.resultRows, func(r): return r.get("tm", "")), cup.name if cup != null else ("Kampioenschap" if g.mode == "champ" else tr.get("banner", tr.name)))
+		syncOverMode()
 
 ## from Hud (game.gd endTimeTrial): the time trial's tiles
 func showTimeTrialOver(distance: float, cps: int, bestLap: float, best: float, rec: bool, cr: int) -> void:
@@ -823,6 +820,7 @@ func showStandings() -> void:
 		O.overTitle.text = "Kampioen!" if pos == 1 else "Eindstand: %de" % pos
 		var cup = Career.cupById(champ.career) if champ.get("career") else null
 		Podium.enterPodium(Podium.podiumEntries(st, func(r): return "%d pt" % int(r.pts)), cup.name if cup != null else "Kampioenschap")
+		syncOverMode()
 		if not champ.get("bonusPaid", false):
 			champ.bonusPaid = true
 			var b := 0
@@ -861,7 +859,10 @@ func careerStory(ev: Dictionary, res: Dictionary) -> void:
 
 # ------------------------------------------------------------------ per frame
 func _process(_dt: float) -> void:
-	# the results board stands left beside the podium (JS #over.menu), centred over a blurred race otherwise
+	syncOverMode()
+
+## the results board stands left beside the podium (JS #over.menu), centred over a blurred race otherwise
+func syncOverMode() -> void:
 	var pm := Podium.inPodium
 	if pm != _overMenu:
 		_overMenu = pm
@@ -997,13 +998,13 @@ func _input(e: InputEvent) -> void:
 		return
 	var onBtn: bool = f is UiKit.Btn and f.is_visible_in_tree()
 	var enter := code == "Enter" or code == "NumpadEnter"
-	if code == "KeyM" and not e.echo:
-		toggleMute()
-		if Game.state == "menu": get_viewport().set_input_as_handled()
 	var st: String = Game.state
+	# the online screen (NetUi) over the menus has its own controls
+	if NetUi.is_open() and st == "menu": return
 	if st == "menu":
 		if code == "Tab": return
 		get_viewport().set_input_as_handled()
+		if code == "KeyM" and not e.echo: toggleMute()    # (Game._input mutes in the other states)
 		if (enter or code == "Space") and onBtn:
 			if not e.echo: f.press()
 			return
@@ -1034,6 +1035,9 @@ func _input(e: InputEvent) -> void:
 func padNav(now: Dictionary, prev: Dictionary) -> bool:
 	var edge := func(k: String) -> bool: return now.get(k, false) and not prev.get(k, false)
 	var g := Game
+	if g.state == "menu" and NetUi.is_open():
+		if edge.call("b"): NetUi.close()
+		return true
 	if g.state == "menu" and menuStep < 0:
 		if edge.call("up"): padFocus(-1)
 		if edge.call("down"): padFocus(1)

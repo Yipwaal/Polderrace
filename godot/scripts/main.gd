@@ -4,6 +4,8 @@ extends Node3D
 
 var env: Env
 var cam: Camera3D
+var fx: Fx
+var overlay: CanvasLayer
 
 func _ready() -> void:
 	env = Env.new()
@@ -18,6 +20,13 @@ func _ready() -> void:
 	add_child(cam)
 	cam.current = true
 	Game.camera = cam
+	fx = Fx.new()
+	add_child(fx)
+	overlay = load("res://scripts/ui/fx_overlay.gd").new()
+	add_child(overlay)
+	Game.fx_overlay = overlay
+	add_child(SplitView.new())
+	Game.applyPrefs()
 	env.time = G.settings.time
 	env.weather = G.settings.weather
 	await load_track(G.settings.track)
