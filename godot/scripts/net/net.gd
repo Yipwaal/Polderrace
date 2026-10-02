@@ -147,6 +147,7 @@ func netLeave() -> void:
 		if r.car != null: r.car.g.queue_free()
 	net = null
 	g.leave()
+	close_internet()
 	# the room says goodbye to the guests for a moment before it closes (NetRoom.leave)
 	get_tree().create_timer(0.6, true, false, true).timeout.connect(g.queue_free)
 	lan.stop()
@@ -498,13 +499,37 @@ func open_internet() -> void:
 			msg = "De router wilde poort %d niet openzetten. Zet hem zelf open (UDP)." % NetRoom.PORT
 		else:
 			msg = "Via internet bereikbaar op %s (poort %d)." % [u.query_external_address(), NetRoom.PORT]
-		call_deferred("_upnp_done", msg))
+			call_deferred("_upnp_done", msg, u)
+			return
+		call_deferred("_upnp_done", msg, null))
 
-func _upnp_done(msg: String) -> void:
+## the router keeps a mapping until it is removed: it is closed again when the host leaves the game or quits
+var _mapped: UPNP = null
+var _unmap: Thread = null
+
+func _upnp_done(msg: String, u: UPNP) -> void:
 	_upnp.wait_to_finish()
 	_upnp = null
 	upnp_status = msg
+	if u != null:
+		_mapped = u
+		if net == null: close_internet()    # the host left while the router was still being asked
 	changed.emit()
+
+func close_internet(wait := false) -> void:
+	if _mapped == null: return
+	var u := _mapped
+	_mapped = null
+	upnp_status = ""
+	if _unmap != null: _unmap.wait_to_finish()
+	_unmap = null
+	if wait:
+		u.delete_port_mapping(NetRoom.PORT, "UDP")
+		return
+	_unmap = Thread.new()
+	_unmap.start(func(): u.delete_port_mapping(NetRoom.PORT, "UDP"))
 
 func _exit_tree() -> void:
 	if _upnp != null: _upnp.wait_to_finish()
+	if _unmap != null: _unmap.wait_to_finish()
+	close_internet(true)
