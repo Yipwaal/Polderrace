@@ -1255,11 +1255,11 @@ func recordLap(lt: float) -> void:
 	if not raceBestLap or lt < raceBestLap: raceBestLap = lt
 	var pb := float(G.store_get(lapKey(Trk.TRACK_ID), 0))
 	if not pb or lt < pb:
-		G.store_set(lapKey(Trk.TRACK_ID), "%.2f" % lt)
+		G.store_set(lapKey(Trk.TRACK_ID), G.toFixed(lt, 2))
 		G.store_set(lapKey(Trk.TRACK_ID) + "-car", G.settings.car)
 		lapRecordSet = true
 	var pc := float(G.store_get(lapCarKey(Trk.TRACK_ID), 0))
-	if not pc or lt < pc: G.store_set(lapCarKey(Trk.TRACK_ID), "%.2f" % lt)
+	if not pc or lt < pc: G.store_set(lapCarKey(Trk.TRACK_ID), G.toFixed(lt, 2))
 
 func sectorsReset() -> void:
 	secBest = [0.0, 0.0, 0.0]; secLast = [0.0, 0.0, 0.0]; secStart = 0; secPrev = 0
@@ -1315,7 +1315,8 @@ func hitCheckpoint(k: int) -> void:
 	Sfx.tone(880, 0.14, "triangle", 0.16); Sfx.tone(1320, 0.26, "triangle", 0.16, 0.12)
 
 func awardCredits(pos: int) -> int:
-	var p: float = G.DIFF[G.settings.diff].pay
+	# a championship pays at its own difficulty (JS: champ.diff)
+	var p: float = G.DIFF[Champ.champ.diff if mode == "champ" and Champ.champ != null else G.settings.diff].pay
 	if mode == "time": return G.addCredits(distance / 1000 * 60)
 	if mode == "ghost": return G.addCredits(lapTimes.size() * 40 + (150 if ghostSaved else 0))
 	var bases := [400, 300, 220, 160, 120, 90, 70, 50]
