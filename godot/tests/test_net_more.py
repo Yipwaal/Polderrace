@@ -4,8 +4,10 @@
      host sluit midden in de race en op de uitslag, nieuwe game.
   2. vol: host + 8 spelers (de 9e krijgt "vol"), Esc en focus, verkeerd IP-adres, host verlaat de lobby.
   3. auto kiezen in de lobby (de speler in een venster, met xvfb-run).
-usage: python godot/tests/test_net_more.py [1] [2] [3]   (about 4 minutes)"""
-import sys, time, math, itertools, shutil
+  4. LAN met losse pc's (Linux als root: netwerk-namespaces): twee hosts in de lijst, /16-netwerk, VirtualBox-kaart,
+     een speler via een slechte verbinding (net_lossy.py: 5% verlies, vertraging, volgorde door elkaar).
+usage: python godot/tests/test_net_more.py [1] [2] [3] [4]   (about 4 minutes)"""
+import sys, os, time, math, itertools, shutil, subprocess, pathlib
 import net_players
 net_players.isolate()
 from net_players import Player, kill_all
@@ -54,6 +56,8 @@ def scenario_four():
     rs = [g.wait(lambda r: len(r['lobbies']) >= 1, 10) for g in (g1, g2, g3)]
     check(all(len(r.get('lobbies', [])) == 1 and r['lobbies'][0]['name'] == 'Yips game' for r in rs), 'iedereen ziet "Yips game" in de lijst', rs[0].get('cards'))
     for g in (g1, g2, g3): g.cmd('join 0')
+    r = g1.wait(lambda r: r.get('net') and 'game van' in r['status'], 8)
+    check('NetUi' in r.get('focus', ''), 'na Meedoen staat de focus op een knop van het online-scherm', r.get('focus'))
     r = h.wait(lambda r: len(r['remotes']) == 3, 15)
     check(sorted((x['name'], x['car']) for x in r.get('remotes', [])) == [('Bram', 'hatch'), ('Lotte', 'evo'), ('Mira', 'super')],
           'host ziet de drie spelers met hun auto', r.get('remotes'))
@@ -158,10 +162,18 @@ def scenario_four():
     t0 = time.time()
     r = h.wait(lambda r: remote(r, 'Bram') is None or not remote(r, 'Bram')['visible'], 4)
     check(remote(r, 'Bram') is None or not remote(r, 'Bram')['visible'], 'gekilde speler meteen van de baan', remote(r, 'Bram'))
-    r = h.wait(lambda r: remote(r, 'Bram') is None, 30, every=0.5)
-    check(remote(r, 'Bram') is None, 'gekilde speler na de time-out uit de game', round(time.time() - t0, 1))
-    r = h.wait(lambda r: r['state'] == 'over', 90)
+    r = h.wait(lambda r: 'remotes' in r and remote(r, 'Bram') is None, 30, every=0.5)
+    check('remotes' in r and remote(r, 'Bram') is None, 'gekilde speler na de time-out uit de game', round(time.time() - t0, 1))
+    r = h.wait(lambda r: r['state'] == 'over' and r.get('results') and 'Bram' not in names(r, 'Yip'), 90)
     check(r.get('state') == 'over' and 'Bram' not in names(r, 'Yip'), 'host haalt de finish, uitslag zonder de weggevallen speler', names(r, 'Yip'))
+    # the replay of this race: Lotte left and Bram fell away halfway; every car of it can still be followed
+    time.sleep(1)
+    check(h.cmd('press Bekijk replay'), 'host bekijkt de replay')
+    for _ in range(6):
+        h.cmd('ex get_node("/root/Rep").next_btn.emit_signal("pressed")'); time.sleep(0.3)
+    r = h.rep()
+    check(r['state'] == 'replay' and not h.errors(), 'replay met spelers die halverwege weggingen: alle auto\'s te volgen, geen fouten', (r['state'], h.errors()[:2]))
+    h.cmd('press Terug naar uitslag')
 
     # ---- race 3 (Nieuwe race): Teun races now; the host closes his window halfway
     check(h.cmd('again'), 'host klikt Nieuwe race')
@@ -268,12 +280,107 @@ def scenario_car():
     no_errors([h, g, o])
     kill_all()
 
-which = sys.argv[1:] or ['1', '2', '3']
+class Lan:
+    """a small test LAN (Linux, root): every PC its own network namespace, all on one bridge"""
+    def __init__(self):
+        self.tag = f'prqa{os.getpid() % 100000}'
+        self.made = []
+        self.k = 0
+        self.ok = all(shutil.which(t) for t in ('ip',)) and self.sh(f'ip netns add {self.tag}-lan')
+        if self.ok:
+            self.made.append(f'{self.tag}-lan')
+            self.ok = self.sh(f'ip -n {self.tag}-lan link add br0 type bridge') and self.sh(f'ip -n {self.tag}-lan link set br0 up')
+    @staticmethod
+    def sh(c):
+        return subprocess.run(c.split(), capture_output=True).returncode == 0
+    def pc(self, name, addr, vbox=False):
+        """a PC with one network card on the LAN (addr like 10.99.1.1/16); vbox: also a VirtualBox-like card that has
+        the default route, so 255.255.255.255 goes out of the wrong card (as on many Windows PCs)"""
+        ns = f'{self.tag}-{name}'
+        self.k += 1
+        v = f'pq{os.getpid() % 10000}v{self.k}'
+        ok = self.sh(f'ip netns add {ns}')
+        self.made.append(ns)
+        for c in (f'ip link add {v} type veth peer name eth0 netns {ns}', f'ip link set {v} netns {self.tag}-lan',
+                  f'ip -n {self.tag}-lan link set {v} master br0', f'ip -n {self.tag}-lan link set {v} up',
+                  f'ip -n {ns} link set lo up', f'ip -n {ns} link set eth0 up', f'ip -n {ns} addr add {addr} dev eth0'):
+            ok = ok and self.sh(c)
+        if vbox:
+            dead = f'{ns}-vb'
+            self.sh(f'ip netns add {dead}')
+            self.made.append(dead)
+            for c in (f'ip link add {v}b type veth peer name vbox0 netns {ns}', f'ip link set {v}b netns {dead}', f'ip -n {dead} link set {v}b up',
+                      f'ip -n {ns} link set vbox0 up', f'ip -n {ns} addr add 192.168.56.1/24 dev vbox0',
+                      f'ip -n {ns} route add default via 192.168.56.2 dev vbox0'):
+                ok = ok and self.sh(c)
+        self.ok = self.ok and ok
+        return ['ip', 'netns', 'exec', ns]
+    def close(self):
+        for ns in reversed(self.made):
+            self.sh(f'ip netns del {ns}')
+
+def scenario_lan():
+    """two hosts and players on separate (virtual) PCs; one player behind a bad connection"""
+    if not (hasattr(os, 'geteuid') and os.geteuid() == 0 and sys.platform.startswith('linux')):
+        print('-- LAN met meerdere pc\'s overgeslagen (alleen Linux als root)'); return
+    print('== online: LAN met 5 pc\'s (/16-netwerk, VirtualBox-kaart, slechte verbinding: 5% verlies, 10-50 ms)')
+    lan = Lan()
+    px = None
+    try:
+        h1w = lan.pc('h1', '10.99.1.1/16'); h2w = lan.pc('h2', '10.99.1.2/16')
+        gw = lan.pc('g', '10.99.2.1/16', vbox=True); g2w = lan.pc('g2', '10.99.2.2/16'); pxw = lan.pc('px', '10.99.3.1/16')
+        if not lan.ok:
+            print('-- LAN met meerdere pc\'s overgeslagen (netwerk maken lukte niet)'); return
+        TS = 4
+        h1 = Player('h1', nick='Yip', car='gt', ts=TS, wrap=h1w)
+        h2 = Player('h2', nick='Kim', car='evo', ts=TS, wrap=h2w)
+        g = Player('g', nick='Bram', car='hatch', ts=TS, wrap=gw)
+        g2 = Player('g2', nick='Lotte', car='super', ts=TS, wrap=g2w)
+        px = subprocess.Popen(pxw + [sys.executable, str(pathlib.Path(__file__).with_name('net_lossy.py')), '10.99.3.1', '47810', '10.99.1.1', '0.05', '0.03', '0.02'],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        P = [h1, h2, g, g2]
+        check(all(p.ready(90) for p in P), 'vier spellen op vier pc\'s gestart')
+        for h in (h1, h2): h.cmd('open'); h.cmd('press Nieuwe game maken')
+        h1.cmd('set laps 1'); h1.cmd('set bots 2')
+        g.cmd('open')
+        r = g.wait(lambda r: len(r['lobbies']) == 2, 10)
+        check(sorted(l['ip'] for l in r.get('lobbies', [])) == ['10.99.1.1', '10.99.1.2'], 'twee hosts op het LAN staan allebei in de lijst (ook met een VirtualBox-kaart en een /16-netwerk)',
+              r.get('lobbies'))
+        h2.cmd('press Game verlaten')
+        r = g.wait(lambda r: len(r['lobbies']) == 1, 8)
+        check([l['name'] for l in r.get('lobbies', [])] == ['Yips game'], 'host die stopt verdwijnt uit de lijst', r.get('lobbies'))
+        g.cmd('join 0')
+        g2.cmd('open'); g2.cmd('joinip 10.99.3.1')
+        r = h1.wait(lambda r: len(r['remotes']) == 2, 15)
+        check(len(r.get('remotes', [])) == 2, 'speler via de slechte verbinding komt binnen', [x['name'] for x in r.get('remotes', [])])
+        h1.cmd('press Start race')
+        rs = [p.wait(lambda r: r['state'] == 'racing', 20) for p in (h1, g, g2)]
+        gos = [r.get('go_at', 0) for r in rs]
+        check(all(r.get('state') == 'racing' for r in rs) and max(gos) - min(gos) < 0.25, 'start tegelijk, ook met vertraging en verlies (de lampen volgen de klok van de host)', (round(max(gos) - min(gos), 3), [r.get('state') for r in rs]))
+        seen = 0
+        for _ in range(12):
+            time.sleep(0.5)
+            x = remote(h1.rep(), 'Lotte')
+            seen += 1 if x and x['visible'] else 0
+        check(seen >= 10, 'host ziet de speler met de slechte verbinding vrijwel steeds rijden', f'{seen}/12')
+        rs = [p.wait(lambda r: r['state'] == 'over' and r.get('results'), 90) for p in (h1, g, g2)]
+        time.sleep(2)
+        rs = [p.rep() for p in (h1, g, g2)]
+        res = [names(r, n) for r, n in zip(rs, ('Yip', 'Bram', 'Lotte'))]
+        check(res[0] and res[0] == res[1] == res[2] and len(res[0]) == 5, 'uitslag overal gelijk, ook met pakketverlies', res)
+        no_errors(P)
+    finally:
+        kill_all()
+        if px is not None: px.kill()
+        lan.close()
+
+which = sys.argv[1:] or ['1', '2', '3', '4']
 t0 = time.time()
 try:
     if '1' in which: scenario_four()
     if '2' in which: scenario_full()
     if '3' in which: scenario_car()
+    if '4' in which: scenario_lan()
 finally:
     kill_all()
 print(f'-- online (meer spelers): {"alles geslaagd" if not bad else str(len(bad)) + " mislukt: " + ", ".join(bad)}  ({round(time.time() - t0)} s)')

@@ -27,7 +27,7 @@ ALL = []
 
 
 class Player:
-    def __init__(self, name, nick=None, car='hatch', ts=1, color=None, env=None, window=False, extra=()):
+    def __init__(self, name, nick=None, car='hatch', ts=1, color=None, env=None, window=False, extra=(), wrap=()):
         self.name = name
         self.ctl = TMP / f'{name}.cmd'
         self.ctl.write_text('')
@@ -40,6 +40,7 @@ class Player:
                 f'nick={nick or name}', f'car={car}', f'ts={ts}'] + ([f'color={color}'] if color else [])
         if shutil.which('stdbuf'):
             args = ['stdbuf', '-oL'] + args      # Godot's print is buffered in a pipe: line by line, please
+        args = list(wrap) + args                 # e.g. ip netns exec <pc>: this player on another "PC" of a test LAN
         # own process group: kill() also stops Godot under xvfb-run
         self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env, start_new_session=True)
         ALL.append(self)

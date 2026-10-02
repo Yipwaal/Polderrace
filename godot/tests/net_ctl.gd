@@ -107,7 +107,7 @@ func _buttons(root: Node, out: Array) -> void:
 
 func _find(text: String) -> Control:
 	var all := []
-	for root in [NetUi, Menu]: _buttons(root, all)
+	for root in [NetUi, Menu, Rep]: _buttons(root, all)
 	for b in all:
 		if _text(b) == text and not b.get("disabled"): return b
 	return null
