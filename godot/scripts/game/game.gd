@@ -344,6 +344,12 @@ func updateBots(dt: float) -> void:
 	obs.append({"ref": null, "s": player.s, "lat": player.lat, "cur": maxf(0, player.speed)})
 	var pProg := progressOf(player.lap, player.s, raceDone, raceFinishTime)
 	var df: Dictionary = G.DIFF[G.settings.diff]
+	# the look-ahead loops below run some 60 times per bot per step: the track arrays and the grip as locals
+	var CURV := Trk.CURV
+	var LEN := Trk.TRACK_LEN
+	var SPC := Trk.SPC
+	var NS := Trk.NS
+	var gf := gripFactor()
 	for b in bots:
 		if b.m.get("beam") != null:
 			b.m.beam.visible = lampsOn and not b.out
@@ -368,10 +374,10 @@ func updateBots(dt: float) -> void:
 		var look := minf(260, 25 + b.speed * b.speed / 40)
 		var d := 4.0
 		while d < look:
-			var i := int(floor(fposmod(b.s + d, Trk.TRACK_LEN) / Trk.SPC)) % Trk.NS
-			var c: float = Trk.CURV[i]
+			var i := int(floor(fposmod(b.s + d, LEN) / SPC)) % NS
+			var c: float = CURV[i]
 			if c > 2e-4:
-				var vl := sqrt(b.aLat * gripFactor() / c)
+				var vl := sqrt(b.aLat * gf / c)
 				var allowed := sqrt(vl * vl + 2 * b.brk * d)
 				if allowed < target: target = allowed
 			d += 6
@@ -405,7 +411,7 @@ func updateBots(dt: float) -> void:
 		var bend := 0.0
 		var dd := 10.0
 		while dd < 160:
-			bend = maxf(bend, Trk.CURV[int(floor(fmod(b.s + dd, Trk.TRACK_LEN) / Trk.SPC)) % Trk.NS])
+			bend = maxf(bend, CURV[int(floor(fmod(b.s + dd, LEN) / SPC)) % NS])
 			dd += 10
 		var kq := clamp_((into - 60) / 260, 0, 1)
 		var kk := maxf(kq, clamp_((bend - 0.004) / 0.01, 0, 1) * clamp_(into / 40, 0, 1))
