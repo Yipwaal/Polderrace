@@ -23,6 +23,9 @@ var start_btn: Button
 var scroll: ScrollContainer
 var outer: VBoxContainer
 var leave_btn: Button
+var car_btn: Button
+var create_btn: Button
+var back_btn: Button
 
 func _ready() -> void:
 	layer = 12
@@ -58,9 +61,11 @@ func _ready() -> void:
 	nick.custom_minimum_size = Vector2(220, 0)
 	_style_edit(nick)
 	nick.text_changed.connect(func(t: String):
-		G.prefs.nick = t if t.strip_edges() != "" else G.prefs.nick
+		var n := t.strip_edges()
+		if n == "" or n == G.prefs.nick: return
+		G.prefs.nick = n
 		G.savePrefs()
-		if Net.net != null: Net.net.game.presence({"nick": G.prefs.nick}))
+		if Net.net != null: Net.net.game.presence({"nick": n}))
 	nr.add_child(nick)
 	box.add_child(nr)
 	# ---- not in a game: the games on this network, make one, or join by IP
@@ -71,9 +76,9 @@ func _ready() -> void:
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 6)
 	lobby_box.add_child(list)
-	var create := Hud.mk_button("Nieuwe game maken")
-	create.pressed.connect(func(): Net.netCreate())
-	lobby_box.add_child(create)
+	create_btn = Hud.mk_button("Nieuwe game maken")
+	create_btn.pressed.connect(func(): Net.netCreate())
+	lobby_box.add_child(create_btn)
 	lobby_box.add_child(_eyebrow("Via internet of een ander netwerk"))
 	var ir := HBoxContainer.new()
 	ir.add_theme_constant_override("separation", 10)
@@ -122,28 +127,35 @@ func _ready() -> void:
 	host_ctl.add_child(up)
 	upnp_note = _note("")
 	host_ctl.add_child(upnp_note)
-	car_lbl = _cycler(game_box, "Auto", func(d: int):
-		var ids: Array = Cars.CARS.keys()
-		var i := ids.find(G.settings.car)
-		G.settings.car = ids[(i + d + ids.size()) % ids.size()]
-		G.saveSettings()
-		Game.rebuildPlayerCar()
-		if Net.net != null: Net.net.game.presence({"car": G.settings.car, "color": G.settings.color})
-		refresh())
+	# your car: the car step of the menus (JS netCar), with only the cars you own and their colours
+	var cr := HBoxContainer.new()
+	cr.add_theme_constant_override("separation", 8)
+	var cl := _lab("Auto")
+	cl.custom_minimum_size = Vector2(80, 0)
+	car_lbl = Hud.mk_label("", "900 17px Nunito", Hud.SIGN_INK)
+	car_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	car_btn = Hud.mk_button("Auto kiezen", false)
+	car_btn.pressed.connect(func():
+		ov.visible = false
+		Menu.menuFlow = "net"
+		Menu.showMenu(0))
+	for c in [cl, car_lbl, car_btn]: cr.add_child(c)
+	game_box.add_child(cr)
 	status = _note("")
 	outer.add_child(status)
 	var nav := HBoxContainer.new()
 	nav.add_theme_constant_override("separation", 10)
 	outer.add_child(nav)
-	var back := Hud.mk_button("Terug", false)
-	back.pressed.connect(func(): close())
-	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nav.add_child(back)
+	back_btn = Hud.mk_button("Terug", false)
+	back_btn.pressed.connect(func(): close())
+	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nav.add_child(back_btn)
 	leave_btn = Hud.mk_button("Game verlaten", false)
 	leave_btn.pressed.connect(func():
 		Net.netLeave()
 		Net.browse()
-		refresh())
+		refresh()
+		create_btn.grab_focus())
 	leave_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nav.add_child(leave_btn)
 	Net.changed.connect(refresh)
@@ -212,13 +224,30 @@ func open() -> void:
 	if Net.net == null:
 		Net.browse()
 	refresh()
+	# keyboard and gamepad: start on the main button of this screen
+	var f: Control = (start_btn if Net.net.host else car_btn) if Net.net != null else create_btn
+	f.grab_focus()
 
 func close() -> void:
 	ov.visible = false
 	Net.stop_browse()
+	# back on the button that opened this screen
+	if Game.state == "menu" and Menu.homeUI.hNet.is_visible_in_tree(): UiKit.focus(Menu.homeUI.hNet)
 
 func is_open() -> bool:
 	return ov.visible
+
+## Escape closes the online screen, like Terug (in the name or address field Menu._input first leaves the field)
+func _input(e: InputEvent) -> void:
+	if not ov.visible or not (e is InputEventKey) or not e.pressed or e.echo or e.keycode != KEY_ESCAPE: return
+	if get_viewport().gui_get_focus_owner() is LineEdit: return
+	get_viewport().set_input_as_handled()
+	close()
+
+static func _clear(n: Node) -> void:
+	for c in n.get_children():
+		n.remove_child(c)
+		c.queue_free()
 
 func refresh() -> void:
 	if not ov.visible:
@@ -227,32 +256,63 @@ func refresh() -> void:
 	lobby_box.visible = not inGame
 	game_box.visible = inGame
 	leave_btn.visible = inGame
-	scroll.custom_minimum_size = Vector2(504, minf(box.get_combined_minimum_size().y, get_viewport().get_visible_rect().size.y - 190))
 	status.text = Net.status
 	status.visible = Net.status != ""
 	if not inGame:
-		for c in list.get_children(): c.queue_free()
+		# keep the keyboard focus on the same card when the list changes
+		var fo := get_viewport().gui_get_focus_owner()
+		var fi := -1
+		for i in list.get_child_count():
+			if fo != null and list.get_child(i).is_ancestor_of(fo): fi = i
+		_clear(list)
 		var ls := Net.lobbies()
 		if ls.is_empty():
 			list.add_child(_note("Nog geen games gevonden. Maak er zelf een aan, of wacht tot de host er een maakt."))
 		for l in ls:
 			list.add_child(_lobby_card(l))
-		return
-	for c in players.get_children(): c.queue_free()
-	_player_row(G.prefs.nick, G.settings.car, Net.net.host, true)
-	for r in Net.net.remotes.values():
-		_player_row(r.name, r.carId, r.host, false)
-	host_ctl.visible = Net.net.host
-	track_lbl.text = TrackDefs.TRACKS[G.settings.track].name + (" (omgekeerd)" if G.settings.dir == "rev" else "")
-	laps_lbl.text = str(G.settings.laps)
-	bots_lbl.text = str(mini(int(G.settings.bots), 5))
-	car_lbl.text = Cars.CARS[G.settings.car].name
-	var ips := []
-	for a in IP.get_local_addresses():
-		if a.count(".") == 3 and not a.begins_with("127.") and not a.begins_with("169.254."): ips.append(a)
-	ip_note.text = ("Jouw IP-adres (voor meedoen via IP): " + ", ".join(ips)) if not ips.is_empty() else ""
-	upnp_note.text = Net.upnp_status
-	upnp_note.visible = Net.upnp_status != ""
+		if fi >= 0:
+			var bs := list.get_child(mini(fi, list.get_child_count() - 1)).find_children("*", "Button", true, false)
+			if not bs.is_empty() and not bs[0].disabled: bs[0].grab_focus()
+			else: create_btn.grab_focus()
+	else:
+		_clear(players)
+		_player_row(G.prefs.nick, G.settings.car, Net.net.host, true)
+		for r in Net.net.remotes.values():
+			_player_row(r.name, r.carId, r.host, false)
+		host_ctl.visible = Net.net.host
+		track_lbl.text = TrackDefs.TRACKS[G.settings.track].name + (" (omgekeerd)" if G.settings.dir == "rev" else "")
+		laps_lbl.text = str(G.settings.laps)
+		bots_lbl.text = str(mini(int(G.settings.bots), 5))
+		car_lbl.text = Cars.CARS[G.settings.car].name
+		var ips := lanAddresses()
+		ip_note.text = (("Jouw IP-adres (voor meedoen via IP): " + ", ".join(ips.slice(0, 3)) + ". ") if not ips.is_empty() else "") + \
+			"Zien anderen je game niet? Sta Polderrace toe in de Windows-firewall, ook voor openbare netwerken."
+		upnp_note.text = Net.upnp_status
+		upnp_note.visible = Net.upnp_status != ""
+	scroll.custom_minimum_size = Vector2(504, minf(box.get_combined_minimum_size().y, get_viewport().get_visible_rect().size.y - 190))
+
+## this PC's IPv4 addresses, the real network first: VirtualBox, Hyper-V, VPN and other virtual adapters last,
+## with the adapter's name when there are several ("192.168.1.20 (Wi-Fi)")
+static func lanAddresses() -> Array:
+	var found := []
+	for it in IP.get_local_interfaces():
+		var nm := str(it.get("friendly", it.get("name", "")))
+		var low := nm.to_lower()
+		var virt := 0
+		for w in ["virtual", "vbox", "vmware", "vethernet", "hyper-v", "wsl", "docker", "vpn", "tap", "tun", "hamachi", "zerotier", "tailscale", "radmin", "bluetooth", "loopback", "virbr"]:
+			if w in low: virt = 1
+		for addr in it.get("addresses", []):
+			var a := str(addr)
+			if a.count(".") != 3 or a.begins_with("127.") or a.begins_with("169.254."): continue
+			var b := int(a.get_slice(".", 1))
+			var lan: bool = a.begins_with("192.168.") or a.begins_with("10.") or (a.begins_with("172.") and b >= 16 and b < 32)
+			var v := 1 if virt == 1 or a.begins_with("192.168.56.") else 0    # 192.168.56.x: VirtualBox host-only
+			found.append({"a": a, "nm": nm, "k": v * 2 + (0 if lan else 1)})
+	found.sort_custom(func(x, y): return x.k < y.k)
+	var out := []
+	for f in found:
+		out.append(f.a + (" (%s)" % f.nm if found.size() > 1 and f.nm != "" else ""))
+	return out
 
 func _lobby_card(l: Dictionary) -> Control:
 	var pc := PanelContainer.new()
@@ -265,9 +325,18 @@ func _lobby_card(l: Dictionary) -> Control:
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(Hud.mk_label(str(l.get("name", "Game")).substr(0, 40), "900 17px Nunito", Hud.SIGN_INK))
-	v.add_child(Hud.mk_label("%s · %d van %d spelers" % [l.get("track", ""), int(l.get("n", 1)), int(l.get("max", 8))], "700 13px Nunito", Hud.SUB))
+	var other: bool = int(l.get("v", 1)) != NetRoom.PROTO
+	var full: bool = not l.get("open", true)
+	var sub := "%s · %d van %d spelers" % [l.get("track", ""), int(l.get("n", 1)), int(l.get("max", 8))]
+	if other: sub += " · andere versie van het spel"
+	elif full: sub += " · vol"
+	elif l.get("race", false): sub += " · race bezig, je doet mee vanaf de volgende"
+	var sl := Hud.mk_label(sub, "700 13px Nunito", Hud.SUB)
+	sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(sl)
 	h.add_child(v)
 	var b := Hud.mk_button("Meedoen")
+	b.disabled = other or full
 	b.pressed.connect(func(): Net.netJoin(str(l.ip)))
 	h.add_child(b)
 	return pc
