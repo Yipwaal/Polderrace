@@ -476,11 +476,10 @@ func homePanel(v: String) -> void:
 		GarageRoom.leaveGarageScene()
 		if v != "main": menuScene()
 
+## JS: querySelector('.tog,[role=radio]') (pause: '[role=switch],[role=radio]'): the first match in document order is
+## always the first tab, "Algemeen", whichever tab is open
 func _first_setting() -> Control:
-	var s := settingsUI
-	if s.general.visible: return s.togs.sound
-	var b = s.tabRadio.checked_item()
-	return b
+	return settingsUI.tabRadio.find("general")
 
 func homeBack() -> void:
 	var from := homeView
@@ -980,7 +979,7 @@ func padFocus(d: int, r: Control = null) -> void:
 	if list.is_empty(): return
 	var i := list.find(get_viewport().gui_get_focus_owner())
 	var n: Control = list[(i + d + list.size()) % list.size()]
-	UiKit.focus(n)
+	UiKit.focus(n, true)
 
 func _input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and e.pressed: UiKit.pointer = true

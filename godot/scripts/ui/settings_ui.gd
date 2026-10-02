@@ -55,7 +55,8 @@ func _init() -> void:
 			syncToggles())
 		togs[k] = b
 		rows.append(b)
-	general.add_child(UiKit.rows_card(rows, UiKit.LINE2))
+	# no lines between the switches: in the CSS .tog{border:0} comes after .togs>*+*{border-top:...} and wins
+	general.add_child(UiKit.rows_card(rows, Color.TRANSPARENT))
 	var gs := UiKit.seg([["auto", "Automaat"], ["manual", "Handgeschakeld"]], func(v) -> void:
 		G.prefs.gearbox = v
 		G.savePrefs()

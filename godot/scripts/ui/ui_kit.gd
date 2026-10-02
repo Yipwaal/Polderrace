@@ -281,13 +281,24 @@ class Radio extends RefCounted:
 		var nb = o[(i + d + o.size()) % o.size()]
 		if on_pick.is_valid(): on_pick.call(nb.value)
 		if is_instance_valid(nb) and nb.is_visible_in_tree():
-			UiKit.focus(nb)
+			UiKit.focus(nb, true)
 
-## focus a control the way JS .focus() does after a key (ring shown), or quietly after a mouse click
+## focus a control the way JS .focus() does after a key (ring shown), or quietly after a mouse click.
+## scroll = false is JS focus({preventScroll:true}), what the menus use when a panel opens: the scroll containers around
+## it do not follow (they would also measure a layout that is not sorted yet); keyboard steps pass scroll = true
 static var pointer := false
-static func focus(c: Control) -> void:
+static func focus(c: Control, scroll := false) -> void:
 	if c != null and is_instance_valid(c) and c.is_visible_in_tree() and c.focus_mode != Control.FOCUS_NONE:
+		var held: Array[ScrollContainer] = []
+		if not scroll:
+			var p := c.get_parent()
+			while p != null:
+				if p is ScrollContainer and p.follow_focus:
+					p.follow_focus = false
+					held.append(p)
+				p = p.get_parent()
 		c.grab_focus(pointer)
+		for s in held: s.follow_focus = true
 
 # ------------------------------------------------------------------ layout containers
 ## a row that wraps like CSS flex-wrap with justify-content:space-between: the first child (a label) takes the free
@@ -533,7 +544,21 @@ static func scroller(content: Control) -> ScrollContainer:
 	m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	s.add_child(m)
-	bar.visibility_changed.connect(func() -> void: m.add_theme_constant_override("margin_right", 4 if bar.visible else 10))
+	# the content ends 10 px from the scroll area's right edge, with or without the bar: whether the ScrollContainer
+	# took the bar's width off the content depends on when the bar appeared, so look at what it did
+	# (after the layout has settled: once per frame at most; the content keeps the same width either way)
+	var fit := func() -> void:
+		if not is_instance_valid(m) or not is_instance_valid(s): return
+		m.remove_meta("fit_q")
+		var want := maxi(0, 10 - int(round(s.size.x - m.size.x)))
+		if m.get_theme_constant("margin_right") != want: m.add_theme_constant_override("margin_right", want)
+	var queue := func() -> void:
+		if not is_instance_valid(m) or m.has_meta("fit_q"): return
+		m.set_meta("fit_q", true)
+		fit.call_deferred()
+	m.resized.connect(queue)
+	s.resized.connect(queue)
+	bar.visibility_changed.connect(queue)
 	var o := margin(s, Vector4(0, 0, -10, 0))
 	o.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	s.set_meta("outer", o)
@@ -780,7 +805,7 @@ static func rows_card(rows: Array, line := LINE) -> PanelContainer:
 	var v := vbox(0)
 	p.add_child(v)
 	for k in rows.size():
-		if k > 0: v.add_child(hline(line))
+		if k > 0 and line.a > 0: v.add_child(hline(line))
 		v.add_child(rows[k])
 	return p
 

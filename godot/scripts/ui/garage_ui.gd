@@ -164,7 +164,7 @@ func openGarage() -> void:
 		var t := UiKit.vbox(0)
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		t.add_child(UiKit.lbl("Nog niet in bezit", 800, 16, UiKit.SIGN_INK, true, 0, false, 1.2))
-		t.add_child(UiKit.lbl(Menu.carStatsLine(S.car) + " · kopen om hem in de carrière te rijden en te upgraden", 600, 12, UiKit.SUB, true, 0, false, 1.3))
+		t.add_child(_upn_small(Menu.carStatsLine(S.car) + " · kopen om hem in de carrière te rijden en te upgraden"))
 		r.add_child(t)
 		var pr := UiKit.lbl(G.fmtCr(p), 900, 14, UiKit.DETOUR)
 		pr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -188,7 +188,7 @@ func openGarage() -> void:
 		var t := UiKit.vbox(0)
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		t.add_child(UiKit.lbl(g.name, 800, 16, UiKit.SIGN_INK, true, 0, false, 1.2))
-		t.add_child(UiKit.lbl(g.desc, 600, 12, UiKit.SUB, true, 0, false, 1.3))
+		t.add_child(_upn_small(g.desc))
 		r.add_child(t)
 		var pips := UiKit.hbox(4)
 		pips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -225,6 +225,11 @@ func openGarage() -> void:
 		b.set_meta("buy", true)
 		r.add_child(b)
 		upgRows.add_child(UiKit.margin(r, Vector4(18, 9, 10, 9)))
+
+## .upn small is inline text in a block: its line box gets the parent's 16 px Nunito strut (line-height normal,
+## 21.8 px with the baseline 16.2 px down), so the row is taller than the small text itself
+static func _upn_small(text: String) -> Control:
+	return UiKit.margin(UiKit.lbl(text, 600, 12, UiKit.SUB, true, 0, false, 1.3), Vector4(0, 4, 0, 2))
 
 func _pick_color(c: Color) -> void:
 	var sw = paintPick.get_child(0)
