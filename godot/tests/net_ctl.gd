@@ -50,15 +50,16 @@ func _ready() -> void:
 	say("0", "ready")
 
 func _process(dt: float) -> void:
+	# first what happened this frame (a report must not see "racing" before go_at is set), then the next command
+	_watch(dt)
+	_drive()
+	Engine.time_scale = 1.0 if Game.state == "countdown" or Game.state == "menu" else ts
 	_poll_ctl()
 	if not busy and not queue.is_empty():
 		var line: String = queue.pop_front()
 		busy = true
 		await _run(line)
 		busy = false
-	_watch(dt)
-	_drive()
-	Engine.time_scale = 1.0 if Game.state == "countdown" or Game.state == "menu" else ts
 
 func _poll_ctl() -> void:
 	if ctl == "" or not FileAccess.file_exists(ctl): return

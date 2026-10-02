@@ -14,7 +14,7 @@ from net_players import Player, kill_all
 
 bad = []
 def check(c, label, detail=''):
-    print(('OK   ' if c else 'FOUT ') + label + (('  ' + str(detail)[:300]) if detail else ''))
+    print(('OK   ' if c else 'FOUT ') + label + (('  ' + str(detail)[:300 if c else 3000]) if detail else ''))
     if not c: bad.append(label)
 
 def names(r, nick):
@@ -93,7 +93,9 @@ def scenario_four():
         rg = g.rep(); rh = h.rep()
         x = remote(rh, nm)
         check(x and x['visible'] and abs(x['s'] - rg['me_s']) < 80, f'host ziet {nm} waar {nm} rijdt', (x and x['s'], rg['me_s']))
-    # Lotte rams bot 0 of the host: the host applies her kick, the bot does not jump
+    # Lotte rams bot 0 of the host: the host applies her kick, the bot does not jump (at real speed: a faster game
+    # time makes every correction between two network updates bigger)
+    for p in (h, g2): p.cmd('ts 1')
     seen0 = h.rep().get('seen', {}).get('g2', 0)
     h.cmd('track')
     g2.cmd('ram')
@@ -101,7 +103,10 @@ def scenario_four():
     check(r.get('seen', {}).get('g2', 0) > seen0, 'host krijgt de botsing van Lotte met zijn bot', (seen0, r.get('seen')))
     time.sleep(1.5)
     sp = speeds(h.rep().get('bot_track', []))
-    check(sp and max(sp) < 110, 'bot springt niet bij de host na de botsing (snelheid van beeld tot beeld)', round(max(sp), 1) if sp else sp)
+    check(sp and max(sp) < 110, 'bot springt niet bij de host na de botsing (snelheid van beeld tot beeld)', [round(x) for x in sp])
+    sp = speeds(g2.rep().get('bot_track', []))
+    check(sp and max(sp) < 110, 'en ook niet bij Lotte zelf (haar botsing en daarna de positie van de host)', [round(x) for x in sp])
+    for p in (h, g2): p.cmd(f'ts {TS}')
     # Mira stops (pause, Naar menu): her car goes, she stays in the game
     check(g3.cmd('quitrace'), 'Mira stopt met de race (pauze, Naar menu)')
     r = g3.wait(lambda r: r['state'] == 'menu' and r['ui'], 5)
@@ -248,6 +253,17 @@ def scenario_full():
     v.cmd('joinip 192.168.1')
     r = v.rep()
     check(not r['net'] and 'geen IP-adres' in r['status'], 'onzin als adres: meteen een melding', r['status'])
+    # leaving and coming back a few times: nothing piles up (players, ENet rooms)
+    w = gs[2]
+    n0 = (h.rep()['nodes'], w.rep()['nodes'])
+    for _ in range(4):
+        w.cmd('press Game verlaten'); h.wait(lambda r: len(r['remotes']) == 6, 5)
+        w.wait(lambda r: r['lobbies'] and r['lobbies'][0]['open'], 6); w.cmd('join 0')
+        h.wait(lambda r: len(r['remotes']) == 7, 8)
+    time.sleep(1.5)
+    r, rw = h.rep(), w.rep()
+    check(len(r['remotes']) == 7 and 'game van Yip' in rw['status'], 'vier keer weggaan en terugkomen werkt', (len(r['remotes']), rw['status']))
+    check(r['nodes'] <= n0[0] + 5 and rw['nodes'] <= n0[1] + 5, 'en er blijft niets achter (aantal nodes bij host en speler)', (n0, (r['nodes'], rw['nodes'])))
     # the host leaves the lobby: everyone gets a message and the list
     h.cmd('press Game verlaten')
     rs = [p.wait(lambda r: not r['net'], 5) for p in gs[1:]]
@@ -356,7 +372,7 @@ def scenario_lan():
         h1.cmd('press Start race')
         rs = [p.wait(lambda r: r['state'] == 'racing', 20) for p in (h1, g, g2)]
         gos = [r.get('go_at', 0) for r in rs]
-        check(all(r.get('state') == 'racing' for r in rs) and max(gos) - min(gos) < 0.25, 'start tegelijk, ook met vertraging en verlies (de lampen volgen de klok van de host)', (round(max(gos) - min(gos), 3), [r.get('state') for r in rs]))
+        check(all(r.get('state') == 'racing' for r in rs) and max(gos) - min(gos) < 0.25, 'start tegelijk, ook met vertraging en verlies (de lampen volgen de klok van de host)', (round(max(gos) - min(gos), 3), gos, [r.get('state') for r in rs]))
         seen = 0
         for _ in range(12):
             time.sleep(0.5)

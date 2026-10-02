@@ -110,7 +110,7 @@ func netEnter(room: NetRoom, host: bool) -> void:
 	if net != null:
 		netLeave()
 	net = {"game": room, "host": host, "inRace": false, "remotes": {}, "lastSend": 0, "raceId": 0, "kicks": [], "kickSeq": 0, "seen": {},
-		"botDefs": null, "order": [], "startAt": 0, "botUpd": -1, "botAt": 0, "sentCar": G.settings.car + G.settings.color, "addr": "", "hostGo": -1e12}
+		"botDefs": null, "order": [], "startAt": 0, "botUpd": -1, "botAt": 0, "sentCar": G.settings.car + G.settings.color, "addr": "", "hostGo": -1e12, "botErr": {}, "botHold": {}}
 	room.presence({"nick": G.prefs.nick, "car": G.settings.car, "color": G.settings.color, "host": host, "st": null, "b": null, "k": [], "race": null})
 	room.peers_changed.connect(func():
 		if net != null and net.game == room and netSyncRemotes(): changed.emit())
@@ -211,6 +211,8 @@ func netHostStart() -> void:
 func netBegin(race: Dictionary) -> void:
 	net.startAt = Time.get_ticks_msec()
 	net.hostGo = -1e12
+	net.botErr = {}
+	net.botHold = {}
 	net.inRace = true
 	net.botDefs = race.bots
 	net.order = race.order
@@ -271,6 +273,8 @@ func netPlace() -> void:
 	Game.snapCamera()
 
 func netKick(i: int, x: float, z: float, s: float) -> void:
+	# this game already pushed its copy of the bot; the host's next positions do not have the push yet: skip them a moment
+	net.botHold[i] = Time.get_ticks_msec() + 200
 	net.kickSeq += 1
 	net.kicks.append({"q": net.kickSeq, "r": net.raceId, "i": i, "x": snappedf(x, 0.001), "z": snappedf(z, 0.001), "s": snappedf(s, 0.001)})
 	if net.kicks.size() > 8: net.kicks.pop_front()
@@ -322,11 +326,28 @@ func netTick() -> void:
 			# a new snapshot of the host's bots (only once: in between they roll on, see botsFresh)
 			net.botUpd = p.updatedAt
 			net.botAt = now
+			var L := Trk.TRACK_LEN
 			for i in b.size():
 				if i >= Game.bots.size(): break
+				if now < int(net.botHold.get(i, 0)): continue
 				var q: Array = b[i]
 				var bot: Mover = Game.bots[i]
-				bot.s = q[0]; bot.lat = q[1]; bot.speed = q[2]; bot.lap = int(q[3]); bot.yawOff = q[4]; bot.finished = bool(q[5]); bot.finishTime = q[6] if q[6] else 0.0
+				# a small difference with where the bot rolled on to here is smoothed out over a few frames (the host's
+				# frames are not evenly spaced either); a big one (a crash, a reset) is taken over at once
+				var es := Trk.wrapD(float(q[0]) - bot.s)
+				var el: float = float(q[1]) - bot.lat
+				var lap := int(q[3])
+				if absf(es) < 8 and absf(el) < 3:
+					net.botErr[i] = Vector2(es, el)
+					# the lap that goes with the bot's own position (it may still be just before or after the line)
+					var rq := fposmod(float(q[0]) - Trk.S_START, L)
+					var rb := fposmod(bot.s - Trk.S_START, L)
+					if rb - rq > L / 2: lap -= 1
+					elif rq - rb > L / 2: lap += 1
+				else:
+					net.botErr[i] = Vector2.ZERO
+					bot.s = q[0]; bot.lat = q[1]
+				bot.speed = q[2]; bot.lap = lap; bot.yawOff = q[4]; bot.finished = bool(q[5]); bot.finishTime = q[6] if q[6] else 0.0
 		var kicks = pr.get("k")
 		if net.host and kicks is Array:
 			var last: int = net.seen.get(p.peer, 0)
@@ -338,6 +359,21 @@ func netTick() -> void:
 					Game.kickOther(Game.bots[bi], float(kq.x), float(kq.z), float(kq.s))
 			net.seen[p.peer] = last
 	if not net.inRace: return
+	if not net.host and botsFresh():
+		# the rest of the difference with the host's bot positions: a part every frame (gone in about 0.1 s)
+		var k := minf(1.0, get_process_delta_time() * 12)
+		for i in mini(Game.bots.size(), 16):
+			var e: Vector2 = net.botErr.get(i, Vector2.ZERO)
+			if e == Vector2.ZERO: continue
+			var c := e * k
+			var bot: Mover = Game.bots[i]
+			var rel := fposmod(bot.s - Trk.S_START, Trk.TRACK_LEN)
+			bot.s = fposmod(bot.s + c.x, Trk.TRACK_LEN)
+			var rel2 := fposmod(bot.s - Trk.S_START, Trk.TRACK_LEN)
+			if rel2 < rel - Trk.TRACK_LEN / 2: bot.lap += 1
+			elif rel2 > rel + Trk.TRACK_LEN / 2: bot.lap -= 1
+			bot.lat += c.y
+			net.botErr[i] = e - c if (e - c).length() > 0.01 else Vector2.ZERO
 	# the start lights follow the time since the race was started, the same on every PC: a game that was busy (loading
 	# the track, a hitch) does not start later than the others
 	if Game.state == "countdown" and int(net.startAt) > 0:
