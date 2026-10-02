@@ -146,7 +146,8 @@ func rebuildPlayerCar(pid := "", pcol := "") -> void:
 				mi.set_surface_override_material(k, tail)
 	if car.get("beam") != null:
 		car.beam.visible = false
-	if Fx.me != null: Fx.me.attachCar(car)
+	# the headlight is player 1's (JS: if(activeP===1)attachHeadlights()): player 2's car in split screen has none
+	if Fx.me != null and activeP == 1: Fx.me.attachCar(car)
 	var c := G.effStats(id)
 	MAXV = c.vmax / 3.6
 	ACC = c.acc * G.ACC_K
@@ -1492,6 +1493,7 @@ func actionOf(code: String) -> Variant:
 	return null
 
 var padStates: Array = []
+var padPrevS: Array = []      ## the pads' states of the previous frame (edges per pad in split screen)
 
 ## with two gamepads in split screen: pad 1 is player 1, pad 2 player 2; with one pad it is player 2's
 func padFor(pi: int) -> Dictionary:
@@ -1604,7 +1606,9 @@ func readPad() -> void:
 			"lb": btn.call(JOY_BUTTON_LEFT_SHOULDER), "rb": btn.call(JOY_BUTTON_RIGHT_SHOULDER), "sel": btn.call(JOY_BUTTON_BACK),
 			"l": btn.call(JOY_BUTTON_DPAD_LEFT) or ax < -0.6, "r": btn.call(JOY_BUTTON_DPAD_RIGHT) or ax > 0.6,
 			"up": btn.call(JOY_BUTTON_DPAD_UP) or ay < -0.6, "down": btn.call(JOY_BUTTON_DPAD_DOWN) or ay > 0.6}
-		padStates.append(pad.duplicate())
+		var ps: Dictionary = pad.duplicate()
+		ps.merge({"y": now.y, "sel": now.sel, "lb": now.lb, "rb": now.rb})
+		padStates.append(ps)
 		# one player: the first pad; split screen: every pad (padFor hands them out)
 		if not split: break
 	var edge := func(k: String) -> bool: return now.get(k, false) and not padPrev.get(k, false)
@@ -1612,11 +1616,27 @@ func readPad() -> void:
 		pass
 	else:
 		if edge.call("start"): setPaused(true)
-		if edge.call("y"): resetToTrack()
-		if edge.call("sel"): cycleCam()
-		if G.prefs.gearbox == "manual":
-			if edge.call("rb"): shiftUp()
-			if edge.call("lb"): shiftDown()
+		# reset, camera and gears for the player whose pad it is (split screen: pad 1 is player 1, pad 2 player 2; one pad: player 2)
+		var handle := func(pi: int, e: Callable) -> void:
+			runFor(pi, func():
+				if e.call("y"): resetToTrack()
+				if e.call("sel"): cycleCam()
+				if G.prefs.gearbox == "manual":
+					if e.call("rb"): shiftUp()
+					if e.call("lb"): shiftDown())
+		if not split:
+			handle.call(1, edge)
+		else:
+			var n := padStates
+			var prevS := padPrevS
+			var pe := func(i: int, k: String) -> bool:
+				return i < n.size() and n[i].get(k, false) and not (prevS[i] if i < prevS.size() else {}).get(k, false)
+			if n.size() >= 2:
+				handle.call(1, func(k: String) -> bool: return pe.call(0, k))
+				handle.call(2, func(k: String) -> bool: return pe.call(1, k))
+			elif n.size() == 1:
+				handle.call(2, func(k: String) -> bool: return pe.call(0, k))
+	padPrevS = padStates.map(func(p): return p.duplicate())
 	padPrev = now
 
 # ================================================================== main loop
@@ -1637,6 +1657,9 @@ func update(dt: float) -> void:
 	updateTraffic(dt, true); updateBots(dt)
 	if state == "countdown":
 		player.speed = 0
+		if split and p2 != null:
+			p2.pl.speed = 0
+			asP2(func(): player.gasIn = input().gas)
 		player.gasIn = input().gas
 		cd += dt
 		var on := mini(5, int(floor(cd / 0.7)))
@@ -1653,6 +1676,7 @@ func update(dt: float) -> void:
 		return
 	if state == "over":
 		autopilot(dt, 22.0 if raceMode else 0.0)
+		if split and p2 != null: asP2(func(): autopilot(dt, 22))
 		Menu.overTick()    # the results list keeps up while the bots finish
 		return
 	raceTime += dt

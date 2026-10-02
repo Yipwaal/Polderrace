@@ -10,6 +10,7 @@ func run(host: Node) -> TestReport:
 	L = load("res://tests/test_laps.gd").new()
 	var env := Env.new()
 	host.add_child(env)
+	if Fx.me == null: host.add_child(Fx.new())     # skid marks, smoke, the headlight
 	World.root = Node3D.new()
 	host.add_child(World.root)
 	var cam := Camera3D.new()
@@ -64,14 +65,24 @@ func run(host: Node) -> TestReport:
 	Game.state = "over"; Game.overReady = true; Game.startRace()
 	r.check(Game.split and Game.p2 != null and Game.p2.car != null, "2 spelers: tweede speler met eigen auto")
 	r.check(Game.bots.size() == 2, "2 spelers: 2 bots")
+	r.check(Fx.me.headL.get_parent() == Game.car.g, "2 spelers: de koplamp blijft op de auto van speler 1")
 	var p1s: float = Game.player.s
-	L.step(4.5, false)
+	L.step(1.0, false)
+	r.check(Game.state == "countdown" and Game.p2.pl.gasIn > 0.9 and Game.p2.pl.speed == 0, "2 spelers: gas van speler 2 tijdens het aftellen (toerental)",
+		"%s, gas %.1f" % [Game.state, Game.p2.pl.gasIn])
+	L.step(3.5, false)
 	L.step(20)
 	r.check(Game.player.s != p1s and Game.p2.pl.speed > 5, "2 spelers: allebei rijden", "p1 %.0f m/s, p2 %.0f m/s" % [Game.player.speed, Game.p2.pl.speed])
 	r.check(Game.otherProgress() != null, "2 spelers: voortgang van speler 2 telt mee")
 	_drive_until(func(): return Game.state == "over", 220)
 	r.check(Game.state == "over", "2 spelers: uitslag na de finish", Game.state)
 	r.check(Game.resultRows.filter(func(x): return x.get("me", false)).size() == 2, "2 spelers: allebei in de uitslag")
+	var rc: Array = Rep.replay.cars
+	r.check(rc.size() == 4 and rc[3].name == "Speler 2" and Rep.replay.frames[-1].size() == 20, "2 spelers: speler 2 staat in de replay",
+		str(rc.map(func(x): return x.name)))
+	var p2s: float = Game.p2.pl.s
+	L.step(2.0, false)
+	r.check(absf(Trk.wrapD(Game.p2.pl.s - p2s)) > 10, "2 spelers: speler 2 rijdt na de uitslag door (autopiloot)", "%.0f m" % Trk.wrapD(Game.p2.pl.s - p2s))
 	Game.toMenu(-1)
 	r.check(not Game.split and Game.p2 == null, "2 spelers: opgeruimd na het menu")
 	# ---- time trial: runs out of time
