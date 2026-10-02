@@ -173,6 +173,12 @@ func part_pause() -> void:
 # ------------------------------------------------------------------ helpers: a race set up through the menus
 ## Spelen -> Race -> mode, bots, laps (stepper clicks) -> Volgende -> Volgende -> (track) -> Start race
 func setup_race(mode: String, bots := -1, laps := -1, track := "") -> void:
+	# still in a race or on its results (a part run on its own): back to the menu the way a player does
+	if Game.state == "countdown" or Game.state == "racing" or Game.state == "finished":
+		if not Game.paused: await D.tap(KEY_ESCAPE)
+		await D.click(Menu.overUI.quitBtn, "Naar menu")
+	elif Game.state == "over":
+		await D.click(Menu.overUI.menuBtn, "Hoofdmenu")
 	if Game.state != "menu":
 		r.check(false, "setup_race vanuit het menu", Game.state)
 		return
