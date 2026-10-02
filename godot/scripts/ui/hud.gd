@@ -1,7 +1,8 @@
 extends CanvasLayer
 ## Autoload "Hud": the race HUD of the HTML game (time/position sign, minimap, lap board, gauge, start lights, messages,
-## toast, big count) plus the pause and results overlays. Same look: ANWB-blue signs, yellow detour pills, Nunito.
-## The full menus (home, garage, career, ...) are their own port; until then a small start screen lives here too.
+## toast, big count). Same look: ANWB-blue signs, yellow detour pills, Nunito.
+## The menus, the pause and the results screens are in Menu (scripts/ui/menu.gd); setPaused / toMenu /
+## showTimeTrialOver forward to it.
 
 const SIGN := Color("#1d4f9e")
 const SIGN_INK := Color("#f7f7f2")
@@ -30,16 +31,7 @@ var toast_label: Label
 var count: Label
 var lights: PanelContainer
 var light_dots: Array = []
-var pause_box: Control
-var over_box: Control
-var over_title: Label
-var over_sub: Label
-var over_list: VBoxContainer
-var over_stats: Label
-var over_tag: Label
-var over_earn: Label
-var again_btn: Button
-var menu_box: Control
+var toast_layer: CanvasLayer
 
 var msgUntil := 0.0
 var countUntil := 0.0
@@ -96,8 +88,6 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 	_build_hud()
-	_build_overlays()
-	_build_menu()
 	hud.visible = false
 
 func _build_hud() -> void:
@@ -152,7 +142,11 @@ func _build_hud() -> void:
 	toast_label = mk_label("", "800 15px Nunito", Color.WHITE)
 	toast.add_child(toast_label)
 	toast.visible = false
-	root.add_child(toast)
+	# the toast shows above the menus and the results board (CSS z-index 31): its own layer over Menu's
+	toast_layer = CanvasLayer.new()
+	toast_layer.layer = 31
+	add_child(toast_layer)
+	toast_layer.add_child(toast)
 	count = mk_label("", "italic 900 150px Nunito", Color.WHITE)
 	count.set_anchors_preset(Control.PRESET_FULL_RECT)
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -194,134 +188,6 @@ class LightDot extends Control:
 		draw_circle(c, size.x / 2, Color("#0b0d12"))
 		draw_circle(c, size.x / 2 - 3, col)
 
-func _overlay_panel(title_spec := "italic 900 44px Barlow Condensed") -> Array:
-	var ov := ColorRect.new()
-	ov.color = Color(0.086, 0.1, 0.133, 0.45)
-	ov.set_anchors_preset(Control.PRESET_FULL_RECT)
-	ov.visible = false
-	root.add_child(ov)
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	ov.add_child(center)
-	var card := SignBox.new(Vector4(28, 24, 28, 24))
-	card.custom_minimum_size = Vector2(440, 0)
-	center.add_child(card)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	card.add_child(v)
-	var t := mk_label("", title_spec, SIGN_INK)
-	v.add_child(t)
-	return [ov, v, t]
-
-static func mk_button(text: String, cta := true) -> Button:
-	var b := Button.new()
-	b.text = text
-	var f := font("900 18px Nunito")
-	b.add_theme_font_override("font", f[0])
-	b.add_theme_font_size_override("font_size", int(f[1]))
-	var n := pill(DETOUR if cta else Color(1, 1, 1, 0.1))
-	n.content_margin_top = 10; n.content_margin_bottom = 10; n.shadow_size = 0
-	var h := n.duplicate(); h.bg_color = Color("#ffd83d") if cta else Color(1, 1, 1, 0.2)
-	var fo := h.duplicate(); fo.border_color = SIGN_INK; fo.set_border_width_all(3)
-	for st in [["normal", n], ["hover", h], ["pressed", h], ["focus", fo]]:
-		b.add_theme_stylebox_override(st[0], st[1])
-	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		b.add_theme_color_override(st, INK if cta else SIGN_INK)
-	return b
-
-func _build_overlays() -> void:
-	var p := _overlay_panel()
-	pause_box = p[0]
-	p[2].text = "Pauze"
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	p[1].add_child(row)
-	var resume := mk_button("Verder")
-	resume.pressed.connect(func(): Game.setPaused(false))
-	var restart := mk_button("Opnieuw", false)
-	restart.pressed.connect(func():
-		Game.paused = false; pause_box.visible = false; Game.state = "over"; Game.overReady = true; Game.startRace())
-	var quit := mk_button("Hoofdmenu", false)
-	quit.pressed.connect(func(): Game.toMenu(-1))
-	for b in [resume, restart, quit]: row.add_child(b)
-	var o := _overlay_panel()
-	over_box = o[0]
-	over_title = o[2]
-	over_sub = mk_label("", "800 14px Nunito", SUB)
-	o[1].add_child(over_sub)
-	over_list = VBoxContainer.new()
-	over_list.add_theme_constant_override("separation", 2)
-	o[1].add_child(over_list)
-	over_stats = mk_label("", "800 15px Nunito", SIGN_INK)
-	o[1].add_child(over_stats)
-	over_tag = mk_label("", "900 15px Nunito", DETOUR)
-	o[1].add_child(over_tag)
-	over_earn = mk_label("", "900 15px Nunito", DETOUR)
-	o[1].add_child(over_earn)
-	var orow := HBoxContainer.new()
-	orow.add_theme_constant_override("separation", 10)
-	o[1].add_child(orow)
-	again_btn = mk_button("Opnieuw racen")
-	again_btn.pressed.connect(func(): Game.onAgain())
-	var menu := mk_button("Hoofdmenu", false)
-	menu.pressed.connect(func(): Game.toMenu(-1))
-	orow.add_child(again_btn); orow.add_child(menu)
-
-# ------------------------------------------------------------------ temporary start screen (until the menus port)
-var _m_track: Label
-var _m_mode: Label
-var _m_car: Label
-const MODES := ["race", "elim", "time"]
-const MODE_NAMES := {"split": "2 spelers", "race": "Race", "elim": "Eliminatie", "time": "Tijdrit", "ghost": "Ghost-tijdrit", "champ": "Kampioenschap"}
-
-func _build_menu() -> void:
-	var m := _overlay_panel("italic 900 56px Barlow Condensed")
-	menu_box = m[0]
-	menu_box.color = Color(0, 0, 0, 0)
-	m[2].text = "POLDERRACE"
-	var add_row := func(label: String, cb: Callable) -> Label:
-		var r := HBoxContainer.new()
-		r.add_theme_constant_override("separation", 8)
-		var a := mk_button("◀", false); var b := mk_button("▶", false)
-		var l := mk_label(label, "900 20px Nunito", SIGN_INK)
-		l.custom_minimum_size = Vector2(240, 0)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		a.pressed.connect(func(): cb.call(-1)); b.pressed.connect(func(): cb.call(1))
-		r.add_child(a); r.add_child(l); r.add_child(b)
-		m[1].add_child(r)
-		return l
-	_m_track = add_row.call("", func(d): _cycle_track(d))
-	_m_mode = add_row.call("", func(d):
-		var i := MODES.find(G.settings.mode)
-		G.settings.mode = MODES[(i + d + MODES.size()) % MODES.size()]; G.saveSettings(); _menu_refresh())
-	_m_car = add_row.call("", func(d):
-		var ids: Array = Cars.CARS.keys()
-		var i := ids.find(G.settings.car)
-		G.settings.car = ids[(i + d + ids.size()) % ids.size()]; G.saveSettings(); Game.rebuildPlayerCar(); _menu_refresh())
-	var start := mk_button("Start")
-	start.pressed.connect(func(): menuNext())
-	m[1].add_child(start)
-	_menu_refresh()
-	menu_box.visible = true
-
-func _cycle_track(d: int) -> void:
-	var ids: Array = TrackLoader.ported()
-	var i := ids.find(G.settings.track)
-	G.settings.track = ids[(i + d + ids.size()) % ids.size()]
-	G.saveSettings()
-	_menu_refresh()
-	get_tree().current_scene.load_track(G.settings.track)
-
-func _menu_refresh() -> void:
-	_m_track.text = TrackDefs.TRACKS[G.settings.track].name
-	_m_mode.text = MODE_NAMES.get(G.settings.mode, G.settings.mode)
-	_m_car.text = Cars.CARS[G.settings.car].name
-
-func menuNext() -> void:
-	if Game.state == "menu":
-		menu_box.visible = false
-		Game.startRace()
-
 # ------------------------------------------------------------------ API used by Game
 func showMsg(text: String, kind: String, dur: float) -> void:
 	msg_label.text = text
@@ -346,7 +212,8 @@ func raceStart(raceMode: bool, mode: String) -> void:
 		d.on = false; d.go = false; d.queue_redraw()
 	lights.visible = true
 	lightsOff = 0
-	for o in [menu_box, pause_box, over_box, msg]: o.visible = false
+	msg.visible = false
+	Menu.hideAll()
 	hud.visible = true
 	minimap.build()
 	_hT = ""; _hL = ""; _hD = ""
@@ -363,73 +230,16 @@ func lightsGo() -> void:
 	showCount("GO!", 0.8)
 
 func setPaused(p: bool) -> void:
-	pause_box.visible = p
+	Menu.setPausedUI(p)
 
 func toMenu() -> void:
-	for o in [pause_box, over_box, hud, msg, count, lights, toast]: o.visible = false
-	menu_box.visible = true
+	for o in [hud, msg, count, lights, toast]: o.visible = false
 
 func touchHeld(_a: String) -> bool:
 	return false
 
-func _show_over(title: String) -> void:
-	over_title.text = title
-	var dir := " (omgekeerd)" if Trk.TRACK_DIR == "rev" else ""
-	over_sub.text = TrackDefs.TRACKS[Trk.TRACK_ID].name + dir + " · " + MODE_NAMES.get(Game.mode, Game.mode).to_lower() + \
-		("" if Game.mode == "time" else " · %d %s" % [Game.raceLaps, "ronde" if Game.raceLaps == 1 else "ronden"])
-	for o in [hud, msg, lights]: o.visible = false
-	over_box.visible = true
-	again_btn.call_deferred("grab_focus")
-
 func showTimeTrialOver(distance: float, cps: int, bestLap: float, best: float, rec: bool, cr: int) -> void:
-	for c in over_list.get_children(): c.queue_free()
-	over_stats.text = "Afstand %s   ·   Checkpoints %d   ·   Snelste ronde %s   ·   Record %s" % [G.fmtKm(distance), cps, G.fmtLap(bestLap) if bestLap else "–", G.fmtKm(best)]
-	over_tag.text = "Nieuw record" if rec else ""
-	over_tag.visible = rec
-	over_earn.text = "+" + G.fmtCr(cr) if cr > 0 else ""
-	over_earn.visible = cr > 0
-	again_btn.text = "Opnieuw racen"
-	_show_over("Tijd is op")
-
-func showRaceOver(rows: Array, mode: String, playerOut: bool, raceDone: bool, finishTime: float, bestLap: float, topSpeed: float, rec: bool, cr: int) -> void:
-	for c in over_list.get_children(): c.queue_free()
-	var winner = null
-	for r in rows:
-		if r.finished: winner = r; break
-	var pos := 0
-	for k in rows.size():
-		var r: Dictionary = rows[k]
-		if r.get("me", false): pos = k + 1
-		var tm: String
-		if mode == "elim":
-			tm = "eruit" if r.out else ("winnaar" if k == 0 and not playerOut else "rijdt nog")
-		else:
-			tm = ("" if not r.finished else (G.fmtLap(r.ft) if r == winner else "+" + ("%.1f" % (r.ft - winner.ft)).replace(".", ",") + " s")) if r.finished else "rijdt nog"
-		over_list.add_child(_result_row("%d." % (k + 1), r.name, r.car, tm, r.get("me", false)))
-	over_stats.text = "Totaal %s   ·   Snelste ronde %s   ·   Topsnelheid %d km/u" % [G.fmtLap(finishTime) if raceDone and not playerOut and finishTime > 0 else "–",
-		G.fmtLap(bestLap) if bestLap else "–", int(round(topSpeed * 3.6))]
-	over_tag.text = "Nieuw klasserecord " + (G.fmtLap(bestLap) if bestLap else "")
-	over_tag.visible = rec
-	over_earn.text = "+" + G.fmtCr(cr) if cr > 0 else ""
-	over_earn.visible = cr > 0
-	again_btn.text = "Opnieuw racen"
-	_show_over(("Uitgeschakeld: %de" % pos) if mode == "elim" and playerOut else ("Gewonnen!" if pos == 1 else "Je werd %de" % pos))
-
-func _result_row(p: String, name: String, sub: String, tm: String, me: bool) -> Control:
-	var pc := PanelContainer.new()
-	var st := pill(DETOUR if me else Color(1, 1, 1, 0.08))
-	st.content_margin_top = 5; st.content_margin_bottom = 5; st.content_margin_left = 12; st.content_margin_right = 12; st.shadow_size = 0
-	pc.add_theme_stylebox_override("panel", st)
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 10)
-	pc.add_child(h)
-	var col := INK if me else SIGN_INK
-	var a := mk_label(p, "900 15px Nunito", col); a.custom_minimum_size = Vector2(28, 0)
-	var n := mk_label(name, "800 15px Nunito", col); n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var s := mk_label(sub, "700 12px Nunito", INK if me else SUB)
-	var t := mk_label(tm, "800 15px Nunito", col)
-	for c in [a, n, s, t]: h.add_child(c)
-	return pc
+	Menu.showTimeTrialOver(distance, cps, bestLap, best, rec, cr)
 
 # ------------------------------------------------------------------ per frame (JS hud())
 func tick() -> void:

@@ -1017,20 +1017,8 @@ func lookHeld() -> bool:
 	return actHeld(activeP, "look") or padFor(activeP).look
 
 func updateCamera(dt: float) -> void:
+	if Menu.menuCamera(dt): return   # menus: podium, home fly-over, orbit round the car, garage (Menu.menuCamera)
 	speedFx = clamp_((maxf(0, player.speed) - 20) / 50, 0, 1) if (state == "racing" or state == "finished") else 0.0
-	if state == "menu":
-		# home screen fly-over along the track (the menus port adds the garage and car views)
-		flyS = fmod(flyS + dt * 24, Trk.TRACK_LEN)
-		var lat := sin(clock * 0.12) * minf(10, Trk.SHOULDER - 2.2)
-		var a := Trk.trackAt(flyS)
-		var cx: float = a.px + a.rx * lat
-		var cz: float = a.pz + a.rz * lat
-		var cy: float = Trk.hAt(a.i, lat) + 4.2 + sin(clock * 0.2) * 1.2
-		var b := Trk.trackAt(flyS + 35)
-		camera.position = Vector3(cx, cy, cz)
-		camera.look_at(Vector3(b.px, Trk.hAt(b.i, 0) + 1.5, b.pz), Vector3.UP)
-		camera.fov = 58
-		return
 	var c := camParams()
 	var back := PI if player.speed < -1 else 0.0
 	camHeading = MathX.lerp_angle_(camHeading, player.heading - drift * 0.5 + back, 1 - exp(-dt * 7))
@@ -1078,21 +1066,24 @@ func resetPlayer(i: int, lat: float) -> void:
 func startRace() -> void:
 	if not (state == "menu" or (state == "over" and overReady)): return
 	Sfx.initAudio()
+	Menu.beforeRace()                                    # menus: garage room and podium off, menu screens hidden
+	if not Champ.active(): Career.ensureOwnedCars()     # you only race cars you own
 	var S := G.settings
-	mode = S.mode
+	mode = "champ" if Champ.active() else S.mode
 	split = mode == "split"
 	if split: mode = "race"
 	if mode == "race" and int(S.bots) < 1 and not split: mode = "time"
 	if mode == "elim" and int(S.bots) < 2: S.bots = 2
 	raceMode = mode == "race" or mode == "elim" or mode == "champ"
-	raceLaps = int(S.bots) if mode == "elim" else int(S.laps)
+	raceLaps = int(Champ.CR()[int(Champ.champ.round)].laps) if mode == "champ" else (int(S.bots) if mode == "elim" else int(S.laps))
 	lapRecordSet = false; ghostSaved = false; sectorsReset(); World.setGateMode(mode == "time")
 	distance = 0; checkpoints = 0; shake = 0; raceBestLap = 0; raceTopSpeed = 0; raceTime = 0; raceDone = false; raceFinishTime = 0; finishAt = 0
 	elimDone = 0; playerOut = false; raceContacts = 0; racePits = 0
 	gustT = 9; gustPhase = 0; gustWarn = false; elimPos = 0; lapTimes = []; player.lap = 0; overView = "results"
 	if raceMode:
 		clearTraffic()
-		setupBots(0, makeBotDefs(mini(int(S.bots), 5) if split else int(S.bots)))
+		# a championship races its fixed field, a career event its own (with the rival)
+		setupBots(0, Champ.champ.bots if mode == "champ" else (G.careerEv.defs if G.careerEv != null else makeBotDefs(mini(int(S.bots), 5) if split else int(S.bots))))
 		placeGrid(); nextCp = 0
 	elif mode == "ghost":
 		clearTraffic(); clearBots(); placeGrid(); nextCp = 0
@@ -1156,21 +1147,24 @@ func resultOrder() -> Array:
 
 func showResults() -> void:
 	state = "over"
-	resultRows = resultOrder()
-	var pos := resultRows.find(resultRows.filter(func(r): return r.get("me", false))[0]) + 1
-	var cr := awardCredits(pos)
-	Hud.showRaceOver(resultRows, mode, playerOut, raceDone, raceFinishTime, raceBestLap, raceTopSpeed, lapRecordSet, cr)
+	Menu.showResults()      # menus: results board, credits, championship points, career result, achievements, podium
 	overReady = false
 	get_tree().create_timer(0.7).timeout.connect(func(): overReady = true)
 
 func onAgain() -> void:
 	if not (state == "over" and overReady): return
+	if Menu.onAgain(): return    # menus: championship standings / next round, on to the next career event
 	startRace()
 
-func toMenu(_step := -1) -> void:
+func toMenu(step := -1) -> void:
 	paused = false
 	Hud.toMenu()
 	state = "menu"
+	Menu.toMenu(step)       # menus: championship and career clean-up, then the menu (step -1 = home screen)
+
+## after a career race or cup: back to the career screen; otherwise to the menu
+func toCareerOr(step := -1) -> void:
+	Menu.toCareerOr(step)
 
 func setPaused(p: bool) -> void:
 	if p and not (state == "racing" or state == "countdown" or state == "finished"): return
@@ -1268,7 +1262,7 @@ func netIsHost() -> bool: return false
 func netAheadCount(_me: float) -> int: return 0
 func netKick(_i: int, _dvx: float, _dvz: float, _sp: float) -> void: pass
 func otherProgress() -> Variant: return null
-func unlockAch(_id: String) -> void: pass
+func unlockAch(id: String) -> void: Ach.unlockAch(id)
 func achPit() -> void:
 	racePits += 1
 	unlockAch("pit")
@@ -1372,9 +1366,7 @@ func _input(e: InputEvent) -> void:
 	if not e.pressed:
 		keysDown.erase(code)
 		return
-	if state == "menu":
-		if code == "Enter" and not e.echo: Hud.menuNext()
-		return
+	if state == "menu": return    # the menus handle their keys themselves (Menu._input)
 	var ac = actionOf(code)
 	if ac != null: keysDown[code] = true
 	if (code == "Enter" or code == "Space"):
@@ -1382,7 +1374,7 @@ func _input(e: InputEvent) -> void:
 		elif state == "over" and overReady: onAgain()
 	if (code == "KeyP" or code == "Escape") and (state == "racing" or state == "countdown" or state == "finished"):
 		setPaused(not paused)
-	if state == "over" and overReady and code == "Escape": toMenu(-1)
+	if state == "over" and overReady and code == "Escape": toCareerOr(-1)
 	if ac != null and not e.echo and not paused:
 		var a: String = ac[1]
 		if a == "reset": resetToTrack()
@@ -1410,17 +1402,15 @@ func readPad() -> void:
 		pad.brake = maxf(Input.get_joy_axis(dev, JOY_AXIS_TRIGGER_LEFT), 1.0 if btn.call(JOY_BUTTON_B) else 0.0)
 		pad.hand = btn.call(JOY_BUTTON_X) or (G.prefs.gearbox != "manual" and btn.call(JOY_BUTTON_RIGHT_SHOULDER))
 		pad.look = btn.call(JOY_BUTTON_RIGHT_STICK)
+		var ay := Input.get_joy_axis(dev, JOY_AXIS_LEFT_Y)
 		now = {"a": btn.call(JOY_BUTTON_A), "b": btn.call(JOY_BUTTON_B), "start": btn.call(JOY_BUTTON_START), "y": btn.call(JOY_BUTTON_Y),
-			"lb": btn.call(JOY_BUTTON_LEFT_SHOULDER), "rb": btn.call(JOY_BUTTON_RIGHT_SHOULDER), "sel": btn.call(JOY_BUTTON_BACK)}
+			"lb": btn.call(JOY_BUTTON_LEFT_SHOULDER), "rb": btn.call(JOY_BUTTON_RIGHT_SHOULDER), "sel": btn.call(JOY_BUTTON_BACK),
+			"l": btn.call(JOY_BUTTON_DPAD_LEFT) or ax < -0.6, "r": btn.call(JOY_BUTTON_DPAD_RIGHT) or ax > 0.6,
+			"up": btn.call(JOY_BUTTON_DPAD_UP) or ay < -0.6, "down": btn.call(JOY_BUTTON_DPAD_DOWN) or ay > 0.6}
 		break
 	var edge := func(k: String) -> bool: return now.get(k, false) and not padPrev.get(k, false)
-	if state == "menu":
-		if edge.call("a") or edge.call("start"): Hud.menuNext()
-	elif paused:
-		if edge.call("a") or edge.call("start") or edge.call("b"): setPaused(false)
-	elif state == "over" and overReady:
-		if edge.call("a") or edge.call("start"): onAgain()
-		if edge.call("b"): toMenu(-1)
+	if Menu.padNav(now, padPrev):    # menus, pause and results screen (Menu.padNav)
+		pass
 	else:
 		if edge.call("start"): setPaused(true)
 		if edge.call("y"): resetToTrack()
@@ -1461,6 +1451,7 @@ func update(dt: float) -> void:
 		return
 	if state == "over":
 		autopilot(dt, 22.0 if raceMode else 0.0)
+		Menu.overTick()    # the results list keeps up while the bots finish
 		return
 	raceTime += dt
 	if state == "finished":

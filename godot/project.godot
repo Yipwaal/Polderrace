@@ -17,6 +17,10 @@ Trk="*res://scripts/track/track.gd"
 Sfx="*res://scripts/game/sfx.gd"
 Game="*res://scripts/game/game.gd"
 Hud="*res://scripts/ui/hud.gd"
+Champ="*res://scripts/game/champ.gd"
+Career="*res://scripts/game/career.gd"
+Ach="*res://scripts/game/ach.gd"
+Menu="*res://scripts/ui/menu.gd"
 
 [display]
 

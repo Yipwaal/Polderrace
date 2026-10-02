@@ -6,8 +6,26 @@ const VERSION := "0.1-godot"
 
 # ------------------------------------------------------------------ store (JS localStorage)
 ## everything the HTML game keeps in localStorage, as strings under the same keys, in one JSON file
-const STORE_PATH := "user://polderrace3d.json"
+var STORE_PATH := "user://polderrace3d.json"
 var _store := {}
+
+## tests and tools: play on their own save file (seeded with data: {key: value}, values as the JS stores them), never
+## the player's; settings, preferences and garage are read again from it
+func use_store(path: String, data: Dictionary = {}) -> void:
+	STORE_PATH = path
+	_store = {}
+	for k in data:
+		_store[k] = data[k] if data[k] is String else JSON.stringify(data[k])
+	settings = {"car": "gt", "color": "#f36f21", "track": "polder", "dir": "fwd", "bots": 5, "diff": "normal", "laps": 3, "grid": "back", "mode": "race",
+		"time": "day", "weather": "dry", "p2car": "hatch", "p2color": "#1d4f9e"}
+	prefs = {"sound": true, "fx": true, "cam": 0, "damage": true, "gearbox": "auto", "mirror": true}
+	garage = {"credits": 500, "cars": {}}
+	careerEv = null
+	careerPrev = null
+	_load_settings()
+	var f := FileAccess.open(STORE_PATH, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify(_store))
 
 func _init() -> void:
 	if FileAccess.file_exists(STORE_PATH):
@@ -132,8 +150,8 @@ func addCredits(n: float) -> int:
 	var v := maxi(0, int(round(n / 10.0)) * 10)
 	garage.credits += v
 	saveGarage()
-	if garage.credits >= 20000 and has_method("unlockAch"):
-		call("unlockAch", "rich")
+	if garage.credits >= 20000:
+		Ach.unlockAch("rich")
 	return v
 
 # ------------------------------------------------------------------ formatting (JS fmtKm, fmtLap, fmtD)

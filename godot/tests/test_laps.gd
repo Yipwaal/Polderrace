@@ -24,6 +24,10 @@ func step(sec: float, steer := true) -> void:
 
 func run(host: Node) -> TestReport:
 	var r := TestReport.new("rijden zoals de HTML-versie (autopiloot-ronde)")
+	# you only race cars you own: the test garage owns them all, stock (like tests/lib.py), on its own save file
+	var owned := {}
+	for id in Cars.CARS: owned[id] = true
+	G.use_store("user://test-laps.json", {"polderrace3d-garage": {"owned": owned}})
 	var gold: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/golden/laps.json"))
 	var env := Env.new()
 	host.add_child(env)

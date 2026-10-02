@@ -1,0 +1,10 @@
+{
+  "polderrace3d-settings": {"car": "gt", "color": "#f36f21", "track": "polder", "dir": "fwd", "bots": 5, "diff": "normal", "laps": 3, "grid": "back", "mode": "race", "time": "day", "weather": "dry", "p2car": "hatch", "p2color": "#1d4f9e", "lastByClass": {"A": "gt", "B": "hatch"}},
+  "polderrace3d-prefs": {"sound": true, "fx": true, "cam": 0, "gearbox": "auto", "quality": "high", "mirror": true},
+  "polderrace3d-garage": {"credits": 3450, "owned": {"hatch": true, "gt": true, "rally": true}, "cars": {"gt": {"eng": 1, "turbo": 0, "tyre": 2, "brake": 0, "body": 0, "rim": "silver", "stripe": "std", "num": 7, "wing": "std", "rimStyle": "std", "exhaust": "std"}}, "ach": {"first_win": 1, "pit": 1, "speed300": 1}, "career": {"cups": {"b1": {"best": 2}}, "bonus": {}}, "wins": {"polder": true}},
+  "polderrace3d-lap-polder@3-A": "61.23",
+  "polderrace3d-lap-polder@3-A-car": "gt",
+  "polderrace3d-lap-dorp@3-B": "58.40",
+  "polderrace3d-lap-dorp@3-B-car": "hatch",
+  "polderrace3d-best-polder@3-A": "4210"
+}
