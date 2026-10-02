@@ -89,8 +89,8 @@ static func ribbon(latA, latB, mat: Material, vRep: float, yOff: float, filter =
 	elif yOff > 0.07 and yOff < 0.1:
 		for k in g.pos.size():
 			g.pos[k].y += 0.02
-	mat.receive_shadow = true
 	var m := O3.mesh(g, mat)
+	O3.receive(m)
 	root.add_child(m)
 	return m
 
@@ -119,8 +119,8 @@ static func vribbon(lat, y0: float, y1: float, mat: Material, vRep: float, filte
 			g.idx.append_array([A, A + 2, A + 1, A + 1, A + 2, A + 3])
 	g.compute_vertex_normals()
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mat.receive_shadow = true
 	var m := O3.mesh(g, mat)
+	O3.receive(m)
 	root.add_child(m)
 	return m
 
@@ -165,9 +165,9 @@ static func inst(geo: Geo, mat: Material, xfs: Array, colors = null, cast := fal
 	if colors != null:
 		use_mat = mat.clone()
 		use_mat.vertex_color_use_as_albedo = true
-		# the JS uses the material itself: what Env does to it (night windows, lamps) must reach the clone too
-		for l in [winMats, lampMats, reflMats, beaconMats, roadMats, hillMats]:
-			if l.has(mat): l.append(use_mat)
+		# the environment changes materials through these lists (lit windows at night, wet roads, ...): the clone follows
+		for lst in [roadMats, lampMats, hillMats, winMats, reflMats, beaconMats]:
+			if lst.has(mat): lst.append(use_mat)
 	var mesh := geo.to_mesh(use_mat)
 	for idxs in cells.values():
 		var mm := MultiMesh.new()
@@ -195,9 +195,10 @@ static func roadMat(tex: Texture2D, o: Dictionary = {}) -> LMat:
 ## the land under everything: tiles of 36 m (one 3.6 km quad gave grass through the road in the JS version)
 static func groundPlane(tex: Texture2D, rep: float) -> MeshInstance3D:
 	var g := Geo.plane(3600, 3600, 100, 100)
-	var m := O3.mesh(g, Mats.M(0xffffff, {"map": tex, "repeat": Vector2(rep, rep), "receiveShadow": true}))
+	var m := O3.mesh(g, Mats.M(0xffffff, {"map": tex, "repeat": Vector2(rep, rep)}))
 	O3.rot(m, -PI / 2, 0, 0)
 	m.position = Vector3((Trk.BX0 + Trk.BX1) / 2.0, 0.0, (Trk.BZ0 + Trk.BZ1) / 2.0)
+	O3.receive(m)
 	root.add_child(m)
 	return m
 
@@ -212,8 +213,9 @@ static func checkerTex() -> ImageTexture:
 	return _checker
 
 static func startLine() -> void:
-	var line := O3.mesh(Geo.plane(Trk.ROAD_HALF * 2, 1.8), Mats.M(0xffffff, {"map": checkerTex(), "receiveShadow": true}))
+	var line := O3.mesh(Geo.plane(Trk.ROAD_HALF * 2, 1.8), Mats.M(0xffffff, {"map": checkerTex()}))
 	O3.rot(line, -PI / 2, 0, 0)
+	O3.receive(line)
 	var g := Node3D.new()
 	g.add_child(line)
 	place(g, Trk.START_I, 0, 0.09)

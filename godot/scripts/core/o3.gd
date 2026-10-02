@@ -25,6 +25,17 @@ static func mesh(geo, mats, x := 0.0, y := 0.0, z := 0.0, parent: Node = null, c
 		parent.add_child(mi)
 	return mi
 
+## three mesh.receiveShadow = true: shadows fall on it. In Godot it is a material flag (LMat.receive_shadow), so it is set on
+## the mesh's materials (every mesh using such a material receives shadows)
+static func receive(n: MeshInstance3D) -> MeshInstance3D:
+	if n.material_override is LMat:
+		n.material_override.receive_shadow = true
+	for i in n.mesh.get_surface_count():
+		var m := n.mesh.surface_get_material(i)
+		if m is LMat:
+			m.receive_shadow = true
+	return n
+
 ## set rotation the three.js way (order XYZ), keeping position and scale
 static func rot(n: Node3D, rx: float, ry: float, rz: float) -> Node3D:
 	var s := n.scale

@@ -37,10 +37,12 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
    `Canvas2D.tex(...)` voert de tekenfunctie direct uit (net als JS `canvasTex`), dus rnd() daarin telt mee.
 3. **three.js → Godot:**
    - `new THREE.Mesh(geo, mat)` + position → `O3.mesh(Geo.box(...), mat, x, y, z, parent, cast)`; `castShadow` = `cast`.
+   - `receiveShadow = true` → `O3.receive(mesh)` (zet `LMat.receive_shadow` op zijn materialen; zonder die vlag valt er, net als
+     in three, geen schaduw op). `ribbon`, `vribbon`, `groundPlane`, `startLine`, `waterPlane` en `landPlane` doen dat al zelf.
    - `rotation.set(x,y,z)` (volgorde XYZ) → `O3.rot(node, x, y, z)`; `scale.set` → `node.scale = Vector3(...)`.
    - `M(c,o)` → `Mats.M(c,o)` (Lambert), de HTML-`PM(c,o)` → `Mats.PM(c,o)` (Phong, specular 0x3a3a3a/38),
      `new THREE.MeshPhongMaterial({...})` → `Mats.phong(c,o)` (three-defaults 0x111111/30),
-     `MeshBasicMaterial` → `Mats.basic(c,o)`. Opties met three-namen: map, repeat, emissive, transparent, opacity, side,
+     `MeshBasicMaterial` → `Mats.basic(c,o)`. Opties met three-namen: map, repeat, emissive, emissiveMap, transparent, opacity, side,
      depthWrite, depthTest, fog, alphaTest, vertexColors, flatShading, blending:"add".
    - Een texture die met `.clone()` + eigen `repeat` wordt gebruikt: geef `"repeat": Vector2(...)` aan de materiaal-opties.
    - Geometrie: `Geo.box/cylinder/cone/plane/sphere/torus/circle/ring/lathe/extrude/icosahedron` (zelfde parameters als three),

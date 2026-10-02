@@ -11,6 +11,9 @@ extends ShaderMaterial
 ##   sun pass:    SPECULAR_LIGHT = dec((1 - f) * colour * sun * N.L * shadow)   (added on top in gamma space by the GPU)
 ## Light comes from global shader parameters set by Env (pr_*), not from Godot's ambient light or fog.
 ##
+## Shadows: like three.js only what asks for it receives shadows (three mesh.receiveShadow = true -> O3.receive(mesh), which sets
+## receive_shadow on its materials); everything else is lit by the sun without shadows (no self-shadowing on boxes, spheres, ...).
+##
 ## The properties carry StandardMaterial3D's names (albedo_color, albedo_texture, emission, transparency, cull_mode, ...),
 ## so code can treat an LMat like a StandardMaterial3D. Flags that change the shader code rebuild it (cached per variant).
 
@@ -24,7 +27,8 @@ var uv1_offset := Vector3.ZERO: set = _set_uv1_offset
 var emission_enabled := false: set = _set_emission_enabled
 var emission := Color.BLACK: set = _set_emission
 var emission_energy_multiplier := 1.0: set = _set_emission_energy
-var emission_texture: Texture2D: set = _set_emission_texture   ## three emissiveMap (multiplies emissive)
+## three emissiveMap: multiplies the emissive colour (same uv as the map)
+var emission_texture: Texture2D: set = _set_emission_texture
 var specular := Color(0.0666, 0.0666, 0.0666): set = _set_specular
 var shininess := 30.0: set = _set_shininess
 var transparency := BaseMaterial3D.TRANSPARENCY_DISABLED: set = _set_transparency
@@ -36,8 +40,7 @@ var no_depth_test := false: set = _set_no_depth_test
 var disable_fog := false: set = _set_disable_fog
 var vertex_color_use_as_albedo := false: set = _set_vcol
 var flat_shading := false: set = _set_flat
-## three.js receiveShadow (per mesh there, per material here): only ground, roads, water and the like get shadows;
-## buildings, trees and instanced decor do not (otherwise big tree crowns get stripy self-shadow)
+## three mesh.receiveShadow (per material here, see O3.receive): false = render_mode shadows_disabled
 var receive_shadow := false: set = _set_receive
 ## kept for code written against StandardMaterial3D; the shader ignores them
 var vertex_color_is_srgb := false
@@ -128,6 +131,7 @@ func _code() -> String:
 	rm.append("fog_disabled")
 	rm.append("ambient_light_disabled")
 	if kind == Kind.BASIC: rm.append("unshaded")
+	if not receive_shadow: rm.append("shadows_disabled")
 	var d := []
 	if albedo_texture != null: d.append("#define TEX")
 	if emission_texture != null: d.append("#define EMAP")
@@ -138,7 +142,6 @@ func _code() -> String:
 	if kind == Kind.PHONG: d.append("#define PHONG")
 	if kind == Kind.BASIC: d.append("#define BASIC")
 	if flat_shading: d.append("#define FLAT")
-	if receive_shadow: d.append("#define RECV")
 	return "shader_type spatial;\nrender_mode %s;\n%s\n%s" % [", ".join(rm), "\n".join(d), SHADER_BODY]
 
 const SHADER_BODY := """
@@ -275,12 +278,7 @@ void light() {
 #ifdef PHONG
 			t += pr_sun.rgb * g_ndl * phong_spec(g_nv, g_lv, VIEW);
 #endif
-#ifdef RECV
-			float sh = ATTENUATION;
-#else
-			float sh = 1.0;
-#endif
-			SPECULAR_LIGHT += dec((1.0 - g_fog) * t * sh);
+			SPECULAR_LIGHT += dec((1.0 - g_fog) * t * ATTENUATION);
 		}
 	} else {
 		// spot lights (headlights, podium): three adds them in gamma space too; close enough on the dark scenes they light
