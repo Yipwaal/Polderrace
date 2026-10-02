@@ -315,6 +315,11 @@ func rain_test() -> void:
 	var N := 16384
 	var mag := spectrum(x, 0, N)
 	r.check(bandPow(mag, N, 3000, 12000) > 20 * bandPow(mag, N, 50, 800), "regen is hoog gefilterd", "")
+	# the garage is indoors: no rain there (JS !inGarage)
+	GarageRoom.inGarage = true
+	await settle(2.0)
+	r.check(Sfx.rainGain < 0.001, "geen regen in de garage", "%.5f (buiten 0,035)" % Sfx.rainGain)
+	GarageRoom.inGarage = false
 	Env.me.weather = "dry"
 
 func bot_test() -> void:

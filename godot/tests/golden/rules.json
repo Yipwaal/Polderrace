@@ -1,0 +1,6053 @@
+{
+"in": {
+"credits": [
+{
+"mode": "race",
+"diff": "easy",
+"laps": 1,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 1,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 1,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 1,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 1,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 1,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 1,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 1,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 2,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 2,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 2,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 2,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 2,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 2,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 2,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 2,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 3,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 3,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 3,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 3,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 3,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 3,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 3,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 3,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 5,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 5,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 5,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 5,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 5,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 5,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 5,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "easy",
+"laps": 5,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 1,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 1,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 1,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 1,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 1,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 1,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 1,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 1,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 2,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 2,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 2,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 2,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 2,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 2,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 2,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 2,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 3,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 3,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 3,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 3,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 3,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 3,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 3,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 3,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 5,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 5,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 5,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 5,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 5,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 5,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 5,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "normal",
+"laps": 5,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 1,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 1,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 1,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 1,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 1,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 1,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 1,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 1,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 2,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 2,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 2,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 2,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 2,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 2,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 2,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 2,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 3,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 3,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 3,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 3,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 3,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 3,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 3,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 3,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 5,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 5,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 5,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 5,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 5,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 5,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 5,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "hard",
+"laps": 5,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 1,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 1,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 1,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 1,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 1,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 1,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 1,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 1,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 2,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 2,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 2,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 2,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 2,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 2,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 2,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 2,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 3,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 3,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 3,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 3,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 3,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 3,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 3,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 3,
+"pos": 9
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 5,
+"pos": 0
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 5,
+"pos": 1
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 5,
+"pos": 2
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 5,
+"pos": 3
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 5,
+"pos": 4
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 5,
+"pos": 5
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 5,
+"pos": 8
+},
+{
+"mode": "race",
+"diff": "extreme",
+"laps": 5,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 1,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 1,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 1,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 1,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 1,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 1,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 1,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 1,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 2,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 2,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 2,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 2,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 2,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 2,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 2,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 2,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 3,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 3,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 3,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 3,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 3,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 3,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 3,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 3,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 5,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 5,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 5,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 5,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 5,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 5,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 5,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "easy",
+"laps": 5,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 1,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 1,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 1,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 1,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 1,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 1,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 1,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 1,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 2,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 2,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 2,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 2,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 2,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 2,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 2,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 2,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 3,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 3,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 3,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 3,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 3,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 3,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 3,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 3,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 5,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 5,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 5,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 5,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 5,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 5,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 5,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "normal",
+"laps": 5,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 1,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 1,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 1,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 1,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 1,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 1,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 1,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 1,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 2,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 2,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 2,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 2,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 2,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 2,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 2,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 2,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 3,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 3,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 3,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 3,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 3,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 3,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 3,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 3,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 5,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 5,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 5,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 5,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 5,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 5,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 5,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "hard",
+"laps": 5,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 1,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 1,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 1,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 1,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 1,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 1,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 1,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 1,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 2,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 2,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 2,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 2,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 2,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 2,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 2,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 2,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 3,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 3,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 3,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 3,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 3,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 3,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 3,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 3,
+"pos": 9
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 5,
+"pos": 0
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 5,
+"pos": 1
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 5,
+"pos": 2
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 5,
+"pos": 3
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 5,
+"pos": 4
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 5,
+"pos": 5
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 5,
+"pos": 8
+},
+{
+"mode": "elim",
+"diff": "extreme",
+"laps": 5,
+"pos": 9
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 1,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 1,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 1,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 1,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 1,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 1,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 1,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 1,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 2,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 2,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 2,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 2,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 2,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 2,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 2,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 2,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 3,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 3,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 3,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 3,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 3,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 3,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 3,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 3,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 5,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 5,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 5,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 5,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 5,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 5,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 5,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "easy",
+"laps": 5,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 1,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 1,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 1,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 1,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 1,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 1,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 1,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 1,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 2,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 2,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 2,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 2,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 2,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 2,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 2,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 2,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 3,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 3,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 3,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 3,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 3,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 3,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 3,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 3,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 5,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 5,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 5,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 5,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 5,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 5,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 5,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "normal",
+"laps": 5,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 1,
+"pos": 0,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 1,
+"pos": 1,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 1,
+"pos": 2,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 1,
+"pos": 3,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 1,
+"pos": 4,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 1,
+"pos": 5,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 1,
+"pos": 8,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 1,
+"pos": 9,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 2,
+"pos": 0,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 2,
+"pos": 1,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 2,
+"pos": 2,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 2,
+"pos": 3,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 2,
+"pos": 4,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 2,
+"pos": 5,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 2,
+"pos": 8,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 2,
+"pos": 9,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 3,
+"pos": 0,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 3,
+"pos": 1,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 3,
+"pos": 2,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 3,
+"pos": 3,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 3,
+"pos": 4,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 3,
+"pos": 5,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 3,
+"pos": 8,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 3,
+"pos": 9,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 5,
+"pos": 0,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 5,
+"pos": 1,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 5,
+"pos": 2,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 5,
+"pos": 3,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 5,
+"pos": 4,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 5,
+"pos": 5,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 5,
+"pos": 8,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "hard",
+"laps": 5,
+"pos": 9,
+"cdiff": "easy"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 1,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 1,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 1,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 1,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 1,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 1,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 1,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 1,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 2,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 2,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 2,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 2,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 2,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 2,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 2,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 2,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 3,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 3,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 3,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 3,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 3,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 3,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 3,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 3,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 5,
+"pos": 0,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 5,
+"pos": 1,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 5,
+"pos": 2,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 5,
+"pos": 3,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 5,
+"pos": 4,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 5,
+"pos": 5,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 5,
+"pos": 8,
+"cdiff": "hard"
+},
+{
+"mode": "champ",
+"diff": "extreme",
+"laps": 5,
+"pos": 9,
+"cdiff": "hard"
+},
+{
+"mode": "time",
+"diff": "hard",
+"laps": 3,
+"pos": 0,
+"dist": 0
+},
+{
+"mode": "time",
+"diff": "hard",
+"laps": 3,
+"pos": 0,
+"dist": 999
+},
+{
+"mode": "time",
+"diff": "hard",
+"laps": 3,
+"pos": 0,
+"dist": 1234.5
+},
+{
+"mode": "time",
+"diff": "hard",
+"laps": 3,
+"pos": 0,
+"dist": 5000
+},
+{
+"mode": "time",
+"diff": "hard",
+"laps": 3,
+"pos": 0,
+"dist": 12345
+},
+{
+"mode": "ghost",
+"diff": "extreme",
+"laps": 3,
+"pos": 0,
+"nl": 0,
+"gs": false
+},
+{
+"mode": "ghost",
+"diff": "extreme",
+"laps": 3,
+"pos": 0,
+"nl": 0,
+"gs": true
+},
+{
+"mode": "ghost",
+"diff": "extreme",
+"laps": 3,
+"pos": 0,
+"nl": 1,
+"gs": false
+},
+{
+"mode": "ghost",
+"diff": "extreme",
+"laps": 3,
+"pos": 0,
+"nl": 1,
+"gs": true
+},
+{
+"mode": "ghost",
+"diff": "extreme",
+"laps": 3,
+"pos": 0,
+"nl": 3,
+"gs": false
+},
+{
+"mode": "ghost",
+"diff": "extreme",
+"laps": 3,
+"pos": 0,
+"nl": 3,
+"gs": true
+}
+],
+"champ": {
+"bots": [
+{
+"name": "Henk",
+"type": "gt",
+"color": "#1d4f9e"
+},
+{
+"name": "Ingrid",
+"type": "muscle",
+"color": "#1d4f9e"
+},
+{
+"name": "Daan",
+"type": "fastback",
+"color": "#1d4f9e"
+},
+{
+"name": "Fenna",
+"type": "sedan",
+"color": "#1d4f9e"
+},
+{
+"name": "Kees",
+"type": "wagon",
+"color": "#1d4f9e"
+}
+],
+"orders": [
+[
+"Henk",
+"Jij",
+"Ingrid",
+"Daan",
+"Fenna",
+"Kees"
+],
+[
+"Jij",
+"Henk",
+"Kees",
+"Fenna",
+"Ingrid",
+"Daan"
+],
+[
+"Kees",
+"Fenna",
+"Daan",
+"Ingrid",
+"Henk",
+"Jij"
+]
+]
+},
+"career": [
+[
+"b1",
+4
+],
+[
+"b1",
+3
+],
+[
+"b2",
+1
+],
+[
+"b3",
+3
+],
+[
+"b3",
+2
+],
+[
+"b4",
+2
+],
+[
+"b4",
+1
+],
+[
+"B",
+4
+],
+[
+"B",
+3
+],
+[
+"B",
+1
+],
+[
+"a1",
+1
+],
+[
+"a2",
+2
+],
+[
+"a3",
+1
+],
+[
+"a4",
+1
+],
+[
+"A",
+2
+],
+[
+"s1",
+1
+],
+[
+"s2",
+3
+],
+[
+"s3",
+2
+],
+[
+"s4",
+1
+],
+[
+"S",
+1
+],
+[
+"l1",
+1
+],
+[
+"l2",
+2
+],
+[
+"l2",
+1
+],
+[
+"l3",
+1
+],
+[
+"L",
+2
+],
+[
+"L",
+1
+]
+],
+"owned": [
+[
+{
+"hatch": true
+},
+{},
+"gt"
+],
+[
+{
+"hatch": true,
+"gt": true,
+"super": true
+},
+{
+"A": "gt"
+},
+"evo"
+],
+[
+{
+"hatch": true,
+"muscle": true,
+"gt": true
+},
+{},
+"evo"
+],
+[
+{
+"hatch": true,
+"super": true
+},
+{
+"S": "super"
+},
+"evo"
+],
+[
+{
+"super": true
+},
+{},
+"hatch"
+],
+[
+{},
+{},
+"gt"
+],
+[
+{
+"rally": true
+},
+{
+"B": "mini"
+},
+"xyz"
+],
+[
+{
+"gt": true
+},
+{},
+"gt"
+]
+],
+"defs": [
+[
+"b1",
+"#f36f21"
+],
+[
+"b4",
+"#d62a2a"
+],
+[
+"a3",
+"#1d4f9e"
+],
+[
+"l2",
+"#1d4f9e"
+],
+[
+"l3",
+"#f2c200"
+],
+[
+"L",
+"#1b1b1b"
+]
+],
+"ach": [
+{
+"pos": 1,
+"mode": "race",
+"time": "day",
+"weather": "dry",
+"contacts": 0,
+"grid": "back",
+"bots": 5
+},
+{
+"pos": 1,
+"mode": "race",
+"time": "night",
+"weather": "rain",
+"contacts": 3,
+"grid": "pole",
+"bots": 3
+},
+{
+"pos": 2,
+"mode": "race",
+"time": "night",
+"weather": "rain",
+"contacts": 0,
+"grid": "back",
+"bots": 7
+},
+{
+"pos": 1,
+"mode": "elim",
+"time": "dusk",
+"weather": "fog",
+"contacts": 0,
+"grid": "back",
+"bots": 5
+},
+{
+"pos": 1,
+"mode": "champ",
+"time": "night",
+"weather": "dry",
+"contacts": 1,
+"grid": "back",
+"bots": 5
+},
+{
+"pos": 1,
+"mode": "ghost",
+"time": "night",
+"weather": "rain",
+"contacts": 0,
+"grid": "back",
+"bots": 0
+},
+{
+"pos": 1,
+"mode": "time",
+"time": "day",
+"weather": "dry",
+"contacts": 0,
+"grid": "back",
+"bots": 0
+},
+{
+"pos": 1,
+"mode": "race",
+"time": "day",
+"weather": "dry",
+"contacts": 2,
+"grid": "back",
+"bots": 4,
+"wins": "others"
+},
+{
+"pos": 1,
+"mode": "race",
+"time": "dusk",
+"weather": "rain",
+"contacts": 0,
+"grid": "mid",
+"bots": 6
+}
+],
+"rival": [
+{
+"cars": {},
+"car": "gt",
+"p2car": "hatch",
+"split": false
+},
+{
+"cars": {
+"gt": {
+"eng": 3,
+"turbo": 2,
+"tyre": 1,
+"brake": 0
+}
+},
+"car": "gt",
+"p2car": "hatch",
+"split": false
+},
+{
+"cars": {
+"gt": {
+"eng": 3,
+"turbo": 2,
+"tyre": 1,
+"brake": 0
+},
+"hatch": {
+"eng": 1,
+"turbo": 0,
+"tyre": 3,
+"brake": 2
+}
+},
+"car": "gt",
+"p2car": "hatch",
+"split": true
+}
+],
+"order": [
+{
+"mode": "race",
+"laps": 2,
+"pl": {
+"lap": 3,
+"s": 40,
+"done": true,
+"out": false,
+"ft": 102.5,
+"ep": 0,
+"best": 50.1
+},
+"bots": [
+{
+"name": "Henk",
+"type": "gt",
+"lap": 3,
+"s": 60,
+"finished": true,
+"finishTime": 100,
+"out": false,
+"elimPos": 0,
+"bestLap": 49.5
+},
+{
+"name": "Ingrid",
+"type": "muscle",
+"lap": 2,
+"s": 500,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Daan",
+"type": "evo",
+"lap": 3,
+"s": 20,
+"finished": true,
+"finishTime": 105.25,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Fenna",
+"type": "sedan",
+"lap": 2,
+"s": 800,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 51
+}
+]
+},
+{
+"mode": "race",
+"laps": 3,
+"pl": {
+"lap": 1,
+"s": 300,
+"done": false,
+"out": false,
+"ft": 0,
+"ep": 0,
+"best": 0
+},
+"bots": [
+{
+"name": "Henk",
+"type": "gt",
+"lap": 1,
+"s": 250,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Ingrid",
+"type": "muscle",
+"lap": 0,
+"s": 1900,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Daan",
+"type": "evo",
+"lap": 1,
+"s": 310,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Fenna",
+"type": "sedan",
+"lap": 2,
+"s": 5,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+}
+]
+},
+{
+"mode": "elim",
+"laps": 4,
+"pl": {
+"lap": 3,
+"s": 100,
+"done": true,
+"out": true,
+"ft": 150,
+"ep": 3,
+"best": 44
+},
+"bots": [
+{
+"name": "Henk",
+"type": "gt",
+"lap": 4,
+"s": 60,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Ingrid",
+"type": "muscle",
+"lap": 2,
+"s": 500,
+"finished": false,
+"finishTime": 0,
+"out": true,
+"elimPos": 5,
+"bestLap": 0
+},
+{
+"name": "Daan",
+"type": "evo",
+"lap": 4,
+"s": 80,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Fenna",
+"type": "sedan",
+"lap": 3,
+"s": 50,
+"finished": false,
+"finishTime": 0,
+"out": true,
+"elimPos": 4,
+"bestLap": 0
+}
+]
+}
+],
+"elim": [
+{
+"pl": {
+"lap": 3,
+"s": 100
+},
+"bots": [
+{
+"name": "Henk",
+"type": "gt",
+"lap": 2,
+"s": 900,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Ingrid",
+"type": "muscle",
+"lap": 2,
+"s": 50,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Daan",
+"type": "evo",
+"lap": 3,
+"s": 10,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+}
+]
+},
+{
+"pl": {
+"lap": 2,
+"s": 30
+},
+"bots": [
+{
+"name": "Henk",
+"type": "gt",
+"lap": 3,
+"s": 20,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Ingrid",
+"type": "muscle",
+"lap": 2,
+"s": 50,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Daan",
+"type": "evo",
+"lap": 2,
+"s": 400,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+}
+]
+},
+{
+"pl": {
+"lap": 2,
+"s": 30
+},
+"bots": [
+{
+"name": "Henk",
+"type": "gt",
+"lap": 2,
+"s": 20,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Ingrid",
+"type": "muscle",
+"lap": 1,
+"s": 0,
+"finished": false,
+"finishTime": 0,
+"out": true,
+"elimPos": 3,
+"bestLap": 0
+}
+]
+},
+{
+"pl": {
+"lap": 1,
+"s": 30
+},
+"bots": [
+{
+"name": "Henk",
+"type": "gt",
+"lap": 1,
+"s": 20,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+},
+{
+"name": "Ingrid",
+"type": "muscle",
+"lap": 1,
+"s": 50,
+"finished": false,
+"finishTime": 0,
+"out": false,
+"elimPos": 0,
+"bestLap": 0
+}
+]
+}
+],
+"laps": [
+{
+"mode": "race",
+"laps": 3,
+"car": "gt",
+"times": [
+1.0,
+63.25,
+125.5,
+186.0,
+250.0
+]
+},
+{
+"mode": "elim",
+"laps": 3,
+"car": "super",
+"times": [
+0.5,
+70.0,
+131.04
+]
+},
+{
+"mode": "time",
+"car": "hatch",
+"cps": [
+1,
+2,
+3,
+4,
+5,
+0,
+1,
+2,
+3,
+4,
+5,
+6,
+7,
+8,
+9,
+10,
+11,
+12,
+13,
+14,
+15,
+16,
+0
+],
+"clock": [
+10,
+20,
+30,
+40,
+50,
+85.37,
+90,
+95,
+100,
+105,
+110,
+115,
+120,
+125,
+130,
+135,
+140,
+145,
+150,
+155,
+160,
+165,
+170
+]
+}
+],
+"keyLabels": [
+"Space",
+"ShiftLeft",
+"ShiftRight",
+"ControlLeft",
+"AltRight",
+"KeyA",
+"KeyQ",
+"Digit5",
+"Numpad0",
+"Numpad3",
+"ArrowUp",
+"ArrowLeft",
+"Enter",
+"Tab",
+"PageUp",
+"PageDown",
+"Comma",
+"Period",
+"Slash",
+"Semicolon",
+"Quote",
+"BracketLeft",
+"BracketRight",
+"Backslash",
+"Minus",
+"Equal",
+"F5",
+"Backquote",
+"CapsLock",
+"Home",
+"Delete"
+],
+"keys": {
+"tracks": [
+"polder",
+"dorp",
+"circuit",
+"afsluitdijk",
+"haven",
+"veluwe",
+"grachten",
+"limburg",
+"rotterdam",
+"zeeland"
+],
+"ids": [
+[
+"polder",
+"fwd",
+"gt"
+],
+[
+"dorp",
+"rev",
+"super"
+],
+[
+"zeeland",
+"fwd",
+"hatch"
+]
+]
+},
+"fmt": {
+"lap": [
+0,
+0.05,
+0.25,
+9.95,
+9.96,
+59.94,
+59.96,
+60,
+61.04,
+62.25,
+62.75,
+125.55,
+599.99,
+3599.99
+],
+"km": [
+0,
+49,
+50,
+250,
+1234.5,
+1250,
+5000,
+99999
+],
+"cr": [
+0,
+5,
+999,
+1000,
+20000.5,
+1234567
+],
+"d": [
+0,
+-0.004,
+0.125,
+1.234,
+-2.375,
+-12.345,
+0.5,
+3.75
+]
+}
+},
+"out": {
+"credits": [
+20,
+190,
+140,
+110,
+80,
+60,
+20,
+20,
+30,
+240,
+180,
+130,
+100,
+70,
+30,
+20,
+40,
+290,
+220,
+160,
+120,
+90,
+40,
+30,
+50,
+380,
+290,
+210,
+150,
+120,
+50,
+40,
+40,
+320,
+240,
+180,
+130,
+100,
+40,
+30,
+50,
+400,
+300,
+220,
+160,
+120,
+50,
+40,
+60,
+480,
+360,
+260,
+190,
+140,
+60,
+50,
+80,
+640,
+480,
+350,
+260,
+190,
+80,
+60,
+60,
+450,
+340,
+250,
+180,
+130,
+60,
+40,
+70,
+560,
+420,
+310,
+220,
+170,
+70,
+60,
+80,
+670,
+500,
+370,
+270,
+200,
+80,
+70,
+110,
+900,
+670,
+490,
+360,
+270,
+110,
+90,
+70,
+580,
+430,
+320,
+230,
+170,
+70,
+60,
+90,
+720,
+540,
+400,
+290,
+220,
+90,
+70,
+110,
+860,
+650,
+480,
+350,
+260,
+110,
+90,
+140,
+1150,
+860,
+630,
+460,
+350,
+140,
+120,
+30,
+240,
+180,
+130,
+100,
+70,
+30,
+20,
+30,
+240,
+180,
+130,
+100,
+70,
+30,
+20,
+30,
+240,
+180,
+130,
+100,
+70,
+30,
+20,
+30,
+240,
+180,
+130,
+100,
+70,
+30,
+20,
+50,
+400,
+300,
+220,
+160,
+120,
+50,
+40,
+50,
+400,
+300,
+220,
+160,
+120,
+50,
+40,
+50,
+400,
+300,
+220,
+160,
+120,
+50,
+40,
+50,
+400,
+300,
+220,
+160,
+120,
+50,
+40,
+70,
+560,
+420,
+310,
+220,
+170,
+70,
+60,
+70,
+560,
+420,
+310,
+220,
+170,
+70,
+60,
+70,
+560,
+420,
+310,
+220,
+170,
+70,
+60,
+70,
+560,
+420,
+310,
+220,
+170,
+70,
+60,
+90,
+720,
+540,
+400,
+290,
+220,
+90,
+70,
+90,
+720,
+540,
+400,
+290,
+220,
+90,
+70,
+90,
+720,
+540,
+400,
+290,
+220,
+90,
+70,
+90,
+720,
+540,
+400,
+290,
+220,
+90,
+70,
+60,
+450,
+340,
+250,
+180,
+130,
+60,
+40,
+70,
+560,
+420,
+310,
+220,
+170,
+70,
+60,
+80,
+670,
+500,
+370,
+270,
+200,
+80,
+70,
+110,
+900,
+670,
+490,
+360,
+270,
+110,
+90,
+60,
+450,
+340,
+250,
+180,
+130,
+60,
+40,
+70,
+560,
+420,
+310,
+220,
+170,
+70,
+60,
+80,
+670,
+500,
+370,
+270,
+200,
+80,
+70,
+110,
+900,
+670,
+490,
+360,
+270,
+110,
+90,
+20,
+190,
+140,
+110,
+80,
+60,
+20,
+20,
+30,
+240,
+180,
+130,
+100,
+70,
+30,
+20,
+40,
+290,
+220,
+160,
+120,
+90,
+40,
+30,
+50,
+380,
+290,
+210,
+150,
+120,
+50,
+40,
+60,
+450,
+340,
+250,
+180,
+130,
+60,
+40,
+70,
+560,
+420,
+310,
+220,
+170,
+70,
+60,
+80,
+670,
+500,
+370,
+270,
+200,
+80,
+70,
+110,
+900,
+670,
+490,
+360,
+270,
+110,
+90,
+0,
+60,
+70,
+300,
+740,
+0,
+150,
+40,
+190,
+120,
+270
+],
+"champ": [
+{
+"round": 1,
+"st": [
+[
+"Henk",
+10,
+"GT-coupé",
+false
+],
+[
+"Jij",
+8,
+"GT-coupé",
+true
+],
+[
+"Ingrid",
+6,
+"Muscle car",
+false
+],
+[
+"Daan",
+5,
+"Fastback",
+false
+],
+[
+"Fenna",
+4,
+"Sportsedan",
+false
+],
+[
+"Kees",
+3,
+"Sportwagon",
+false
+]
+]
+},
+{
+"round": 2,
+"st": [
+[
+"Jij",
+18,
+"GT-coupé",
+true
+],
+[
+"Henk",
+18,
+"GT-coupé",
+false
+],
+[
+"Ingrid",
+10,
+"Muscle car",
+false
+],
+[
+"Fenna",
+9,
+"Sportsedan",
+false
+],
+[
+"Kees",
+9,
+"Sportwagon",
+false
+],
+[
+"Daan",
+8,
+"Fastback",
+false
+]
+]
+},
+{
+"round": 3,
+"st": [
+[
+"Henk",
+22,
+"GT-coupé",
+false
+],
+[
+"Jij",
+21,
+"GT-coupé",
+true
+],
+[
+"Kees",
+19,
+"Sportwagon",
+false
+],
+[
+"Fenna",
+17,
+"Sportsedan",
+false
+],
+[
+"Ingrid",
+15,
+"Muscle car",
+false
+],
+[
+"Daan",
+14,
+"Fastback",
+false
+]
+]
+}
+],
+"champHist": [
+[
+"Henk",
+"Jij",
+"Ingrid",
+"Daan",
+"Fenna",
+"Kees"
+],
+[
+"Jij",
+"Henk",
+"Kees",
+"Fenna",
+"Ingrid",
+"Daan"
+],
+[
+"Kees",
+"Fenna",
+"Daan",
+"Ingrid",
+"Henk",
+"Jij"
+]
+],
+"career": [
+{
+"res": {
+"passed": false,
+"first": false,
+"bonus": 0,
+"fin": false,
+"chi": 0,
+"unlocked": ""
+},
+"credits": 0,
+"next": "b1",
+"open": [
+"b1"
+],
+"chs": [
+"c1"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 0,
+"unlocked": "Kermisrace"
+},
+"credits": 0,
+"next": "b2",
+"open": [
+"b1",
+"b2"
+],
+"chs": [
+"c1"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 0,
+"unlocked": "Laatste man staat"
+},
+"credits": 0,
+"next": "b3",
+"open": [
+"b1",
+"b2",
+"b3"
+],
+"chs": [
+"c1"
+]
+},
+{
+"res": {
+"passed": false,
+"first": false,
+"bonus": 0,
+"fin": false,
+"chi": 0,
+"unlocked": ""
+},
+"credits": 0,
+"next": "b3",
+"open": [
+"b1",
+"b2",
+"b3"
+],
+"chs": [
+"c1"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 0,
+"unlocked": "Duel op de dijk"
+},
+"credits": 0,
+"next": "b4",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4"
+],
+"chs": [
+"c1"
+]
+},
+{
+"res": {
+"passed": false,
+"first": false,
+"bonus": 0,
+"fin": false,
+"chi": 0,
+"unlocked": ""
+},
+"credits": 0,
+"next": "b4",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4"
+],
+"chs": [
+"c1"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 0,
+"unlocked": "Polder Cup"
+},
+"credits": 0,
+"next": "B",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B"
+],
+"chs": [
+"c1"
+]
+},
+{
+"res": {
+"passed": false,
+"first": false,
+"bonus": 0,
+"fin": true,
+"chi": 0,
+"unlocked": ""
+},
+"credits": 0,
+"next": "B",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B"
+],
+"chs": [
+"c1"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 1500,
+"fin": true,
+"chi": 0,
+"unlocked": "Hoofdstuk 2: De delta"
+},
+"credits": 1500,
+"next": "a1",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1"
+],
+"chs": [
+"c1",
+"c2"
+]
+},
+{
+"res": {
+"passed": true,
+"first": false,
+"bonus": 0,
+"fin": true,
+"chi": 0,
+"unlocked": ""
+},
+"credits": 2500,
+"next": "a1",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1"
+],
+"chs": [
+"c1",
+"c2"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 1,
+"unlocked": "Regen op de dijk"
+},
+"credits": 2500,
+"next": "a2",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2"
+],
+"chs": [
+"c1",
+"c2"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 1,
+"unlocked": "Zeeuwse eliminatie"
+},
+"credits": 2500,
+"next": "a3",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3"
+],
+"chs": [
+"c1",
+"c2"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 1,
+"unlocked": "Duel in de Maasstad"
+},
+"credits": 2500,
+"next": "a4",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4"
+],
+"chs": [
+"c1",
+"c2"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 1,
+"unlocked": "Delta Trofee"
+},
+"credits": 2500,
+"next": "A",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A"
+],
+"chs": [
+"c1",
+"c2"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 5000,
+"fin": true,
+"chi": 1,
+"unlocked": "Hoofdstuk 3: Oranje"
+},
+"credits": 7500,
+"next": "s1",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1"
+],
+"chs": [
+"c1",
+"c2",
+"c3"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 2,
+"unlocked": "Mist op de Veluwe"
+},
+"credits": 7500,
+"next": "s2",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2"
+],
+"chs": [
+"c1",
+"c2",
+"c3"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 2,
+"unlocked": "Limburgse heuvels"
+},
+"credits": 7500,
+"next": "s3",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3"
+],
+"chs": [
+"c1",
+"c2",
+"c3"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 2,
+"unlocked": "Duel met de Baron"
+},
+"credits": 7500,
+"next": "s4",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3",
+"s4"
+],
+"chs": [
+"c1",
+"c2",
+"c3"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 2,
+"unlocked": "Oranje Grand Prix"
+},
+"credits": 7500,
+"next": "S",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3",
+"s4",
+"S"
+],
+"chs": [
+"c1",
+"c2",
+"c3"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 6000,
+"fin": true,
+"chi": 2,
+"unlocked": "Hoofdstuk 4: Legende"
+},
+"credits": 17500,
+"next": "l1",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3",
+"s4",
+"S",
+"l1"
+],
+"chs": [
+"c1",
+"c2",
+"c3",
+"c4"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 3,
+"unlocked": "Ingrids laatste seizoen"
+},
+"credits": 19000,
+"next": "l2",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3",
+"s4",
+"S",
+"l1",
+"l2"
+],
+"chs": [
+"c1",
+"c2",
+"c3",
+"c4"
+]
+},
+{
+"res": {
+"passed": false,
+"first": false,
+"bonus": 0,
+"fin": false,
+"chi": 3,
+"unlocked": ""
+},
+"credits": 19000,
+"next": "l2",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3",
+"s4",
+"S",
+"l1",
+"l2"
+],
+"chs": [
+"c1",
+"c2",
+"c3",
+"c4"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 3,
+"unlocked": "Nacht in het dorp"
+},
+"credits": 19000,
+"next": "l3",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3",
+"s4",
+"S",
+"l1",
+"l2",
+"l3"
+],
+"chs": [
+"c1",
+"c2",
+"c3",
+"c4"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": false,
+"chi": 3,
+"unlocked": "Tour van Nederland"
+},
+"credits": 19000,
+"next": "L",
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3",
+"s4",
+"S",
+"l1",
+"l2",
+"l3",
+"L"
+],
+"chs": [
+"c1",
+"c2",
+"c3",
+"c4"
+]
+},
+{
+"res": {
+"passed": true,
+"first": true,
+"bonus": 0,
+"fin": true,
+"chi": 3,
+"unlocked": ""
+},
+"credits": 19000,
+"next": null,
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3",
+"s4",
+"S",
+"l1",
+"l2",
+"l3",
+"L"
+],
+"chs": [
+"c1",
+"c2",
+"c3",
+"c4"
+]
+},
+{
+"res": {
+"passed": true,
+"first": false,
+"bonus": 0,
+"fin": true,
+"chi": 3,
+"unlocked": ""
+},
+"credits": 25000,
+"next": null,
+"open": [
+"b1",
+"b2",
+"b3",
+"b4",
+"B",
+"a1",
+"a2",
+"a3",
+"a4",
+"A",
+"s1",
+"s2",
+"s3",
+"s4",
+"S",
+"l1",
+"l2",
+"l3",
+"L"
+],
+"chs": [
+"c1",
+"c2",
+"c3",
+"c4"
+]
+}
+],
+"careerCups": {
+"b1": {
+"best": 3
+},
+"b2": {
+"best": 1,
+"won": true
+},
+"b3": {
+"best": 2
+},
+"b4": {
+"best": 1,
+"won": true
+},
+"B": {
+"best": 1,
+"won": true
+},
+"a1": {
+"best": 1,
+"won": true
+},
+"a2": {
+"best": 2
+},
+"a3": {
+"best": 1,
+"won": true
+},
+"a4": {
+"best": 1,
+"won": true
+},
+"A": {
+"best": 2
+},
+"s1": {
+"best": 1,
+"won": true
+},
+"s2": {
+"best": 3
+},
+"s3": {
+"best": 2
+},
+"s4": {
+"best": 1,
+"won": true
+},
+"S": {
+"best": 1,
+"won": true
+},
+"l1": {
+"best": 1,
+"won": true
+},
+"l2": {
+"best": 1,
+"won": true
+},
+"l3": {
+"best": 1,
+"won": true
+},
+"L": {
+"best": 1,
+"won": true
+}
+},
+"careerBonus": {
+"c1": true,
+"c2": true,
+"c3": true
+},
+"careerAch": [
+"cupB",
+"cupL",
+"cupS",
+"duels"
+],
+"evSub": [
+[
+"b1",
+"Race · Polder · 2 ronden · 3 tegenstanders",
+"top 3"
+],
+[
+"b2",
+"Race · Dorp · 3 ronden · 5 tegenstanders · avond",
+"top 3"
+],
+[
+"b3",
+"Eliminatie · Duincircuit · 4 ronden · 4 tegenstanders",
+"top 2"
+],
+[
+"b4",
+"Duel · Afsluitdijk · 2 ronden",
+"winnen"
+],
+[
+"B",
+"3 races · Polder, Dorp, Veluwe",
+"top 3"
+],
+[
+"a1",
+"Race · Haven · 2 ronden · 5 tegenstanders · nacht",
+"top 3"
+],
+[
+"a2",
+"Race · Afsluitdijk · 2 ronden · 5 tegenstanders · regen",
+"top 3"
+],
+[
+"a3",
+"Eliminatie · Zeeland · 5 ronden · 5 tegenstanders",
+"top 2"
+],
+[
+"a4",
+"Duel · Rotterdam · 2 ronden · nacht",
+"winnen"
+],
+[
+"A",
+"4 races · Haven, Afsluitdijk, Duincircuit, Polder",
+"top 3"
+],
+[
+"s1",
+"Race · Grachten · 2 ronden · 5 tegenstanders · nacht",
+"top 3"
+],
+[
+"s2",
+"Race · Veluwe · 2 ronden · 5 tegenstanders · mist",
+"top 3"
+],
+[
+"s3",
+"Eliminatie · Limburg · 5 ronden · 5 tegenstanders",
+"top 2"
+],
+[
+"s4",
+"Duel · Duincircuit · 3 ronden · avond",
+"winnen"
+],
+[
+"S",
+"5 races · Duincircuit, Veluwe, Haven omgekeerd, Afsluitdijk, Dorp omgekeerd",
+"top 3"
+],
+[
+"l1",
+"Duel · Zeeland omgekeerd · 2 ronden · avond",
+"winnen"
+],
+[
+"l2",
+"Race · Haven omgekeerd · 3 ronden · 7 tegenstanders",
+"winnen"
+],
+[
+"l3",
+"Eliminatie · Dorp omgekeerd · 6 ronden · 6 tegenstanders · nacht",
+"winnen"
+],
+[
+"L",
+"6 races · Polder, Veluwe, Grachten, Limburg, Rotterdam, Zeeland",
+"top 3"
+]
+],
+"owned": [
+"hatch",
+"gt",
+"gt",
+"super",
+"super",
+"hatch",
+"rally",
+"gt"
+],
+"defs": [
+[
+[
+"Henk",
+"#d62a2a",
+false,
+""
+],
+[
+"Fenna",
+"#f2c200",
+false,
+""
+],
+[
+"Daan",
+"#d62a2a",
+true,
+"rally"
+]
+],
+[
+[
+"Daan",
+"#f36f21",
+true,
+"rally"
+]
+],
+[
+[
+"Henk",
+"#f36f21",
+false,
+""
+],
+[
+"Fenna",
+"#d62a2a",
+false,
+""
+],
+[
+"Sanne",
+"#f2c200",
+false,
+""
+],
+[
+"Bram",
+"#2f8f5b",
+false,
+""
+],
+[
+"Ingrid",
+"#f2f2ee",
+true,
+"evo"
+]
+],
+[
+[
+"Henk",
+"#f36f21",
+false,
+""
+],
+[
+"Fenna",
+"#d62a2a",
+false,
+""
+],
+[
+"Sanne",
+"#f2c200",
+false,
+""
+],
+[
+"Bram",
+"#2f8f5b",
+false,
+""
+],
+[
+"Lotte",
+"#f2f2ee",
+false,
+""
+],
+[
+"Mees",
+"#1b1b1b",
+false,
+""
+],
+[
+"Ingrid",
+"#f36f21",
+true,
+"hyper"
+]
+],
+[
+[
+"Henk",
+"#f36f21",
+false,
+""
+],
+[
+"Fenna",
+"#d62a2a",
+false,
+""
+],
+[
+"Sanne",
+"#1d4f9e",
+false,
+""
+],
+[
+"Bram",
+"#2f8f5b",
+false,
+""
+],
+[
+"Daan",
+"#d62a2a",
+true,
+"speedster"
+],
+[
+"De Baron",
+"#1b1b1b",
+true,
+"v12"
+]
+],
+[
+[
+"Henk",
+"#f36f21",
+false,
+""
+],
+[
+"Fenna",
+"#d62a2a",
+false,
+""
+],
+[
+"Daan",
+"#d62a2a",
+true,
+"speedster"
+],
+[
+"Ingrid",
+"#1d4f9e",
+true,
+"hyper"
+],
+[
+"De Baron",
+"#2f8f5b",
+true,
+"v12"
+]
+]
+],
+"botDefs": [
+[
+[
+"Henk",
+"#d62a2a",
+"A"
+],
+[
+"Ingrid",
+"#f2c200",
+"A"
+],
+[
+"Daan",
+"#1d4f9e",
+"A"
+],
+[
+"Fenna",
+"#2f8f5b",
+"A"
+],
+[
+"Kees",
+"#f2f2ee",
+"A"
+],
+[
+"Sanne",
+"#1b1b1b",
+"A"
+],
+[
+"Joost",
+"#d62a2a",
+"A"
+]
+],
+[
+[
+"Henk",
+"#f36f21",
+"A"
+],
+[
+"Ingrid",
+"#d62a2a",
+"A"
+],
+[
+"Daan",
+"#1d4f9e",
+"A"
+],
+[
+"Fenna",
+"#2f8f5b",
+"A"
+],
+[
+"Kees",
+"#f2f2ee",
+"A"
+],
+[
+"Sanne",
+"#1b1b1b",
+"A"
+],
+[
+"Joost",
+"#f36f21",
+"A"
+]
+],
+[
+[
+"Henk",
+"#f36f21",
+"A"
+],
+[
+"Ingrid",
+"#d62a2a",
+"A"
+],
+[
+"Daan",
+"#f2c200",
+"A"
+],
+[
+"Fenna",
+"#1d4f9e",
+"A"
+],
+[
+"Kees",
+"#f2f2ee",
+"A"
+],
+[
+"Sanne",
+"#1b1b1b",
+"A"
+],
+[
+"Joost",
+"#f36f21",
+"A"
+]
+]
+],
+"ach": [
+{
+"ach": [
+"clean",
+"comeback",
+"first_win"
+],
+"wins": [
+"polder"
+]
+},
+{
+"ach": [
+"first_win",
+"night",
+"rain"
+],
+"wins": [
+"polder"
+]
+},
+{
+"ach": [],
+"wins": []
+},
+{
+"ach": [
+"clean",
+"elim",
+"first_win"
+],
+"wins": [
+"polder"
+]
+},
+{
+"ach": [
+"first_win",
+"night"
+],
+"wins": [
+"polder"
+]
+},
+{
+"ach": [],
+"wins": []
+},
+{
+"ach": [],
+"wins": []
+},
+{
+"ach": [
+"all_tracks",
+"first_win"
+],
+"wins": [
+"afsluitdijk",
+"circuit",
+"dorp",
+"grachten",
+"haven",
+"limburg",
+"polder",
+"rotterdam",
+"veluwe",
+"zeeland"
+]
+},
+{
+"ach": [
+"clean",
+"first_win",
+"rain"
+],
+"wins": [
+"polder"
+]
+}
+],
+"rival": [
+[
+1,
+1,
+1,
+1
+],
+[
+1.072,
+1.096,
+1.032,
+1
+],
+[
+1.048,
+1.048,
+1.064,
+1.064
+]
+],
+"order": [
+{
+"rows": [
+[
+"Henk",
+"GT-coupé",
+true,
+false
+],
+[
+"Jij",
+"GT-coupé",
+true,
+false
+],
+[
+"Daan",
+"Turbo-sedan",
+true,
+false
+],
+[
+"Fenna",
+"Sportsedan",
+false,
+false
+],
+[
+"Ingrid",
+"Muscle car",
+false,
+false
+]
+],
+"pos": 2
+},
+{
+"rows": [
+[
+"Fenna",
+"Sportsedan",
+false,
+false
+],
+[
+"Daan",
+"Turbo-sedan",
+false,
+false
+],
+[
+"Jij",
+"GT-coupé",
+false,
+false
+],
+[
+"Henk",
+"GT-coupé",
+false,
+false
+],
+[
+"Ingrid",
+"Muscle car",
+false,
+false
+]
+],
+"pos": 3
+},
+{
+"rows": [
+[
+"Daan",
+"Turbo-sedan",
+false,
+false
+],
+[
+"Henk",
+"GT-coupé",
+false,
+false
+],
+[
+"Jij",
+"GT-coupé",
+false,
+true
+],
+[
+"Fenna",
+"Sportsedan",
+false,
+true
+],
+[
+"Ingrid",
+"Muscle car",
+false,
+true
+]
+],
+"pos": 3
+}
+],
+"elim": [
+{
+"bots": [
+[
+"Henk",
+false,
+0,
+0
+],
+[
+"Ingrid",
+true,
+4,
+77
+],
+[
+"Daan",
+false,
+0,
+0
+]
+],
+"playerOut": false,
+"elimPos": 0,
+"raceDone": false,
+"state": "racing",
+"msg": "Ingrid ligt eruit",
+"elimDone": 2
+},
+{
+"bots": [
+[
+"Henk",
+false,
+0,
+0
+],
+[
+"Ingrid",
+false,
+0,
+0
+],
+[
+"Daan",
+false,
+0,
+0
+]
+],
+"playerOut": true,
+"elimPos": 4,
+"raceDone": true,
+"state": "finished",
+"msg": "Uitgeschakeld! 4e plaats",
+"elimDone": 2
+},
+{
+"bots": [
+[
+"Henk",
+true,
+2,
+77
+],
+[
+"Ingrid",
+true,
+3,
+0
+]
+],
+"playerOut": false,
+"elimPos": 0,
+"raceDone": true,
+"state": "finished",
+"msg": "Finish! Gewonnen",
+"elimDone": 1
+},
+{
+"bots": [
+[
+"Henk",
+false,
+0,
+0
+],
+[
+"Ingrid",
+false,
+0,
+0
+]
+],
+"playerOut": false,
+"elimPos": 0,
+"raceDone": false,
+"state": "racing",
+"msg": "",
+"elimDone": 0
+}
+],
+"laps": [
+{
+"msgs": [
+[
+"",
+"racing",
+1,
+10
+],
+[
+"Ronde 2/3  1:02,3",
+"racing",
+2,
+10
+],
+[
+"Laatste ronde  1:02,3",
+"racing",
+3,
+10
+],
+[
+"Finish! Gewonnen",
+"finished",
+4,
+10
+],
+[
+"",
+"finished",
+4,
+10
+]
+],
+"lapTimes": [
+62.25,
+62.25,
+60.5
+],
+"best": 60.5,
+"rec": true,
+"cps": 0,
+"store": [
+[
+"polderrace3d-lap-polder@3-A",
+"60.50",
+"gt"
+],
+[
+"polderrace3d-lapcar-polder@3-gt",
+"60.50",
+"?"
+]
+]
+},
+{
+"msgs": [
+[
+"",
+"racing",
+1,
+10
+],
+[
+"Ronde 2  1:09,5",
+"racing",
+2,
+10
+],
+[
+"Ronde 3  1:01,0",
+"racing",
+3,
+10
+]
+],
+"lapTimes": [
+69.5,
+61.04
+],
+"best": 61.04,
+"rec": true,
+"cps": 0,
+"store": [
+[
+"polderrace3d-lap-polder@3-S",
+"61.04",
+"super"
+],
+[
+"polderrace3d-lapcar-polder@3-super",
+"61.04",
+"?"
+]
+]
+},
+{
+"msgs": [
+[
+"Checkpoint  +15 s",
+"racing",
+0,
+25
+],
+[
+"Checkpoint  +14 s",
+"racing",
+0,
+39
+],
+[
+"Checkpoint  +14 s",
+"racing",
+0,
+53
+],
+[
+"Checkpoint  +13 s",
+"racing",
+0,
+66
+],
+[
+"Checkpoint  +13 s",
+"racing",
+0,
+79
+],
+[
+"Ronde 1:25,4  +13 s",
+"racing",
+1,
+92
+],
+[
+"Checkpoint  +12 s",
+"racing",
+1,
+104
+],
+[
+"Checkpoint  +12 s",
+"racing",
+1,
+116
+],
+[
+"Checkpoint  +11 s",
+"racing",
+1,
+127
+],
+[
+"Checkpoint  +11 s",
+"racing",
+1,
+138
+],
+[
+"Checkpoint  +11 s",
+"racing",
+1,
+149
+],
+[
+"Checkpoint  +10 s",
+"racing",
+1,
+159
+],
+[
+"Checkpoint  +10 s",
+"racing",
+1,
+169
+],
+[
+"Checkpoint  +9 s",
+"racing",
+1,
+178
+],
+[
+"Checkpoint  +9 s",
+"racing",
+1,
+187
+],
+[
+"Checkpoint  +9 s",
+"racing",
+1,
+196
+],
+[
+"Checkpoint  +9 s",
+"racing",
+1,
+205
+],
+[
+"Checkpoint  +9 s",
+"racing",
+1,
+214
+],
+[
+"Checkpoint  +9 s",
+"racing",
+1,
+223
+],
+[
+"Checkpoint  +9 s",
+"racing",
+1,
+232
+],
+[
+"Checkpoint  +9 s",
+"racing",
+1,
+241
+],
+[
+"Checkpoint  +9 s",
+"racing",
+1,
+250
+],
+[
+"Ronde 1:24,6  +9 s",
+"racing",
+2,
+259
+]
+],
+"lapTimes": [],
+"best": 84.63,
+"rec": true,
+"cps": 23,
+"store": [
+[
+"polderrace3d-lap-polder@3-B",
+"84.63",
+"hatch"
+],
+[
+"polderrace3d-lapcar-polder@3-hatch",
+"84.63",
+"?"
+]
+]
+}
+],
+"keyLabels": [
+"Spatie",
+"L-Shift",
+"R-Shift",
+"L-Ctrl",
+"R-Alt",
+"A",
+"Q",
+"5",
+"Num 0",
+"Num 3",
+"↑",
+"←",
+"Enter",
+"Tab",
+"Page Up",
+"Page Down",
+",",
+".",
+"/",
+";",
+"'",
+"[",
+"]",
+"\\",
+"-",
+"=",
+"F5",
+"Backquote",
+"CapsLock",
+"Home",
+"Delete"
+],
+"tv": [
+[
+"polder@3",
+"polder@3-rev"
+],
+[
+"dorp@3",
+"dorp@3-rev"
+],
+[
+"circuit@3",
+"circuit@3-rev"
+],
+[
+"afsluitdijk@3",
+"afsluitdijk@3-rev"
+],
+[
+"haven@3",
+"haven@3-rev"
+],
+[
+"veluwe@3",
+"veluwe@3-rev"
+],
+[
+"grachten@3",
+"grachten@3-rev"
+],
+[
+"limburg@3",
+"limburg@3-rev"
+],
+[
+"rotterdam@4",
+"rotterdam@4-rev"
+],
+[
+"zeeland@4",
+"zeeland@4-rev"
+]
+],
+"keys": [
+[
+"polderrace3d-best-polder@3-A",
+"polderrace3d-lap-polder@3-A",
+"polderrace3d-lapcar-polder@3-gt",
+"polderrace3d-ghost-polder@3-A",
+"polderrace3d-best-polder@3-S",
+"polderrace3d-lapcar-polder@3-mini"
+],
+[
+"polderrace3d-best-dorp@3-rev-S",
+"polderrace3d-lap-dorp@3-rev-S",
+"polderrace3d-lapcar-dorp@3-rev-super",
+"polderrace3d-ghost-dorp@3-rev-S",
+"polderrace3d-best-dorp@3-rev-S",
+"polderrace3d-lapcar-dorp@3-rev-mini"
+],
+[
+"polderrace3d-best-zeeland@4-B",
+"polderrace3d-lap-zeeland@4-B",
+"polderrace3d-lapcar-zeeland@4-hatch",
+"polderrace3d-ghost-zeeland@4-B",
+"polderrace3d-best-zeeland@4-S",
+"polderrace3d-lapcar-zeeland@4-mini"
+]
+],
+"fmt": {
+"lap": [
+"0:00,0",
+"0:00,1",
+"0:00,3",
+"0:09,9",
+"0:010,0",
+"0:59,9",
+"0:60,0",
+"1:00,0",
+"1:01,0",
+"1:02,3",
+"1:02,8",
+"2:05,5",
+"9:60,0",
+"59:60,0"
+],
+"km": [
+"0,0 km",
+"0,0 km",
+"0,1 km",
+"0,3 km",
+"1,2 km",
+"1,3 km",
+"5,0 km",
+"100,0 km"
+],
+"cr": [
+"€ 0",
+"€ 5",
+"€ 999",
+"€ 1.000",
+"€ 20.001",
+"€ 1.234.567"
+],
+"d": [
+"+0,00",
+"−0,00",
+"+0,13",
+"+1,23",
+"−2,38",
+"−12,35",
+"+0,50",
+"+3,75"
+]
+},
+"upCost": [
+[
+"hatch",
+[
+[
+600,
+1200,
+2200
+],
+[
+500,
+1000,
+1900
+],
+[
+450,
+900,
+1700
+],
+[
+300,
+650,
+1200
+]
+]
+],
+[
+"roadster",
+[
+[
+600,
+1200,
+2200
+],
+[
+500,
+1000,
+1900
+],
+[
+450,
+900,
+1700
+],
+[
+300,
+650,
+1200
+]
+]
+],
+[
+"gt",
+[
+[
+850,
+1700,
+3100
+],
+[
+700,
+1400,
+2650
+],
+[
+650,
+1250,
+2400
+],
+[
+400,
+900,
+1700
+]
+]
+],
+[
+"sedan",
+[
+[
+850,
+1700,
+3100
+],
+[
+700,
+1400,
+2650
+],
+[
+650,
+1250,
+2400
+],
+[
+400,
+900,
+1700
+]
+]
+],
+[
+"super",
+[
+[
+1150,
+2300,
+4200
+],
+[
+950,
+1900,
+3600
+],
+[
+850,
+1700,
+3250
+],
+[
+550,
+1250,
+2300
+]
+]
+],
+[
+"proto",
+[
+[
+1150,
+2300,
+4200
+],
+[
+950,
+1900,
+3600
+],
+[
+850,
+1700,
+3250
+],
+[
+550,
+1250,
+2300
+]
+]
+]
+],
+"effStats": [
+272.5,
+17.36,
+1.04,
+37.2
+]
+}
+}

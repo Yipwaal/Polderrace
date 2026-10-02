@@ -67,9 +67,13 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 
 ## Testen
 
-- `python godot/tests/run.py track build laps cars flow audio menus` — alle Godot-tests headless (±8 min). Elke test speelt
-  op een eigen savebestand (`G.use_store`, in runner.gd) met een garage die alle auto's bezit, nooit op die van de speler.
+- `python godot/tests/run.py track build laps cars flow audio menus rules` — alle Godot-tests headless (±8 min). Elke test
+  speelt op een eigen savebestand (`G.use_store`, in runner.gd) met een garage die alle auto's bezit, nooit op die van de speler.
   `python godot/tests/test_net.py` — online: host en speler als twee processen.
+- `rules`: de spelregels gelijk aan de HTML (golden/rules.json): credits per modus/plaats/ronden/niveau, kampioenschapspunten
+  en stand (ook bij gelijke punten), de carrière (resultaat, bonus, wat opengaat, prestaties), prestaties na een race,
+  meetunen van de tegenstanders, uitslagvolgorde, eliminatie, ronde- en checkpointmeldingen met de records die ze opslaan,
+  opslagsleutels, getalnotatie (`G.toFixed` rondt af als JS `toFixed`), upgradeprijzen.
 - `python godot/tests/run.py track build` — headless. `track`: baanberekening gelijk aan de HTML (golden/tracks.json).
   `build`: per geporte baan (fwd en rev) het aantal rnd()-aanroepen per fase, elk `inst()`-object (aantal, eerste en
   laatste positie) en het aantal meshes gelijk aan de HTML (golden/build.json). **Een builder is pas af als `build` groen is.**
@@ -79,7 +83,7 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
   JS-expressie `[ex,ey,ez,lx,ly,lz]`. Bekijk het plaatje met Read. Wolken, vogels en sterren zijn willekeurig; de rest
   hoort gelijk te zijn.
 - Golden data opnieuw maken (alleen als de HTML-versie verandert): `python godot/tools/export_golden.py`,
-  `python godot/tools/export_build.py`.
+  `python godot/tools/export_build.py`, `python godot/tools/export_rules.py`.
 - Screenshots in de container: `xvfb-run -a godot --path godot --rendering-driver opengl3 ...`.
 - `python godot/tools/compare_menus.py [BxH] [scherm,...] [--html]` — elk menuscherm in de HTML-versie (links) en Godot
   (rechts): `tests/.out/menus/compare_<BxH>/<scherm>.png`. Beide met dezelfde save (`tools/menus_state.json`);
