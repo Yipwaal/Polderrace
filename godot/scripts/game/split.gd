@@ -114,7 +114,9 @@ func tick(dt: float) -> void:
 		main_cam.cull_mask = 0
 	var vp := get_viewport().get_visible_rect().size
 	var h2 := vp.y / 2
-	for v in [vp1, vp2]: v.size = Vector2i(int(vp.x), int(h2))
+	# the halves render at the window's real pixels (the UI may be scaled up: main.gd fitUi)
+	var f := get_window().content_scale_factor
+	for v in [vp1, vp2]: v.size = Vector2i(int(vp.x * f), int(h2 * f))
 	img1.position = Vector2.ZERO; img1.size = Vector2(vp.x, h2)
 	img2.position = Vector2(0, h2); img2.size = Vector2(vp.x, h2)
 	line.position = Vector2(0, h2 - 1.5); line.size = Vector2(vp.x, 3)

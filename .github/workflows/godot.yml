@@ -1,5 +1,7 @@
 # Polderrace 3D (Godot): run the Godot tests and build the game for Windows and Linux on every push that touches godot/.
-# The builds are attached to the run as artifacts ("Polderrace-Windows", "Polderrace-Linux"); see godot/README.md.
+# The builds are attached to the run as artifacts ("Polderrace-Windows", "Polderrace-Linux", "Polderrace-Setup"), and a
+# build of the default branch replaces the GitHub release "pc-nieuwste" (the download page, see godot/README.md):
+# https://github.com/<owner>/<repo>/releases/latest/download/Polderrace-Setup.exe always is the newest installer.
 name: Godot build
 
 on:
@@ -15,6 +17,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write    # the release with the downloads
     steps:
       - uses: actions/checkout@v4
 
@@ -69,3 +73,28 @@ jobs:
         with:
           name: Polderrace-Linux
           path: godot/build/linux/
+
+      - name: Windows installer (desktop and Start menu shortcut)
+        run: |
+          sudo apt-get install -y -qq nsis > /dev/null
+          mkdir -p godot/build/installer
+          cd godot/installer && makensis -V2 -DVERSION=1.0.${{ github.run_number }} polderrace.nsi
+          ls -la ../build/installer
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Polderrace-Setup
+          path: godot/build/installer/
+
+      - name: Download page (GitHub release "pc-nieuwste", only for the default branch)
+        if: github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd godot/build
+          (cd windows && zip -q -r ../Polderrace-Windows.zip .)
+          (cd linux && zip -q -r ../Polderrace-Linux.zip .)
+          gh release delete pc-nieuwste --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+          gh release create pc-nieuwste --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
+            --title "Polderrace 3D voor pc (versie 1.0.${{ github.run_number }})" --notes-file ../installer/release-notes.md \
+            installer/Polderrace-Setup.exe Polderrace-Windows.zip Polderrace-Linux.zip

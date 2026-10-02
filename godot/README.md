@@ -5,11 +5,15 @@ browserversie, maar nu als echt pc-spel, met online racen op je eigen netwerk zo
 
 ## Spelen
 
-1. Download de nieuwste versie: op GitHub, tabblad **Actions** → workflow **Godot build** → de bovenste (groene) run →
-   onderaan bij *Artifacts*: **Polderrace-Windows** (of **Polderrace-Linux**). Je krijgt een zip.
-2. Pak de zip uit en start **Polderrace.exe**. Er hoeft niets geïnstalleerd te worden.
+1. Download de nieuwste versie op de downloadpagina: https://github.com/Yipwaal/Polderrace/releases/latest
+   (rechtstreeks: https://github.com/Yipwaal/Polderrace/releases/latest/download/Polderrace-Setup.exe).
+2. Start **Polderrace-Setup.exe**. Het spel komt op je bureaublad en in het Startmenu (**Polderrace 3D**); je hebt
+   geen beheerdersrechten nodig. Een nieuwe versie installeer je gewoon over de oude heen; je voortgang blijft.
+   Verwijderen: Instellingen → Apps → *Polderrace 3D*.
    - Windows kan de eerste keer "Windows heeft uw pc beschermd" zeggen (het spel is niet ondertekend):
      klik op *Meer info* → *Toch uitvoeren*.
+   - Liever zonder installeren: download **Polderrace-Windows.zip**, pak hem uit en start **Polderrace.exe**
+     (Linux: **Polderrace-Linux.zip**).
    - Bij de eerste keer online spelen vraagt Windows of het spel het netwerk mag gebruiken: vink **Particuliere
      netwerken** én **Openbare netwerken** aan en klik *Toegang toestaan*. Op een LAN-party noemt Windows het netwerk
      vaak "openbaar"; zonder dat vinkje zien anderen de game van de host niet.
@@ -29,6 +33,7 @@ browserversie, maar nu als echt pc-spel, met online racen op je eigen netwerk zo
 | Achterom kijken | C | Num 2 | rechterstick indrukken |
 | Schakelen (handbak) | E / Q | Page Up / Page Down | RB / LB |
 | Pauze | Esc of P | | Start |
+| Volledig scherm | F11 of Alt+Enter | | |
 
 De toetsen zijn in te stellen bij Instellingen.
 

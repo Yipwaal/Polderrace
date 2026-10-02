@@ -27,6 +27,8 @@ func _ready() -> void:
 	Game.fx_overlay = overlay
 	add_child(SplitView.new())
 	Game.applyPrefs()
+	get_window().size_changed.connect(fitUi)
+	fitUi()
 	if G.store_get("polderrace3d-window") == "full": setFullscreen(true)
 	env.time = G.settings.time
 	env.weather = G.settings.weather
@@ -45,6 +47,18 @@ func _input(e: InputEvent) -> void:
 		var full := DisplayServer.window_get_mode() < DisplayServer.WINDOW_MODE_FULLSCREEN
 		setFullscreen(full)
 		G.store_set("polderrace3d-window", "full" if full else "win")
+
+## PC version: the menus and the HUD are laid out like the browser page at 1280 x 720 CSS pixels and up; a bigger
+## window (maximised or full screen on a 1440p or 4K screen) scales them along, so they keep their size on the screen
+## instead of shrinking. The 3D world still renders at the window's full resolution; the mirror's texture grows along.
+func fitUi() -> void:
+	var w := get_window()
+	var s: Vector2i = w.size
+	var f := maxf(1.0, minf(s.x / 1280.0, s.y / 720.0))
+	if absf(w.content_scale_factor - f) > 0.001:
+		w.content_scale_factor = f
+	if fx != null and fx.mirror_vp != null:
+		fx.mirror_vp.size = Vector2i(int(512 * minf(f, 2.0)), int(150 * minf(f, 2.0)))
 
 func setFullscreen(on: bool) -> void:
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED)
