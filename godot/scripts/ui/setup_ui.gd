@@ -434,7 +434,7 @@ func refresh() -> void:
 ## the control to focus when a step opens: its chosen option, else Volgende
 func first_focus() -> Control:
 	var step: int = Menu.menuStep
-	for rg in ({0: [carRadio, classRadio], 1: [trackRadio], 2: [modeRadio], 3: [champDiffRadio]}).get(step, []):
+	for rg in ({0: [classRadio, carRadio], 1: [trackRadio], 2: [modeRadio], 3: [champDiffRadio]}).get(step, []):
 		var b = rg.checked_item()
 		if b != null and b.is_visible_in_tree(): return b
 	return nextBtn

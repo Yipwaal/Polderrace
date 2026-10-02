@@ -380,8 +380,9 @@ func showMenu(step: int) -> void:
 ## the chosen car or track in view (six cars a class, ten tracks)
 func _reveal_checked() -> void:
 	for _i in 2: await get_tree().process_frame
-	var f := setupUI.first_focus()
-	if f != null and f.is_visible_in_tree() and f != setupUI.nextBtn: setupUI.scroll.ensure_control_visible(f)
+	var rg = {0: setupUI.carRadio, 1: setupUI.trackRadio}.get(menuStep)
+	var f = rg.checked_item() if rg != null else null
+	if f != null and f.is_visible_in_tree(): setupUI.scroll.ensure_control_visible(f)
 
 ## what "Verder racen" on the home screen does: continue a cup or championship under way, else a quick race
 func resumeInfo() -> Dictionary:

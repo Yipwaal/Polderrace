@@ -13,7 +13,7 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 | G2 alle 10 banen + terrein + dag/nacht/weer | klaar; decor exact gelijk (test `build`, 120/120), beeld gelijk (`tools/compare.py`) |
 | G3 auto's (18 modellen, tuning, verkeer) | klaar; elke mesh gelijk (test `cars`), beeld gelijk (`tools/compare_car.py`) |
 | G4 gameplay (rijden, botsingen, bots, verkeer, race, camera, HUD, audio, fx, spiegel, ghost, replay, invoer) | klaar; autopiloot-ronde gelijk (test `laps`), spelverloop (test `flow`), geluid (test `audio`) |
-| G5 menu's (hoofdscherm, race-opzet, garage, carrière, kampioenschap, prestaties, records, instellingen, podium) | in bewerking (tijdelijk eenvoudig startscherm) |
+| G5 menu's (hoofdscherm, race-opzet, garage, carrière, kampioenschap, prestaties, records, instellingen, podium) | klaar: Menu (`scripts/ui/menu.gd` + `*_ui.gd`, look in `ui_kit.gd`), Champ, Career, Ach, GarageRoom, Podium; test `menus`, beeld gelijk (`tools/compare_menus.py`) |
 | G6 online: LAN zonder codes (automatisch vinden), meedoen via IP, UPnP | klaar; `tests/test_net.py` (host + speler als 2 processen) |
 | G7 split screen | klaar (test `flow`) |
 | G8 export (Windows .exe en Linux, GitHub Actions) | klaar; zie `README.md` en `.github/workflows/godot.yml` |
@@ -67,7 +67,8 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 
 ## Testen
 
-- `python godot/tests/run.py track build laps cars flow audio` — alle Godot-tests headless (±5 min).
+- `python godot/tests/run.py track build laps cars flow audio menus` — alle Godot-tests headless (±8 min). Elke test speelt
+  op een eigen savebestand (`G.use_store`, in runner.gd) met een garage die alle auto's bezit, nooit op die van de speler.
   `python godot/tests/test_net.py` — online: host en speler als twee processen.
 - `python godot/tests/run.py track build` — headless. `track`: baanberekening gelijk aan de HTML (golden/tracks.json).
   `build`: per geporte baan (fwd en rev) het aantal rnd()-aanroepen per fase, elk `inst()`-object (aantal, eerste en
@@ -80,6 +81,9 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 - Golden data opnieuw maken (alleen als de HTML-versie verandert): `python godot/tools/export_golden.py`,
   `python godot/tools/export_build.py`.
 - Screenshots in de container: `xvfb-run -a godot --path godot --rendering-driver opengl3 ...`.
+- `python godot/tools/compare_menus.py [BxH] [scherm,...] [--html]` — elk menuscherm in de HTML-versie (links) en Godot
+  (rechts): `tests/.out/menus/compare_<BxH>/<scherm>.png`. Beide met dezelfde save (`tools/menus_state.json`);
+  `--html` maakt de HTML-kant opnieuw (`tools/menus_html.py`, met de echte lettertypen).
 
 ## Online (G6) — ontwerp
 

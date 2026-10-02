@@ -109,7 +109,7 @@ func run(host: Node) -> TestReport:
 	UiKit.focus(Menu.setupUI.nextBtn)
 	key(KEY_ENTER)
 	r.check(Menu.menuStep == 0, "Enter op Volgende: stap Kies je auto", str(Menu.menuStep))
-	r.check(focused() == Menu.setupUI.carRadio.find("hatch"), "focus op de gekozen auto")
+	r.check(focused() == Menu.setupUI.classRadio.find("B"), "focus op de gekozen klasse")
 	focused().release_focus()
 	key(KEY_ENTER)
 	r.check(Menu.menuStep == 1, "Enter zonder focus: volgende stap", str(Menu.menuStep))
