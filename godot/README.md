@@ -55,5 +55,5 @@ Poorten: 47810/UDP (het spel), 47811/UDP (games vinden op het netwerk).
 ## Voor ontwikkelaars
 
 Zie [PLAN.md](PLAN.md): opzet, portregels (de Godot-versie is een getrouwe port van `../polderrace-3d.html`) en tests.
-Tests: `python godot/tests/run.py track build laps cars flow` en `python godot/tests/test_net.py`
+Tests: `python godot/tests/run.py track build laps cars flow audio menus rules memory perf play` en `python godot/tests/test_net.py`
 (meer online-scenario's, tot 9 spelers: `python godot/tests/test_net_more.py`).

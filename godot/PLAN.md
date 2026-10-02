@@ -17,7 +17,10 @@ is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, 
 | G6 online: LAN zonder codes (automatisch vinden), meedoen via IP, UPnP | klaar; `tests/test_net.py` (2 processen), `tests/test_net_more.py` (tot 9 spelers, LAN-scenario's) |
 | G7 split screen | klaar (test `flow`) |
 | G8 export (Windows .exe en Linux, GitHub Actions) | klaar; zie `README.md` en `.github/workflows/godot.yml` |
-| G9 QA | open |
+| G9 QA | klaar: vier onafhankelijke controles (doorspelen met echte toetsen en muis: test `play`; volledigheid tegen de JS: test `rules`; online met tot 9 spelers; geheugen en snelheid: tests `memory`, `perf`), gevonden bugs opgelost |
+
+Mogelijke volgende stappen (nog niet gedaan): menu's meeschalen op hoge-DPI-schermen (Windows-schaal 125–200 %; nu
+1 schermpixel = 1 CSS-pixel, zoals de browser op 100 %), botauto's samenvoegen tot minder meshes (±70 draw calls minder).
 
 ## Opzet
 
