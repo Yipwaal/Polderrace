@@ -31,4 +31,23 @@ Rol Rijgedrag uit `PLAN2.md`. Branch `worktree-agent-af8627a4a145c2dfd`. Eigen b
 
 ## Logboek
 
-(zie onder, nieuwste onderaan)
+- **Opvolger (Opus 5.5), 20 nov:** overgenomen WIP gecommit (44d5adb); `handling` 107/107, `flow` groen; `laps`-golden
+  liep uiteen (autopiloot = vol gas, stuurt niet af: circuit/polder trager, stadsbanen sneller). Gemeten met
+  `test_measure` (`tools/handling_table.py before now`): nette ronden (`lap-*`) allemaal binnen ±5 % van vóór
+  (uiterste: afsluitdijk super +4,4 %, haven/zeeland hatch −4 %). Daarna:
+  - a0d84e2: camera kijkt een beetje de bocht in (`camSide`, gierhoeksnelheid), voorwielen van bots sturen mee,
+    muurklap draait de auto in beeld in een flits in plaats van in één frame (`wallYaw`, alleen beeld),
+    replay zet wielen recht onder de carrosserie (`replay.gd`, buiten eigen gebied: tiltRig-resten).
+  - e859ec4: camera draait alleen achterom bij bewust achteruitrijden (`camBack`, rem ingedrukt), niet als de
+    auto van een muur terugstuitert; test in `body`.
+  - `test_dbg.gd` verwijderd; `handling` in de CI-stap Tests; `golden/laps.json` opnieuw vastgelegd.
+
+## Wat nog kan (volgende stappen)
+
+- Muurklap recht erin: fysiek draait de neus nog steeds in één stap langs de muur (alleen het beeld is nu zacht).
+  Eerlijker zou zijn: minder direct draaien en de auto laten terugstuiteren; pas op voor de test `ground` (w45/w80).
+- Handrem op 120 km/u kost de hatch veel snelheid (120 → 38 km/u bij 0,7 s vol); een korte tik is prima.
+- `max_corner` op kleine straal (20–40 m) is nu bijna 2× sneller dan vóór (oude model werd daar door de
+  draaisnelheid begrensd); de nette ronden merken het nauwelijks, maar haarspelden zijn makkelijker.
+- Camera kan bij een bot vlak naast/achter je door die auto heen kijken (geen botsing van de camera met auto's).
+- Autopiloot-ronde limburg/gt: 1 keer terug op de baan (vol gas zonder remmen spint hij één keer).

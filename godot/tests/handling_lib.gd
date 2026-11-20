@@ -50,6 +50,8 @@ func start(track: String, car := "gt", weather := "dry", dir := "fwd", bots := 0
 	env.apply("day", weather, true)
 	Game.rebuildPlayerCar()
 	Game.startRace()
+	# another test may have set the game clock back (tests/test_rules.gd): the last wall hit must lie in the past
+	Game.wallT = minf(Game.wallT, Game.clock - 1.0); Game.hitT = minf(Game.hitT, Game.clock - 1.0)
 	walls = 0; ditches = 0; offT = 0.0; _wallT = Game.wallT
 	vel = Vector2.ZERO; yawRate = 0.0
 
