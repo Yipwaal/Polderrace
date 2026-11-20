@@ -486,6 +486,7 @@ class MiniMap extends Control:
 		for c in g.traffic: dot.call(c.m.g.position.x, c.m.g.position.z, 2.2 * u, Color("#9fb0c8"), false)
 		for b in g.bots:
 			if b.m.g.visible: dot.call(b.m.g.position.x, b.m.g.position.z, 3.2 * u, Color(b.color), true)
+		for d in Net.mapDots(): dot.call(d[0], d[1], 3.6 * u, d[2], true)      # online: the other players
 		if Rep.ghostCar != null and Rep.ghostCar.g.visible:
 			dot.call(Rep.ghostCar.g.position.x, Rep.ghostCar.g.position.z, 3.2 * u, Color(1, 1, 1, 0.6), true)
 		if g.mode == "time":

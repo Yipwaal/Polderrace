@@ -27,7 +27,7 @@ ALL = []
 
 
 class Player:
-    def __init__(self, name, nick=None, car='hatch', ts=1, color=None, env=None, window=False, extra=(), wrap=()):
+    def __init__(self, name, nick=None, car='hatch', ts=1, color=None, env=None, window=False, extra=(), wrap=(), look=None, tok=None, res=None):
         self.name = name
         self.ctl = TMP / f'{name}.cmd'
         self.ctl.write_text('')
@@ -36,8 +36,10 @@ class Player:
         self.out = []
         self.cv = threading.Condition()
         # window=True: a real window with OpenGL (under xvfb-run in the cloud) instead of headless
-        args = (['xvfb-run', '-a', GODOT, '--rendering-driver', 'opengl3'] if window else [GODOT, '--headless']) + list(extra) + ['--path', str(PROJ), 'res://tests/net_ctl.tscn', '--', f'name={name}', f'ctl={self.ctl}',
-                f'nick={nick or name}', f'car={car}', f'ts={ts}'] + ([f'color={color}'] if color else [])
+        # res='1280x720': the size of that window (for screenshots)
+        win = ['xvfb-run', '-a'] + (['-s', f'-screen 0 {res}x24'] if res else []) + [GODOT, '--rendering-driver', 'opengl3'] + (['--resolution', res] if res else [])
+        args = (win if window else [GODOT, '--headless']) + list(extra) + ['--path', str(PROJ), 'res://tests/net_ctl.tscn', '--', f'name={name}', f'ctl={self.ctl}',
+                f'nick={nick or name}', f'car={car}', f'ts={ts}'] + ([f'color={color}'] if color else []) + ([f'look={json.dumps(look)}'] if look else []) + ([f'tok={tok}'] if tok else [])
         if shutil.which('stdbuf'):
             args = ['stdbuf', '-oL'] + args      # Godot's print is buffered in a pipe: line by line, please
         args = list(wrap) + args                 # e.g. ip netns exec <pc>: this player on another "PC" of a test LAN
@@ -97,7 +99,9 @@ class Player:
         with self.cv:
             return [l for l in self.out if 'SCRIPT ERROR' in l or 'Parse Error' in l or
                     (l.startswith('ERROR') and 'leaked at exit' not in l and 'still in use at exit' not in l
-                     and 'ERR_CANT_OPEN' not in l)]      # (no sound card under xvfb)
+                     and 'ERR_CANT_OPEN' not in l      # (no sound card under xvfb)
+                     # taking over as host on the PC the old host ran on: the port is busy for a moment (tried again)
+                     and "Couldn't create an ENet host" not in l)]
 
     def kill(self):
         try:
