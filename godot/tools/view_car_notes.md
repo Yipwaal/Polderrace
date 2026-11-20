@@ -137,6 +137,20 @@ Hoofdmaten (car space: +z vooruit, +x links, meters):
 - Lak: `CarPaint.paint(color, finish)`; finish uit `G.carUp(car).finish` via `styleCar`; `CarKit.setGlass(m, hex, opacity)`,
   `CarKit.setCalipers(m, color)`, `setRims`, `setPlate`, `setDriver`.
 
+## Samenvoegen met Aanpassen deel 1 (CarLook)
+
+- `styleCar` = `CarLook.pre` + `_styleStd` + `CarLook.post`; `_styleStd` zet `paint.finish` en `paint.set_meta("finish", true)`
+  (CarLook.finish blijft van de CarPaint af). `applyEnv` roept `CarLook.envChanged` aan.
+- In `car_look.gd` aangepast aan de nieuwe kit: onderdelen hangen aan `m.shell` (`CarLook._par`); tweekleurig dak via
+  `CarKit.roofSplit(K)` (verlakte mesh zonder cabine + cabine apart in dakkleur, +1 mesh); remklauwen via
+  `CarKit.setCalipers`; bandopdruk/witte wang als dunne ring op de buitenwang (`CarKit.setTyreWall`, +1 mesh per wiel,
+  uv zoals CarDecal.tyre); ruitkleur via `CarKit.setGlass` (CarPaint-glas, tabel `CarLook.GLASS`); lampkleur = getinte kopie
+  van de lampen-atlas (`lampMat.clone()`); velgkleur via `CarKit.setRims`; voorruitband: punt 9 van de cabinering.
+- `test_looks.gd`: remklauwen/banden-controle aangepast, volle look ≤ 13 meshes extra (4 bandringen), glaskleur `CarKit.GLASS_TINT`.
+- `view_car.py ... look`: set met een volle look (bandopdruk, remklauwen, ruit, lampkleur, dak, vlammen, sticker, band).
+- Gezien (tests/.out/looks/sheet_cars_*.png): alles zit op de nieuwe carrosserieën. Proto: flank te laag, het deurontwerp
+  zakt onder de witte fabrieksstreep en er is geen plek voor stickers (de test staat dat al toe).
+
 ## Nog open / ideeën
 
 - hyper en proto hebben geen kenteken (raceauto-achtig, bewust zo gelaten); super/hyper/proto/v12/speedster geen voorkenteken.
