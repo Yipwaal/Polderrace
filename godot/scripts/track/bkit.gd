@@ -192,16 +192,16 @@ static func crowd(spots: Array) -> void:
 ## a row of people along the track from sample i0, n people, at lateral offset lat (outside the wall), facing the road
 static func crowdRow(i0: int, n: int, lat: float, step := 1.1, rows := 1) -> Array:
 	var out := []
-	var NS := Trk.NS
 	for r in rows:
 		for k in n:
-			var f := i0 + (k * step + rnd() * 0.5) / Trk.SPC
-			var i := (int(floor(f)) % NS + NS) % NS
-			var l := lat + signf(lat) * (r * 0.9 + rnd() * 0.3)
-			var xz := Trk.onTrack(i, l)
-			var hd := Trk.heading_of(Trk.T[i]) + (PI / 2 if lat > 0 else -PI / 2)
-			var y := gy(xz[0], xz[1]) if Trk.TRK.get("terrain", false) else Trk.hAt(i, l)
-			out.append([xz[0], y + r * 0.0, xz[1], hd])
+			# between the samples too (two people on the same 2 m sample would stand in each other)
+			var a := Trk.trackAt(i0 * Trk.SPC + k * step + rnd() * maxf(0.0, step - 0.85))
+			var l := lat + signf(lat) * (r * 0.9 + rnd() * 0.4)
+			var x: float = a.px + a.rx * l
+			var z: float = a.pz + a.rz * l
+			var hd := atan2(a.tx, a.tz) + (PI / 2 if lat > 0 else -PI / 2)
+			var y := gy(x, z) if Trk.TRK.get("terrain", false) else lerpf(Trk.hAt(a.i, l), Trk.hAt(a.j, l), a.t)
+			out.append([x, y, z, hd])
 	return out
 
 ## deer: body, neck, head, legs, and antlers for the stags (two geometries, one draw call per cell each)
@@ -221,6 +221,34 @@ static func deerGeo(stag: bool) -> Geo:
 			parts.append([Geo.box(0.05, 0.3, 0.05).rotate_z(-s * 1.1).translate(s * 0.42, 2.38, 0.8), 0xd8ccb0])
 			parts.append([Geo.box(0.05, 0.28, 0.05).rotate_x(0.7).translate(s * 0.3, 2.3, 0.92), 0xd8ccb0])
 	return merge(parts)
+
+## a sheep: woolly body, dark head and legs
+static func sheepGeo() -> Geo:
+	var parts := [
+		[Geo.box(0.8, 0.7, 1.3).translate(0, 0.8, 0), 0xefece2],
+		[Geo.box(0.35, 0.4, 0.45).translate(0, 0.98, 0.78), 0x1f1f1f]]
+	for lx in [-0.25, 0.25]:
+		for lz in [-0.45, 0.45]:
+			parts.append([Geo.box(0.12, 0.5, 0.12).translate(lx, 0.25, lz), 0x1f1f1f])
+	return merge(parts)
+
+## trees keep a little distance from each other (two cone bases at the same height in the same place flicker):
+## Spacing.new(3.2).free_at(x, z) is true once per spot
+class Spacing:
+	var r := 3.0
+	var grid := {}
+	func _init(radius: float) -> void:
+		r = radius
+	func free_at(x: float, z: float) -> bool:
+		var cx := int(floor(x / r)); var cz := int(floor(z / r))
+		for a in range(cx - 1, cx + 2):
+			for b in range(cz - 1, cz + 2):
+				for p in grid.get(Vector2i(a, b), []):
+					if (p.x - x) * (p.x - x) + (p.y - z) * (p.y - z) < r * r: return false
+		var key := Vector2i(cx, cz)
+		if not grid.has(key): grid[key] = []
+		grid[key].append(Vector2(x, z))
+		return true
 
 ## a cow: black-and-white (the instance colour tints the white patches: white or red-brown cattle)
 static func cowGeo() -> Geo:
@@ -316,8 +344,8 @@ static func chevrons(lat: float, curv := 0.016, every := 9.0, h := 1.25, onGroun
 	if not posts.is_empty():
 		# two posts (half a metre into the ground: the terrain slopes) and a grey back plate
 		var ph := h + 1.4
-		var pg := merge([[Geo.box(0.1, ph, 0.1).translate(-0.75, ph / 2.0 - 0.5, -0.07), 0x6a6f74], [Geo.box(0.1, ph, 0.1).translate(0.75, ph / 2.0 - 0.5, -0.07), 0x6a6f74],
-			[Geo.box(1.98, 0.98, 0.04).translate(0, h + 0.45, -0.03), 0x50555a]])
+		var pg := merge([[Geo.box(0.1, ph, 0.1).translate(-0.75, ph / 2.0 - 0.5, -0.12), 0x6a6f74], [Geo.box(0.1, ph, 0.1).translate(0.75, ph / 2.0 - 0.5, -0.12), 0x6a6f74],
+			[Geo.box(1.98, 0.98, 0.04).translate(0, h + 0.45, -0.05), 0x50555a]])
 		World.inst(pg, vmat(), posts, null, false)
 	return bl
 

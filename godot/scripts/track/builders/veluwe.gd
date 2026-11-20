@@ -93,7 +93,8 @@ static func build() -> void:
 	fans(TF)
 
 ## the edge of the road: a post every 9 m (down to the ground, which lies 0.3 m below the road there), a log rail from
-## post to post where the invisible wall stands (lat 10.6), and a reflector on every post for the night
+## post to post just outside the invisible wall (the car's centre gets to 10.6, its side to 11.2), and a reflector on
+## every post for the night
 static func edgeRail() -> void:
 	var NS := Trk.NS
 	var HT := Trk.HT
@@ -103,9 +104,9 @@ static func edgeRail() -> void:
 		var i := int(round(dd / Trk.SPC)) % NS
 		var hd := Trk.heading_of(Trk.T[i])
 		for s in [-1, 1]:
-			var xz := Trk.onTrack(i, s * 10.8)
+			var xz := Trk.onTrack(i, s * 11.3)
 			post.append(World.mtx(xz[0], HT[i] + 0.25, xz[1], hd))
-			var rxz := Trk.onTrack(i, s * 10.72)
+			var rxz := Trk.onTrack(i, s * 11.22)
 			refl.append(World.mtx(rxz[0], HT[i] + 0.74, rxz[1], hd))
 		dd += 9
 	World.inst(Geo.box(0.2, 1.4, 0.2), M(0x6b4a2e), post, null, false)
@@ -114,11 +115,12 @@ static func edgeRail() -> void:
 	World.inst(Geo.box(0.05, 0.16, 0.14), rm, refl, null, false)
 	var wd := M(0x7a5a3a)
 	for s in [-1, 1]:
-		World.vribbon(s * 10.8, 0.42, 0.62, wd, 3)
+		World.vribbon(s * 11.3, 0.42, 0.62, wd, 3)
 
 ## where the buildings come, so that trees, deer, heather and the roadside bushes of the dressing keep out (World.pavTaken)
 static var cafe: Array = []
 static var stand_i := 0
+static var fold = null   ## the sheepfold's spot [x, z]
 static func sites(TF: Terrain) -> void:
 	cafe = flatSpot(TF, [0.07, 0.11, 0.17, 0.23, 0.44, 0.5, 0.56, 0.74, 0.8, 0.9], 36.0, 12.0)
 	if not cafe.is_empty(): World.pavTaken.append([cafe[0], cafe[1], 19.0])
@@ -127,6 +129,8 @@ static func sites(TF: Terrain) -> void:
 	World.pavTaken.append([sxz[0], sxz[1], 10.5])
 	var wxz := Trk.onTrack(int(round(Trk.NS * 0.62)), -55)
 	World.pavTaken.append([wxz[0], wxz[1], 7.0])
+	fold = World.clearSpot(45, 200)
+	if fold != null: World.pavTaken.append([fold[0], fold[1], 13.0])
 
 ## woods of spruce, Scots pine, birch and oak, each a single instanced tree; clearings stay open, a few loners in the open
 static func forest(TF: Terrain) -> void:
@@ -141,6 +145,8 @@ static func forest(TF: Terrain) -> void:
 		var side := -1 if rnd() < 0.5 else 1
 		spots.append(Trk.onTrack(i, side * (15 + pow(rnd(), 1.6) * 110)))
 	var sm := []; var sc := []; var pm := []; var pc := []; var bm := []; var bc := []; var om := []; var oc := []
+	var room := BKit.Spacing.new(3.4)
+	var broad := BKit.Spacing.new(6.5)
 	for sp in spots:
 		var x: float = sp[0]
 		var z: float = sp[1]
@@ -151,13 +157,16 @@ static func forest(TF: Terrain) -> void:
 		var ry := rnd() * 6
 		var tint := 0.8 + rnd() * 0.4
 		var r2 := rnd()
+		th -= rnd() * 0.3
 		if d < 14 or heath(x, z) > 0.8 or sand(x, z) > 0.85 or World.pavBusy(x, z, 3.0): continue
 		var wv := wood(x, z)
 		# open ground keeps one tree in seven: loners and small groups
 		if wv < 0.0 and r > 0.14: continue
 		var st := stand(x, z) + (r - 0.5) * 0.5
+		if st > 0.3 and d < 17: continue   # broad crowns stay off the verge
+		if not room.free_at(x, z): continue
+		if st > 0.3 and not broad.free_at(x, z): continue   # wide crowns: two in one place would flicker
 		if st > 0.3:
-			if d < 17: continue   # broad crowns stay off the verge
 			if r2 < 0.5:
 				bm.append(World.mtx(x, th - 0.15, z, ry, s * 1.1)); bc.append(Color(tint, tint, tint * 0.9))
 			else:
@@ -176,14 +185,20 @@ static func forest(TF: Terrain) -> void:
 ## checkpoint (where it stood, the checkpoint gate was hidden inside its deck).
 static func ecoduct() -> void:
 	var NS := Trk.NS
+	# on the straightest stretch between 26% and 46% of the lap (its walls are straight: in a bend the road would run into them)
 	var i := int(round(NS * 0.36))
-	for _try in 40:
+	var bestc := 1e9
+	for q in range(int(NS * 0.26), int(NS * 0.46)):
 		var near := false
 		for c in Trk.cps:
-			var dlt := absi(c - i)
+			var dlt := absi(c - q)
 			if mini(dlt, NS - dlt) < 30: near = true
-		if not near: break
-		i = (i + 5) % NS
+		if near: continue
+		var mc := 0.0
+		for k in range(-11, 12):
+			mc = maxf(mc, Trk.CURV[(q + k + NS) % NS])
+		if mc < bestc:
+			bestc = mc; i = q
 	var hh := 7.5
 	var ln := 34.0
 	var g := Node3D.new()
@@ -194,29 +209,29 @@ static func ecoduct() -> void:
 	g.free()
 	var con := 0x9a978f; var grass := 0x56763a; var earth := 0x5f7038
 	# deck: concrete slab, soil on top
-	A.box(25, 2, ln, 0, hh, 0, con)
-	A.box(24, 0.6, ln - 0.4, 0, hh + 1.3, 0, grass)
+	A.box(27, 2, ln, 0, hh, 0, con)
+	A.box(26, 0.6, ln - 0.4, 0, hh + 1.3, 0, grass)
 	for s in [-1.0, 1.0]:
 		# abutment wall beside the road, and behind it an earth bank down to the forest floor
-		A.box(1.4, hh + 3, ln, s * 12.1, (hh - 3) / 2 + 1, 0, con)
-		var bank := Geo.extrude([Vector2(12.6, -4), Vector2(12.6, hh + 1.55), Vector2(17, hh + 1.55), Vector2(47, -4)], ln - 0.4)
+		A.box(1.4, hh + 3, ln, s * 13.1, (hh - 3) / 2 + 1, 0, con)
+		var bank := Geo.extrude([Vector2(13.6, -4), Vector2(13.6, hh + 1.55), Vector2(18, hh + 1.55), Vector2(48, -4)], ln - 0.4)
 		bank.translate(0, 0, -(ln - 0.4) / 2)
 		if s < 0: bank.rotate_y(PI)
 		A.add(bank, earth)
 		# wing walls at both portals
 		for e in [-1.0, 1.0]:
-			A.box(7, hh + 2.4, 0.8, s * 15.6, (hh - 3.6) / 2 + 1, e * (ln / 2 - 0.4), con)
-		A.box(0.5, 1.2, ln, s * 12.25, hh + 2.2, 0, con)
+			A.box(7, hh + 2.4, 0.8, s * 16.6, (hh - 3.6) / 2 + 1, e * (ln / 2 - 0.4), con)
+		A.box(0.5, 1.2, ln, s * 13.25, hh + 2.2, 0, con)
 	for e in [-1.0, 1.0]:
-		A.box(26, 1.1, 0.5, 0, hh + 2.15, e * (ln / 2 - 0.25), con)
+		A.box(28, 1.1, 0.5, 0, hh + 2.15, e * (ln / 2 - 0.25), con)
 	# the blue name board over the road, on the side the traffic comes from
 	A.box(5.4, 1.3, 0.2, 0, hh + 0.1, -(ln / 2 + 0.11), 0x1d4f9e)
 	A.box(5.0, 0.9, 0.06, 0, hh + 0.1, -(ln / 2 + 0.24), 0xf2f0ea)
 	A.commit()
 	var cm := []; var cc := []
-	for _k in 16:
-		var ex := (rnd() - .5) * 20
-		var ez := (rnd() - .5) * 28
+	for k16 in 16:
+		var ex := (k16 % 4 - 1.5) * 5.6 + (rnd() - .5) * 2.0
+		var ez := (k16 / 4 - 1.5) * 7.4 + (rnd() - .5) * 3.0
 		cm.append(A.frame * World.mtx(ex, hh + 1.5, ez, rnd() * 6, 0.45 + rnd() * 0.2))
 		var t := 0.85 + rnd() * 0.25
 		cc.append(Color(t, t, t))
@@ -396,9 +411,13 @@ static func pancakeHouse(TF: Terrain) -> void:
 		lp.append(A.frame * World.mtx(px, 2.3, 9.9))
 	World.inst(Geo.box(0.3, 0.4, 0.3), lm, lp, null, false)
 	var ppl := []
-	for _k in 14:
-		var p := A.frame * Vector3((rnd() - .5) * 22, 0.0, 1.6 + rnd() * 7.2)
-		ppl.append([p.x, p.y, p.z, ry + rnd() * 6])
+	for px in [-11.2, -6.75, -2.25, 2.25, 6.75, 11.2]:
+		for pz in [2.6, 5.0, 7.4]:
+			var here := rnd() < 0.55
+			var turn := rnd() * 6
+			if here and not (absf(px + 2.25) < 1.0 and pz < 4):
+				var p := A.frame * Vector3(px, 0.0, pz)
+				ppl.append([p.x, p.y, p.z, ry + turn])
 	BKit.crowd(ppl)
 
 ## hunting seats (hoogzit) at the forest edge: a little cabin on stilts with a ladder
@@ -494,7 +513,7 @@ static func fans(TF: Terrain) -> void:
 ## JS detailVeluwe: a sheepfold (heather-roofed barn) with its flock, and picnic tables next to the start
 static func details() -> void:
 	var NS := Trk.NS
-	var s = World.clearSpot(45, 200)
+	var s = fold
 	if s != null:
 		var g := O3.group(s[0], 0, s[1])
 		World.box(15, 3.6, 8, M(0x5b4331), 0, 1.8, 0, g)
@@ -527,7 +546,7 @@ static func finish_details() -> void:
 	for g in veluweGround:
 		var t: Dictionary = TF.call(g.position.x, g.position.z)
 		g.position.y = t.h - 0.2
-	var sb := []; var shd := []
+	var sb := []
 	for e in veluweSheep:
 		var x: float = e[0]
 		var z: float = e[1]
@@ -535,10 +554,8 @@ static func finish_details() -> void:
 		var t: Dictionary = TF.call(x, z)
 		if t.d < 14: continue
 		var m := Transform3D(Basis(Vector3.UP, r), Vector3(x, t.h, z))
-		sb.append(m * Transform3D(Basis(), Vector3(0, 0.75, 0)))
-		shd.append(m * Transform3D(Basis(), Vector3(0, 0.98, 0.75)))
-	World.inst(Geo.box(0.8, 0.8, 1.3), M(0xefece2), sb, null, true)
-	World.inst(Geo.box(0.35, 0.4, 0.45), M(0x1f1f1f), shd, null, false)
+		sb.append(m)
+	World.inst(BKit.sheepGeo(), BKit.vmat(), sb, null, true)
 	var wood_m := M(0x7a5a3a)
 	var tb := []; var bn := []; var lg := []
 	for e in veluwePicnic:

@@ -99,8 +99,8 @@ static func build() -> void:
 	World.gates(Trk.TRK)
 	guardRail()
 	sites(TF)
-	woods(TF)
 	vineyards(TF)
+	woods(TF)
 	houses(TF)
 	church(TF)
 	castle(TF)
@@ -155,7 +155,8 @@ static func sites(TF: Terrain) -> void:
 static func inQuarry(x: float, z: float, extra := 6.0) -> bool:
 	return not quarry.is_empty() and quarrySdf(x, z) < 14 + extra
 
-## white posts with a reflector every 10 m and a steel guard rail where the invisible wall stands (lat 10.6)
+## white posts with a reflector every 10 m and a steel guard rail just outside the invisible wall (the car's centre gets
+## to 10.6, its side to 11.2)
 static func guardRail() -> void:
 	var NS := Trk.NS
 	var HT := Trk.HT
@@ -165,9 +166,9 @@ static func guardRail() -> void:
 		var i := int(round(dd / Trk.SPC)) % NS
 		var hd := Trk.heading_of(Trk.T[i])
 		for s in [-1, 1]:
-			var xz := Trk.onTrack(i, s * 10.86)
+			var xz := Trk.onTrack(i, s * 11.36)
 			post.append(World.mtx(xz[0], HT[i] + 0.3, xz[1], hd))
-			var rxz := Trk.onTrack(i, s * 10.78)
+			var rxz := Trk.onTrack(i, s * 11.28)
 			refl.append(World.mtx(rxz[0], HT[i] + 0.82, rxz[1], hd))
 		dd += 10
 	World.inst(Geo.box(0.16, 1.5, 0.16), M(0xe8e6de), post, null, false)
@@ -176,12 +177,13 @@ static func guardRail() -> void:
 	World.inst(Geo.box(0.05, 0.2, 0.14), rm, refl, null, false)
 	var rail := M(0xffffff, {"map": TrackCommon.railTex()})
 	for s in [-1, 1]:
-		World.vribbon(s * 10.8, 0.3, 0.68, rail, 4)
+		World.vribbon(s * 11.3, 0.3, 0.68, rail, 4)
 
 ## woods of oak and spruce on the hilltops, loners in the fields, rows of poplars along the road, orchards in blossom
 static func woods(TF: Terrain) -> void:
 	var NS := Trk.NS
 	var om := []; var oc := []; var sm := []; var sc := []; var pm := []; var pc := []; var fm := []; var fcol := []
+	var room := BKit.Spacing.new(3.6)
 	for _k in 3400:
 		var x := Trk.BX0 - 300 + rnd() * (Trk.BX1 - Trk.BX0 + 600)
 		var z := Trk.BZ0 - 300 + rnd() * (Trk.BZ1 - Trk.BZ0 + 600)
@@ -189,10 +191,11 @@ static func woods(TF: Terrain) -> void:
 		var s := 0.8 + rnd() * 0.7
 		var ry := rnd() * 6
 		var tint := 0.8 + rnd() * 0.4
-		var th := TF.at(x, z)
+		var th := TF.at(x, z) - rnd() * 0.3
 		if TF.d < 18 or inQuarry(x, z) or World.pavBusy(x, z, 4.0): continue
 		var wv := woodL(x, z)
 		if wv < 0.0 and r > 0.05: continue
+		if not room.free_at(x, z): continue
 		if r < 0.8 or wv < 0.0:
 			om.append(World.mtx(x, th - 0.2, z, ry, s * 1.15)); oc.append(Color(tint, tint, tint * 0.9))
 		else:
@@ -242,6 +245,7 @@ static func vineyards(TF: Terrain) -> void:
 		var x0 := Trk.BX0 + rnd() * (Trk.BX1 - Trk.BX0)
 		var z0 := Trk.BZ0 + rnd() * (Trk.BZ1 - Trk.BZ0)
 		var ang := rnd() * 3
+		var any := false
 		for r in 9:
 			for c in 14:
 				var x := x0 + cos(ang) * c * 3 + sin(ang) * r * 2.6
@@ -249,7 +253,10 @@ static func vineyards(TF: Terrain) -> void:
 				var th := TF.at(x, z)
 				if TF.d < 16 or woodL(x, z) > 0.1 or inQuarry(x, z) or World.pavBusy(x, z, 3.0): continue
 				vh.append(World.mtx(x, th + 0.7, z, ang, 0.5, 1.2, 2.6))
+				any = true
 				if c % 3 == 0: vp.append(World.mtx(x, th + 0.8, z))
+		# trees, houses and cows stay out of the vines
+		if any: World.pavTaken.append([x0 + cos(ang) * 19.5 + sin(ang) * 10.4, z0 - sin(ang) * 19.5 + cos(ang) * 10.4, 25.0])
 	World.inst(Geo.box(1, 1, 1), M(0x3f6a2a), vh, null, true)
 	World.inst(Geo.box(0.1, 1.6, 0.1), M(0x6b4a2e), vp, null, false)
 
@@ -452,6 +459,7 @@ static func quarryDecor(TF: Terrain) -> void:
 static func cattle(TF: Terrain) -> void:
 	var NS := Trk.NS
 	var cm := []; var cc := []
+	var herd := BKit.Spacing.new(2.6)
 	var groups := 0
 	for _k in 120:
 		var i := int(floor(rnd() * NS))
@@ -468,7 +476,7 @@ static func cattle(TF: Terrain) -> void:
 			var z: float = xz[1] + (rnd() - .5) * 16
 			var r := rnd() * 6
 			var th := TF.at(x, z)
-			if TF.d < 17 or World.pavBusy(x, z, 2.0): continue
+			if TF.d < 17 or World.pavBusy(x, z, 2.0) or not herd.free_at(x, z): continue
 			cm.append(World.mtx(x, th, z, r, 0.95 + rnd() * 0.15))
 			cc.append(Color(0.75, 0.42, 0.3) if red else Color(1, 1, 1))
 	World.inst(BKit.cowGeo(), M(0xffffff), cm, cc, true)
