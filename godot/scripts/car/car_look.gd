@@ -732,8 +732,7 @@ static func _hash(s: String) -> int:
 ## number, rims and often stripes that go with the paint. rival: a career rival in his or her own colours.
 static func botLook(name: String, type: String, color, rival := false) -> Dictionary:
 	if rival and RIVAL_LOOKS.has(name):
-		var r: Dictionary = RIVAL_LOOKS[name].duplicate()
-		return r
+		return compact(clean(RIVAL_LOOKS[name], type))
 	var h := _hash(name + "/" + type)
 	var col: Color = color if color is Color else (Color(str(color)) if Color.html_is_valid(str(color)) else Color.WHITE)
 	var dark := col.get_luminance() < 0.35
@@ -753,4 +752,4 @@ static func botLook(name: String, type: String, color, rival := false) -> Dictio
 		L.numStyle = "square"
 	if dark and (h >> 15) % 2 == 0:
 		L.numBg = "yellow"
-	return L
+	return compact(clean(L, type))

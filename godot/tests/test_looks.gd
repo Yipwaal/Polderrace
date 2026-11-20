@@ -30,7 +30,7 @@ func car(id: String, look: Dictionary, color := "#1d4f9e") -> Dictionary:
 	CarKit.styleCar(m, look)
 	return m
 
-func free(m: Dictionary) -> void:
+func drop(m: Dictionary) -> void:
 	var keep := []
 	for e in Cars_.dump_nodes(m.g):
 		for s in e.mesh.get_surface_count(): keep.append(e.get_surface_override_material(s))
@@ -142,8 +142,8 @@ func part_apply() -> void:
 					if k == "paint": want = CarLook.cleanValue(k, want)
 					if m.look.get(k) != want and not (k == "paint" and want == ""): bad.append("%s = %s werd %s" % [k, want, m.look.get(k)])
 				if m.len != base.len or m.wid != base.wid or m.rc != base.rc or m.wheels.size() != base.wheels.size(): bad.append("ronde %d: hitbox of wielen veranderd" % i)
-			free(m)
-		free(base)
+			drop(m)
+		drop(base)
 		r.check(bad.is_empty(), "%s: elke optie past" % id, ", ".join(bad.slice(0, 4)) if not bad.is_empty() else "%d rondes" % most)
 	# what a look does, on one car
 	var plain := car("gt", {})
@@ -167,20 +167,20 @@ func part_apply() -> void:
 			var mt = o.get_surface_override_material(s)
 			if mt == CarKit.carGlass and not mt.albedo_color.is_equal_approx(MathX.col(0x151d26)): shared = false
 	r.check(shared, "een look verandert de gedeelde materialen niet (andere auto's blijven zoals ze zijn)")
-	free(plain); free(full)
+	drop(plain); drop(full)
 	# cars without a roof: no roof colour, no band; class S: no exhaust choice
 	var ro := car("roadster", {"roof": "black", "ban": "DAK", "exhaust": "dual"})
 	r.check(ro.look.roof == "" and ro.look.ban == "" and ro.look.exhaust == "dual", "roadster: geen dak, geen voorruitband, wel een uitlaat", str(CarLook.compact(ro.look)))
-	free(ro)
+	drop(ro)
 	var sup := car("super", {"exhaust": "dual"})
 	r.check(sup.look.exhaust == "std", "klasse S: uitlaat blijft af fabriek")
-	free(sup)
+	drop(sup)
 	# every sticker and the band have a place on every car that can carry them
 	var no_room := []
 	for id in Cars.CARS:
 		var K := CarKit.carKit(id)
 		var sp := CarLook.stickerSpots(K)
-		if sp[0].is_empty(): no_room.append(id + ": sticker voor")
+		if sp[0].is_empty() and not K.S.has("numFin"): no_room.append(id + ": sticker voor")    # (the prototype's flank is too low)
 		if K.C != null and CarLook.bannerGeo(K) == null: no_room.append(id + ": voorruitband")
 		if CarLook.doorGeo(K) == null: no_room.append(id + ": deurontwerp")
 	r.check(no_room.is_empty(), "elke auto heeft plek voor een sticker, een deurontwerp en (met dak) de voorruitband", ", ".join(no_room))
@@ -194,7 +194,9 @@ func part_roundtrip() -> void:
 	for it in CarLook.ITEMS:
 		if it.has("kit"): looks[it.k] = 1
 		for o in it.get("opts", []): looks["%s:%s" % [it.k, o[0]]] = 1
-	G.use_store("user://test-looks.json", {"polderrace3d-settings": {"car": "gt", "color": "#f36f21"}, "polderrace3d-garage": {"credits": 100, "owned": owned, "looks": looks}})
+	var ach := {}
+	for a in Ach.ACH: ach[a[0]] = 1
+	G.use_store("user://test-looks.json", {"polderrace3d-settings": {"car": "gt", "color": "#f36f21"}, "polderrace3d-garage": {"credits": 100, "owned": owned, "looks": looks, "ach": ach}})
 	var want := {"paint": "#2a6fdb", "finish": "pearl", "roof": "white", "stripe": "lion", "sc": "gold", "sc2": "#123456", "rimStyle": "dish", "rim": "#aa5500", "cal": "blue", "tw": "letter",
 		"tint": "bronze", "lamp": "purple", "glow": "pink", "num": 46, "numStyle": "ring", "numBg": "yellow", "numFg": "white", "numFont": "round", "numPos": "doors", "plate": "YIP-46",
 		"plateStyle": "old", "d1": "kaas", "d2": "molen", "ban": "TEAM YIP", "banCol": "orange", "wing": "gt", "exhaust": "dual"}
@@ -220,7 +222,7 @@ func part_roundtrip() -> void:
 	CarKit.styleCar(theirs, parsed)
 	var diff: String = Cars_.compare(Cars_.dump(mine), JSON.parse_string(JSON.stringify(Cars_.dump(theirs))))
 	r.check(diff == "", "auto uit G.lookOf (via JSON) = auto uit de garage", diff)
-	free(mine); free(theirs)
+	drop(mine); drop(theirs)
 	# a car with nothing chosen sends next to nothing
 	var plain := G.lookOf("hatch")
 	r.check(plain.size() == 1 and plain.has("paint"), "auto zonder keuzes: alleen de lakkleur", str(plain))
@@ -257,7 +259,7 @@ func part_junk() -> void:
 	for u in [{"stripe": 12, "rim": [], "num": NAN, "numStyle": {}, "plate": 5, "d1": "nope", "glow": 1, "paint": 7, "rimStyle": "x", "wing": "x", "exhaust": 9}, {"num": 1e30, "roof": "#12", "tw": null}]:
 		var m := car("gt", u)
 		r.check(m.get("lookDone", false) and CarLook.compact(m.look).is_empty(), "auto met rommel-look wordt gewoon gebouwd (standaard)", str(CarLook.compact(m.look)))
-		free(m)
+		drop(m)
 	r.check(CarLook.clean("geen woordenboek", "gt") == CarLook.clean({}, "gt") and CarLook.clean(null) == CarLook.clean({}), "geen woordenboek: standaardlook")
 	# looks from before the catalogue: the stripe colour was the choice
 	for old in [["white", "white"], ["black", "black"], ["yellow", "yellow"]]:
@@ -281,7 +283,7 @@ func part_saves() -> void:
 	var b := car("gt", {"stripe": "yellow", "rim": "gold", "num": 7, "wing": "gt", "rimStyle": "spoke", "exhaust": "sport"})
 	var diff: String = Cars_.compare(Cars_.dump(a), JSON.parse_string(JSON.stringify(Cars_.dump(b))))
 	r.check(diff == "", "oude save: zelfde auto als voorheen", diff)
-	free(a); free(b)
+	drop(a); drop(b)
 	# a new player: nothing bought, no mixer
 	G.use_store("user://test-looks.json", {})
 	r.check(not G.lookHas("mix") and G.garage.looks.is_empty(), "nieuwe speler: nog niets gekocht, geen kleurenmenger")
@@ -299,12 +301,12 @@ func part_bots() -> void:
 		for t in ["gt", "hatch", "super"]:
 			var L := CarLook.botLook(n, t, "#1d4f9e")
 			seen[JSON.stringify(L)] = true
-			if CarLook.compact(CarLook.clean(L, t)).size() != L.size(): r.check(false, "botlook geldig", "%s %s: %s" % [n, t, L])
+			if CarLook.compact(CarLook.clean(L, t)) != L: r.check(false, "botlook geldig", "%s %s: %s" % [n, t, L])
 	r.check(seen.size() >= 12, "bots verschillen van elkaar", "%d looks" % seen.size())
 	for id in Career.RIVALS:
 		var R: Dictionary = Career.RIVALS[id]
 		var L := CarLook.botLook(R.name, "v12", R.color, true)
-		r.check(CarLook.RIVAL_LOOKS.has(R.name) and CarLook.compact(CarLook.clean(L, "v12")).size() == L.size(), "rivaal %s heeft een eigen, geldige look" % R.name, str(L))
+		r.check(CarLook.RIVAL_LOOKS.has(R.name) and CarLook.compact(CarLook.clean(L, "v12")) == L and L.size() >= 6, "rivaal %s heeft een eigen, geldige look" % R.name, str(L))
 	r.check(JSON.stringify(CarLook.botLook("Daan", "gt", "#d62a2a")) != JSON.stringify(CarLook.botLook("Daan", "gt", "#d62a2a", true)), "een gewone bot die Daan heet, is de rivaal niet")
 	# bots in a race wear it
 	G.settings.car = "gt"; G.settings.bots = 3
@@ -447,7 +449,7 @@ func part_keys(host: Node) -> void:
 	var missed := []
 	var n := 0
 	for g in CarLook.GROUPS:
-		# to the group with the arrow keys: its chip, then down through the rows
+		# to the group with the arrow keys on its chip, then Tab through the rows (arrows walk the options of a row)
 		UiKit.focus(ui.groupRadio.checked_item())
 		var guard := 0
 		while ui.group != g[0] and guard < 12:
@@ -459,10 +461,9 @@ func part_keys(host: Node) -> void:
 		for it in CarLook.itemsOf(g[0]):
 			if not ui.rows[it.k].root.visible or ui.rows[it.k].radio == null: continue
 			var rg: UiKit.Radio = ui.rows[it.k].radio
-			# down until the focus is in this row's group
 			guard = 0
 			while guard < 40 and not (focused() is UiKit.Btn and focused().radio == rg):
-				key(KEY_DOWN)
+				key(KEY_TAB)
 				guard += 1
 			if not (focused() is UiKit.Btn and focused().radio == rg):
 				missed.append(it.k + ": rij niet bereikt")
