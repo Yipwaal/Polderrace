@@ -567,7 +567,7 @@ func interior(A: CarAcc, Dv: CarAcc) -> void:
 		ws = hz0
 		zH = hz1 + 0.3
 		yH = top(zH) + S.cockpit.get("head", 0.34)
-	var dashZ := hz0 - clampf((hz0 - ws) * 0.55, 0.26, 0.7) if C != null else hz0 - 0.3
+	var dashZ: float = (hz0 - clampf((hz0 - ws) * 0.55, 0.26, 0.7)) if C != null else hz0 - 0.3
 	zH = minf(zH, dashZ - 0.5)
 	if C != null: yH = roof(zH) - 0.18
 	var sx0 := minf(hole(zH) * 0.52, 0.4)
@@ -704,7 +704,7 @@ func lines_image() -> Image:
 			side.call([[fz - q, fy - q], [fz + q, fy - q], [fz + q, fy + q], [fz - q, fy + q], [fz - q, fy - q]])
 		# bonnet and boot lid on the top chart
 		var hood0: float = (C.z0 + 0.05) if C != null else ((S.cockpit.z0 + 0.3) if S.has("cockpit") else 0.6)
-		var hood1 := zF - S.get("hoodGap", 0.22)
+		var hood1: float = zF - S.get("hoodGap", 0.22)
 		var xk: float = S.get("hoodW", 0.74)
 		if hood1 - hood0 > 0.4 and S.get("hood", true):
 			var pts: Array = []

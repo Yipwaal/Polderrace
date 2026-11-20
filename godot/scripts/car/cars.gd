@@ -47,7 +47,7 @@ const EXHAUSTS := {"std": "Af fabriek", "sport": "Sport", "dual": "Dubbel", "cen
 
 ## a fresh car's upgrades and looks (JS carUp(id) for a car that is not in the garage yet)
 static func default_up() -> Dictionary:
-	return {"eng": 0, "turbo": 0, "tyre": 0, "brake": 0, "body": 0, "rim": "silver", "stripe": "std", "num": 0, "wing": "std", "rimStyle": "std", "exhaust": "std"}
+	return {"eng": 0, "turbo": 0, "tyre": 0, "brake": 0, "body": 0, "rim": "silver", "stripe": "std", "num": 0, "wing": "std", "rimStyle": "std", "exhaust": "std", "finish": "gloss"}
 
 ## JS carKit's S: the spec of a model (unknown ids fall back to gt) with zF/zR (nose/tail z), type, W (half width) and
 ## wx (wheel centre x). Gameplay reads len, wid, hitR, off, r, w, wz, wx from it.
@@ -120,6 +120,7 @@ const CAR_SPECS := {
 		"top": [[2.025, 0.58], [1.99, 0.7], [1.85, 0.77], [1.4, 0.81], [0.6, 0.85], [-0.2, 0.87], [-1.4, 0.88], [-1.88, 0.87], [-2.0, 0.81], [-2.025, 0.72]],
 		"bot": [[2.025, 0.32], [1.88, 0.25], [1.6, 0.22], [-1.6, 0.22], [-1.88, 0.26], [-2.025, 0.34]],
 		"wing": {"z": -1.85},
+		"cockpit": {"z0": 0.34, "z1": -0.84, "w": 0.64, "head": 0.3},
 		"zcuts": [0.35, -0.8]},
 	"gt": {
 		"len": 4.4,
@@ -344,6 +345,7 @@ const CAR_SPECS := {
 		"top": [[2.3, 0.42], [2.26, 0.5], [2.0, 0.56], [1.4, 0.62], [0.8, 0.7], [0.2, 0.76], [-0.6, 0.8], [-1.6, 0.84], [-2.18, 0.82], [-2.3, 0.72]],
 		"bot": [[2.3, 0.25], [2.12, 0.16], [1.8, 0.15], [-1.8, 0.15], [-2.12, 0.19], [-2.3, 0.29]],
 		"wing": {"z": -2.0},
+		"cockpit": {"z0": 0.28, "z1": -0.78, "w": 0.66, "head": 0.3},
 		"zcuts": [0.3, -0.75]},
 	"city": {
 		"len": 4.1,

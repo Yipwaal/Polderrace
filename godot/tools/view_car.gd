@@ -28,7 +28,7 @@ const VIEWS := {
 ## what each set shows: env, looks (styleCar), views
 const SETS := {
 	"day": {"views": ["f34", "side", "r34", "top", "front", "rear", "lowf", "lowr", "chase", "high", "wheel", "nose", "tail", "cabin"]},
-	"night": {"time": "night", "views": ["f34", "r34", "brake", "chase"]},
+	"night": {"time": "night", "views": ["f34", "r34", "brake", "rev", "chase"]},
 	"dusk": {"time": "dusk", "views": ["f34", "r34"]},
 	"rain": {"weather": "rain", "views": ["f34", "r34"]},
 	"num": {"up": {"num": 7}, "views": ["f34", "side", "high"]},
@@ -125,7 +125,7 @@ func _view(name: String, m: Dictionary) -> Array:
 	match name:
 		"wheel": return [Vector3(W / 2 + 1.25, 0.55, wz + 0.75), Vector3(W / 2 - 0.15, wr, wz), 34]
 		"nose": return [Vector3(1.25, 0.95, zf + 1.5), Vector3(0.35, 0.55, zf - 0.1), 36]
-		"tail", "brake": return [Vector3(-1.25, 1.0, zr - 1.5), Vector3(-0.35, 0.6, zr + 0.1), 36]
+		"tail", "brake", "rev": return [Vector3(-1.25, 1.0, zr - 1.5), Vector3(-0.35, 0.6, zr + 0.1), 36]
 		"cabin": return [Vector3(2.0, 1.75, 1.3), Vector3(0, 0.95, -0.35), 36]
 	var v: Array = VIEWS[name]
 	var ez: float = v[2] * k
@@ -163,7 +163,7 @@ func _sheets(a: Dictionary) -> void:
 				for vn in st.views:
 					if vn == "chase" and m.wheels.size() > 0: pass
 					var braking: bool = vn == "brake"
-					if braking: pass   # TODO CarKit.setBrake(m, braking)
+					CarKit.setLights(m, braking, vn == "rev")
 					var v := _view(vn, m)
 					cam.fov = v[2]
 					cam.position = v[0]
