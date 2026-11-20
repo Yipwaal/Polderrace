@@ -21,12 +21,12 @@ enum Mode { PAINT, DETAIL, GLASS }
 ##   f0: reflection head-on; reflection: strength of the sky/road reflection; roughness: 0 sharp horizon .. 1 blurred;
 ##   tint: how much the reflection takes the paint's colour (chrome, metallic)
 const FINISHES := {
-	"gloss": {"f0": 0.07, "refl": 0.6, "rough": 0.05, "coat": 1.0, "coat_shin": 420.0, "base": 1.0, "flake": 0.0, "pearl": 0.0, "spec": 0x4a4a4a, "shin": 48.0, "tint": 0.0},
-	"metallic": {"f0": 0.1, "refl": 0.62, "rough": 0.1, "coat": 1.0, "coat_shin": 380.0, "base": 0.82, "flake": 1.0, "pearl": 0.0, "spec": 0x9a9a9a, "shin": 14.0, "tint": 0.45},
-	"matte": {"f0": 0.02, "refl": 0.06, "rough": 1.0, "coat": 0.0, "coat_shin": 40.0, "base": 0.94, "flake": 0.0, "pearl": 0.0, "spec": 0x2c2c2c, "shin": 9.0, "tint": 0.0},
-	"satin": {"f0": 0.05, "refl": 0.3, "rough": 0.55, "coat": 0.22, "coat_shin": 60.0, "base": 0.96, "flake": 0.0, "pearl": 0.0, "spec": 0x505050, "shin": 22.0, "tint": 0.1},
-	"pearl": {"f0": 0.08, "refl": 0.6, "rough": 0.07, "coat": 1.0, "coat_shin": 400.0, "base": 0.95, "flake": 0.35, "pearl": 0.75, "spec": 0x707070, "shin": 30.0, "tint": 0.2},
-	"chrome": {"f0": 0.72, "refl": 1.0, "rough": 0.03, "coat": 1.3, "coat_shin": 700.0, "base": 0.16, "flake": 0.0, "pearl": 0.0, "spec": 0x303030, "shin": 60.0, "tint": 0.55},
+	"gloss": {"f0": 0.13, "refl": 0.85, "rough": 0.03, "coat": 1.0, "coat_shin": 420.0, "base": 0.94, "flake": 0.0, "pearl": 0.0, "spec": 0x4a4a4a, "shin": 40.0, "tint": 0.0},
+	"metallic": {"f0": 0.16, "refl": 0.8, "rough": 0.08, "coat": 1.0, "coat_shin": 380.0, "base": 0.8, "flake": 1.0, "pearl": 0.0, "spec": 0xa8a8a8, "shin": 12.0, "tint": 0.5},
+	"matte": {"f0": 0.03, "refl": 0.1, "rough": 1.0, "coat": 0.0, "coat_shin": 40.0, "base": 0.9, "flake": 0.0, "pearl": 0.0, "spec": 0x303030, "shin": 8.0, "tint": 0.0},
+	"satin": {"f0": 0.12, "refl": 0.5, "rough": 0.5, "coat": 0.25, "coat_shin": 50.0, "base": 0.93, "flake": 0.0, "pearl": 0.0, "spec": 0x585858, "shin": 18.0, "tint": 0.15},
+	"pearl": {"f0": 0.14, "refl": 0.85, "rough": 0.04, "coat": 1.0, "coat_shin": 400.0, "base": 0.92, "flake": 0.4, "pearl": 0.8, "spec": 0x787878, "shin": 26.0, "tint": 0.25},
+	"chrome": {"f0": 0.78, "refl": 1.0, "rough": 0.02, "coat": 1.4, "coat_shin": 700.0, "base": 0.14, "flake": 0.0, "pearl": 0.0, "spec": 0x303030, "shin": 60.0, "tint": 0.5},
 }
 const FINISH_NAMES := {"gloss": "Glans", "metallic": "Metallic", "matte": "Mat", "satin": "Zijdeglans", "pearl": "Parelmoer", "chrome": "Chroom"}
 
@@ -185,14 +185,20 @@ float cp_hash(vec3 p) {
 // the world a car body mirrors: sky above, haze at the horizon, a dark band of land and the road below (r: world direction)
 vec3 cp_env(vec3 r, float rough) {
 	float up = r.y;
-	vec3 sky = pr_hemi_sky.rgb * 1.2;
-	vec3 hor = mix(pr_fog.rgb, pr_hemi_sky.rgb, 0.3) * 1.05;
-	vec3 land = pr_hemi_ground.rgb * 0.5;
-	vec3 road = (pr_hemi_sky.rgb * 0.22 + pr_hemi_ground.rgb * 0.25);
-	vec3 above = mix(hor, sky, pow(clamp(up, 0.0, 1.0), 0.55));
-	vec3 below = mix(land, road, clamp(-up * 2.2 - 0.25, 0.0, 1.0));
-	float w = 0.012 + rough * 0.6;
-	return mix(below, above, smoothstep(-w, w, up + 0.02));
+	float ls = dot(pr_hemi_sky.rgb, vec3(0.3, 0.5, 0.2));
+	float lg = dot(pr_hemi_ground.rgb, vec3(0.3, 0.5, 0.2));
+	vec3 sky = pr_hemi_sky.rgb * vec3(0.72, 0.86, 1.1);
+	vec3 hor = mix(pr_fog.rgb, vec3(ls), 0.35) * 1.08;
+	vec3 land = mix(pr_hemi_ground.rgb, vec3(lg), 0.6) * 0.42;
+	vec3 road = vec3(ls * 0.26 + lg * 0.1);
+	vec3 above = mix(hor, sky, pow(clamp(up, 0.0, 1.0), 0.5 + rough * 0.4));
+	vec3 below = mix(land, road, clamp(-up * 2.4 - 0.2, 0.0, 1.0));
+	float w = 0.01 + rough * 0.7;
+	vec3 e = mix(below, above, smoothstep(-w, w, up + 0.015));
+	// the sun's glow in the sky
+	float sd = max(dot(r, pr_sun_dir.xyz), 0.0);
+	e += pr_sun.rgb * (pow(sd, 40.0 / (1.0 + rough * 12.0)) * 0.35) * (1.0 - rough * 0.7);
+	return e;
 }
 
 // LMat's Blinn-Phong lobe (the paint itself) plus the clear coat: a tight glint of the sun
@@ -203,7 +209,7 @@ vec3 phong_spec(vec3 n, vec3 l, vec3 v) {
 	float sh = cp_b.y;
 	float coat = cp_shine * 0.05 * 0.25 * (sh * 0.5 + 1.0) * pow(dnh, sh);
 	// flakes: tiny mirrors that light up round the highlight
-	float fl = cp_spark * 6.0 * pow(dnh, 24.0);
+	float fl = cp_spark * 3.0 * pow(dnh, 30.0);
 	return s + vec3(coat + fl);
 }
 
@@ -234,10 +240,10 @@ const CP_SURFACE := """
 	}
 	if (cp_b.z > 0.0) {
 		// metallic: the colour is lighter where it faces you and darker at a glancing angle, with a fine grain of flakes
-		float cp_nr = 1.0 - smoothstep(6.0, 22.0, -VERTEX.z);
-		float g = cp_hash(floor(cp_pos * 260.0));
-		c.rgb *= mix(1.0, 0.86 + 0.28 * g, cp_b.z * cp_nr * 0.6) * mix(0.8, 1.15, cp_ndv);
-		cp_spark = cp_b.z * cp_nr * step(0.86, g);
+		float cp_nr = 1.0 - smoothstep(3.0, 11.0, -VERTEX.z);
+		float g = cp_hash(floor(cp_pos * 700.0));
+		c.rgb *= mix(1.0, 0.94 + 0.12 * g, cp_b.z * cp_nr) * mix(0.78, 1.14, cp_ndv);
+		cp_spark = cp_b.z * cp_nr * step(0.9, g);
 	}
 	if (cp_b.w > 0.0) {
 		// pearl: the colour turns towards its neighbour on the colour wheel at a glancing angle
@@ -262,7 +268,7 @@ const CP_REFLECT := """
 	{
 		vec3 cp_vw = normalize((INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz);
 		vec3 cp_r = reflect(-cp_vw, nw);
-		float cp_fr = cp_f0 + (1.0 - cp_f0) * pow(1.0 - cp_ndv, 4.0);
+		float cp_fr = cp_f0 + (1.0 - cp_f0) * pow(1.0 - cp_ndv, 3.5);
 		cp_fres = cp_fr;
 		vec3 cp_e = cp_env(cp_r, cp_rough);
 #ifdef CP_DETAIL
@@ -270,6 +276,6 @@ const CP_REFLECT := """
 #else
 		cp_e *= mix(vec3(1.0), c.rgb / max(cp_a.w, 0.05) * 1.5, cp_tn);
 #endif
-		lit += cp_e * cp_fr * cp_refl * (1.0 - cp_rough * 0.5);
+		lit += cp_e * cp_fr * cp_refl * (1.0 - cp_rough * 0.6);
 	}
 """

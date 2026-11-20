@@ -247,6 +247,7 @@ func replayUpdate(dt: float) -> void:
 		m.g.rotation = Vector3(0, MathX.lerp_angle_(a[o + 3], b[o + 3], k), 0)
 		m.g.visible = true
 		for w in m.wheels: w.spin.rotation.x += Game.wheelSpin(a[o + 4], w.r, dt)
+		CarKit.autoBrake(m, a[o + 4] + (b[o + 4] - a[o + 4]) * k, dt)
 	var ot: int = rp.target * 5
 	rp.speed = a[ot + 4] + (b[ot + 4] - a[ot + 4]) * k if ot + 4 < a.size() else 0.0
 	rp.camT += dt

@@ -112,6 +112,19 @@ static func setLights(m: Dictionary, brake: bool, reverse := false) -> void:
 		st.brake = brake; st.rev = reverse
 	o.set_surface_override_material(0, (brakeRevMat if reverse else brakeMat) if brake else (revMat if reverse else tailMat))
 
+## brake lights from how the car slows down (bots, traffic, online players, the replay): call every frame with its speed.
+## Lights up above about 3 m/s2 and stays on a moment, so it does not flicker; reversing lamps when it rolls backwards.
+static func autoBrake(m: Dictionary, speed: float, dt: float) -> void:
+	var st = m.get("lights", null)
+	if st == null or dt <= 0.0: return
+	var a: float = (speed - st.get("v", speed)) / dt
+	st.v = speed
+	st.a = st.get("a", 0.0) + (a - st.get("a", 0.0)) * minf(1.0, dt * 9.0)
+	var hold: float = st.get("hold", 0.0) - dt
+	if st.a < -3.0 and speed > 0.5: hold = 0.25
+	st.hold = hold
+	setLights(m, hold > 0.0, speed < -0.5)
+
 static func setBrake(m: Dictionary, on: bool) -> void:
 	var st = m.get("lights", null)
 	setLights(m, on, st.rev if st != null else false)
@@ -243,7 +256,7 @@ static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine :=
 	if WGEO.has(key):
 		return WGEO[key]
 	var hw := w / 2.0
-	var rb := r * (0.64 if style == "steel" else 0.7)
+	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7))
 	var tyre := Geo.lathe([Vector2(rb, -hw + 0.018), Vector2(rb + 0.012, -hw + 0.004), Vector2(r - 0.075, -hw), Vector2(r - 0.03, -hw + 0.012),
 		Vector2(r - 0.008, -hw + 0.04), Vector2(r, -hw + 0.075), Vector2(r, hw - 0.075), Vector2(r - 0.008, hw - 0.04), Vector2(r - 0.03, hw - 0.012),
 		Vector2(r - 0.075, hw), Vector2(rb + 0.012, hw - 0.004), Vector2(rb, hw - 0.018)], 26)
@@ -264,11 +277,19 @@ static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine :=
 	bg.idx = _flip(bg.idx)
 	A.geo(bg)
 	var bp := Geo.circle(rb * 0.985, 24); bp.rotate_y(X90); bp.translate(-hw + 0.03, 0, 0); A.geo(bp)
-	if style != "steel":
+	if style == "tractor":
+		# chevron lugs round the tyre
+		A.color(sc(0x161617, 0.07))
+		var nl := 22 if r > 0.7 else 16
+		for k in nl:
+			for sd in [1.0, -1.0]:
+				var lg := Geo.box(hw * 0.98, 0.05 + r * 0.03, 0.05 + r * 0.045); lg.rotate_y(sd * 0.5); lg.translate(sd * hw * 0.48, r, 0)
+				lg.rotate_x((k + (0.5 if sd > 0 else 0.0)) / nl * TAU); A.geo(lg)
+	if style != "steel" and style != "tractor":
 		A.color(sc(0x8f9297, 0.62)); disc.call(rb * 0.8, 0.024, face - 0.085, 24)
 		A.color(sc(0x2a2c30, 0.4)); disc.call(rb * 0.34, 0.03, face - 0.05, 16)
 	A.color(rc)
-	if style == "steel":
+	if style == "steel" or style == "tractor":
 		ringG.call(rb * 0.86, rb, face + 0.012); disc.call(rb * 0.86, 0.02, face - 0.03, 24)
 		A.color(sc(0x3a3d42, 0.4)); disc.call(rb * 0.28, 0.05, face - 0.005, 14)
 	else:
@@ -328,7 +349,7 @@ static func addWheel(parent: Node3D, x: float, y: float, z: float, r: float, w: 
 	pivot.add_child(spin)
 	var wm := mesh(spin, G.all, detailMat, true)
 	wm.set_meta("rim", true)
-	if cal != null and style != "steel":
+	if cal != null and style != "steel" and style != "tractor":
 		var c := mesh(null, _calGeo(G.rb, cal), detailMat)
 		var a := 2.3 if z > 0 else 0.85
 		var rb: float = G.rb
@@ -342,7 +363,7 @@ static func addWheel(parent: Node3D, x: float, y: float, z: float, r: float, w: 
 static func setRims(m: Dictionary, style: String, col = null, shine := 0.72) -> void:
 	if col is LMat: col = col.albedo_color
 	for wh in m.wheels:
-		if wh.style == "steel": continue
+		if wh.style == "steel" or wh.style == "tractor": continue
 		var G := wheelGeos(wh.r, wh.w, style, col, shine)
 		wh.style = style
 		set_geo(wh.mesh, G.all)
@@ -987,6 +1008,7 @@ static func _dress(type: String, K: CarBody, D: Dictionary) -> void:
 		"v12": _dress_v12(K, D)
 		"speedster": _dress_speedster(K, D)
 		"city": _dress_city(K, D)
+		"van": _dress_van(K, D)
 		_: _dress_gt(K, D)
 
 ## amber indicator in the bumper (front)
@@ -1350,7 +1372,7 @@ static func buildCar(type: String, color, lite := false) -> Dictionary:
 	var paint := CarPaint.paint(_col(color))
 	paint.set_lines(K.lines_tex, K.lines_map())
 	var body := mesh(shell, K.G.paint, paint, true)
-	var det := mesh(shell, K.G.detail, detailMat)
+	var det := mesh(shell, K.G.detail, detailMat, true)   # casts too: the floor closes the body's shadow under the windows
 	var glass := mesh(shell, K.G.glass, carGlass)
 	var lamp := mesh(shell, K.G.lamp, lampMat)
 	var tail := mesh(shell, K.G.tail, tailMat)
@@ -1506,3 +1528,17 @@ static func styleExtras(m: Dictionary, u: Dictionary, _rim = null) -> void:
 		for o in exm.meshes: o.visible = false
 		var t := tuneParts(K, ux)
 		mesh(shell, t.detail, detailMat)
+
+## the delivery van (traffic): a panel van with glass only round the cab, tall tail lamps, a stripe along the flank
+static func _dress_van(K: CarBody, D: Dictionary) -> void:
+	dressStd(K, D, {"hl": [{"x": [0.52, 0.92], "y": [0.86, 1.04], "kind": "h_van", "flat": true}], "grille": [{"x": [-0.42, 0.42], "y": [0.9, 1.02], "kind": "g_slats"}, {"x": [-0.7, 0.7], "y": [0.56, 0.74], "kind": "g_slats", "tile": 0.35}],
+		"plateF": 0.8, "tl": [{"x": [0.74, 0.96], "y": [0.72, 1.14], "kind": "t_van", "flat": true}], "rtrim": [{"x": [-0.95, 0.95], "y": [0.44, 0.58]}], "plateR": 0.82,
+		"mz": 1.72, "my": 1.5, "handles": [0.5, -0.9], "hy": 1.08, "exh": [-0.6]})
+	D.deco.color(0x2f6db3); hSd(K, D.deco, -2.3, 1.9, 0.9, 1.0, 0.02, 12, 1)
+	# rear doors: a seam down the middle and two handles
+	var y0 := 0.66
+	var s = K.on_rear(0, 1.0)
+	if s != null:
+		D.trim.box(0.014, 1.5, 0.02, 0, 1.75, K.C.z1 - 0.004)
+		D.trim.box(0.05, 0.14, 0.03, 0.08, 1.3, K.C.z1 - 0.012); D.trim.box(0.05, 0.14, 0.03, -0.08, 1.3, K.C.z1 - 0.012)
+		D.trim.box(0.014, 0.5, 0.02, 0, y0 + 0.25, s[0].z - 0.004)

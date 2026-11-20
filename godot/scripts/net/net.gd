@@ -407,6 +407,7 @@ func netTick() -> void:
 		r.car.g.position = Vector3(a[0] + (b[0] - a[0]) * f + sin(b[3]) * b[4] * ex, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f + cos(b[3]) * b[4] * ex)
 		r.car.g.rotation = Vector3(0, MathX.lerp_angle_(a[3], b[3], f), 0)
 		for w in r.car.wheels: w.spin.rotation.x += Game.wheelSpin(b[4], w.r, 1.0 / 60)
+		CarKit.autoBrake(r.car, b[4], 1.0 / 60)
 
 func netRemoteProg(r: Dictionary) -> float:
 	if r.done: return (Game.raceLaps + 2) * Trk.TRACK_LEN + 100000 - r.ft * 10

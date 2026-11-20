@@ -117,7 +117,7 @@ func _view(name: String, m: Dictionary) -> Array:
 	var L: float = m.len
 	var W: float = m.wid
 	var off: float = m.get("off", 0.0)
-	var k := maxf(1.0, L / 4.6)
+	var k := maxf(maxf(1.0, L / 4.6), Vehicles.heightOf(m) / 1.55)
 	var zf := off + L / 2
 	var zr := off - L / 2
 	var wz: float = m.wheels[0].pivot.position.z if not m.wheels.is_empty() else L * 0.3

@@ -562,15 +562,23 @@ func interior(A: CarAcc, Dv: CarAcc) -> void:
 		ws = C.ws
 		zH = ws - minf(0.45, (ws - C.rw) * 0.5)
 		yH = roof(zH) - 0.18
-		if ws - C.rw > 1.0 and hz1 < zH - 1.05: rear = zH - 0.86
 	else:
 		ws = hz0
 		zH = hz1 + 0.3
 		yH = top(zH) + S.cockpit.get("head", 0.34)
 	var dashZ: float = (hz0 - clampf((hz0 - ws) * 0.55, 0.26, 0.7)) if C != null else hz0 - 0.3
 	zH = minf(zH, dashZ - 0.5)
-	if C != null: yH = roof(zH) - 0.18
+	if C != null: yH = minf(roof(zH) - 0.18, S.get("headY", 9.0))
 	var sx0 := minf(hole(zH) * 0.52, 0.4)
+	var bwid := 0.44     # width of a seat back: inside the glass at shoulder height
+	if C != null:
+		var xg := cabX(zH, yH)
+		if xg > 0: sx0 = minf(sx0, xg - 0.17)
+		var xs := cabX(zH - 0.16, yH - 0.1)
+		if xs > 0: bwid = clampf((xs - 0.035 - sx0) * 2, 0.3, 0.44)
+		# a rear bench: heads under the roof, at least 60 cm behind the front seats
+		var rz := maxf(zH - 0.86, C.rw + 0.2)
+		if ws - C.rw > 1.0 and zH - rz >= 0.6 and hz1 < rz - 0.25 and S.get("rearSeat", true): rear = rz
 	var yc := maxf(yf + 0.07, yH - 0.66)
 	var dashY: float = rim.call(hz0, 0).y - 0.012
 	# dashboard: a shelf from the foot of the screen back to the wheel, with a cowl over the dials
@@ -594,15 +602,17 @@ func interior(A: CarAcc, Dv: CarAcc) -> void:
 	for sx in [sx0, -sx0]:
 		A.color(cSeat2).box(0.46, 0.12, 0.48, sx, yc - 0.06, zH + 0.17)
 		var bh := maxf(0.2, yH - 0.1 - yc)
-		A.color(cSeat).box(0.44, bh, 0.1, sx, yc + bh / 2 - 0.02, zH - 0.11 - bh * 0.09, -0.2)
-		A.color(cSeat2).box(0.25, 0.17, 0.085, sx, yH - 0.01, zH - 0.19, -0.1)
+		A.color(cSeat).box(bwid, bh, 0.1, sx, yc + bh / 2 - 0.02, zH - 0.11 - bh * 0.09, -0.2)
+		A.color(cSeat2).box(minf(0.25, bwid - 0.08), 0.17, 0.085, sx, yH - 0.01, zH - 0.19, -0.1)
 	if rear != null:
 		var rz: float = rear
 		var bw := maxf(0.6, hole(maxf(rz, hz1 + 0.05)) * 2 - 0.1)
-		var ry := minf(yH, roof(rz) - 0.16) if C != null else yH
+		var ry: float = minf(yH, roof(rz - 0.2) - 0.2) if C != null else yH
+		var xr := cabX(rz - 0.24, ry - 0.08) if C != null else -1.0
+		var bt := minf(bw, (xr - 0.04) * 2) if xr > 0 else bw     # the back's width: inside the glass up there
 		A.color(cSeat2).box(bw, 0.12, 0.46, 0, yc - 0.04, rz + 0.17)
-		A.color(cSeat).box(bw, maxf(0.2, ry - 0.1 - yc), 0.1, 0, (yc + ry - 0.1) / 2, rz - 0.13, -0.24)
-		for sx in [bw * 0.27, -bw * 0.27]:
+		A.color(cSeat).box(bt, maxf(0.2, ry - 0.1 - yc), 0.1, 0, (yc + ry - 0.1) / 2, rz - 0.13, -0.24)
+		for sx in [bt * 0.27, -bt * 0.27]:
 			A.color(cSeat2).box(0.22, 0.14, 0.08, sx, ry - 0.04, rz - 0.2, -0.1)
 		# parcel shelf behind the bench
 		if hz1 < rz - 0.3:

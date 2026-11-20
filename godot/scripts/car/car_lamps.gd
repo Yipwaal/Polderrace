@@ -46,24 +46,20 @@ static func ensure() -> void:
 		m.emission_energy_multiplier = k
 		return m
 	head = mk.call(1, 0x807860, 1.0)
-	tail = mk.call(1, 0xc81d1d, 0.45)
-	brake = mk.call(1, 0xff3a30, 1.5)
-	rev = mk.call(2, 0xffffff, 0.45)
-	brakeRev = mk.call(2, 0xffffff, 1.5)
+	tail = mk.call(1, 0xc81d1d, 1.0)
+	brake = mk.call(1, 0xff4030, 3.4)
+	rev = mk.call(2, 0xc8c8c8, 1.0)
+	brakeRev = mk.call(2, 0xffffff, 3.4)
 
 ## lamps on at dusk/night/rain/fog (JS applyEnv, the car part)
 static func applyEnv(t: String, lamps: bool) -> void:
 	ensure()
+	# the emission colours are the old game's (the garage sets them too); the atlas' emission map scales them per part
 	head.emission_enabled = true
 	head.emission = MathX.col(0xfff0c0 if t == "night" else (0xd8ccaa if lamps else 0x807860))
-	head.emission_energy_multiplier = 1.5 if t == "night" else (1.25 if lamps else 0.55)
-	var k := 1.0 if t == "night" else (0.85 if lamps else 0.3)
 	tail.emission_enabled = true
 	tail.emission = MathX.col(0xff3a30 if t == "night" else 0xc81d1d)
-	tail.emission_energy_multiplier = k
-	rev.emission_energy_multiplier = k
-	brake.emission_energy_multiplier = 1.7
-	brakeRev.emission_energy_multiplier = 1.7
+	rev.emission = MathX.col(0xffffff if t == "night" else 0xc8c8c8)
 
 # ---------------------------------------------------------------- drawing
 
@@ -104,7 +100,7 @@ static func _draw(c, layer: int) -> void:
 		c.restore()
 	# the red glow: in the plain emission map the lens is white (the material's emission colour makes it red); in the
 	# reversing map the material glows white, so there the lens carries the red itself
-	var rg := "#ffffff" if layer == 1 else REDG
+	var rg := "#666666" if layer == 1 else "#660f0f"
 	# ---- headlights
 	cellf.call("h_rect", func():
 		_rect(c, layer, 0, 0, CW, CH, HOUSE)
@@ -151,11 +147,11 @@ static func _draw(c, layer: int) -> void:
 	_red = true
 	cellf.call("t_block", func():
 		_rect(c, layer, 0, 0, CW, CH, "#3c0a0a")
-		_rect(c, layer, 5, 5, 80, 54, RED, rg)
+		_rect(c, layer, 43, 5, 80, 54, RED, rg)
 		for k in 4:
-			_rect(c, layer, 5, 15 + k * 12, 80, 2, "#7a1010", "")
-		_rect(c, layer, 88, 5, 17, 54, "#d98a1c", "#2a1804", "#2a1804")
-		_rect(c, layer, 108, 5, 15, 54, "#dfe3e6", "", "#ffffff"))
+			_rect(c, layer, 43, 15 + k * 12, 80, 2, "#7a1010", "")
+		_rect(c, layer, 23, 5, 17, 54, "#d98a1c", "#2a1804", "#2a1804")
+		_rect(c, layer, 5, 5, 15, 54, "#dfe3e6", "", "#ffffff"))
 	cellf.call("t_bar", func():
 		_rect(c, layer, 0, 0, CW, CH, "#1c0606")
 		_rect(c, layer, 0, 18, CW, 28, RED, rg)
@@ -178,9 +174,9 @@ static func _draw(c, layer: int) -> void:
 		_rect(c, layer, 0, 26, CW, 12, "#e84434", rg))
 	cellf.call("t_wide", func():
 		_rect(c, layer, 0, 0, CW, CH, "#3c0a0a")
-		_rect(c, layer, 4, 6, 92, 52, RED, rg)
-		_rect(c, layer, 4, 28, 92, 8, "#e03a2c", rg)
-		_rect(c, layer, 100, 6, 24, 52, "#dfe3e6", "", "#ffffff"))
+		_rect(c, layer, 32, 6, 92, 52, RED, rg)
+		_rect(c, layer, 32, 28, 92, 8, "#e03a2c", rg)
+		_rect(c, layer, 4, 6, 24, 52, "#dfe3e6", "", "#ffffff"))
 	cellf.call("t_van", func():
 		_rect(c, layer, 0, 0, CW, CH, "#2a0808")
 		_rect(c, layer, 6, 4, 116, 22, RED, rg)

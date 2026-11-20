@@ -135,15 +135,6 @@ func rebuildPlayerCar(pid := "", pcol := "") -> void:
 		car = CarKit.buildCar(S.car, Color(S.color))
 		CarKit.styleCar(car, S.car)
 	get_tree().current_scene.add_child(car.g)
-	# the player's car gets its own tail-light material so the brake lights can light up
-	var tail: LMat = CarKit.tailMat.clone()
-	car.tail = tail
-	for mi in car.g.find_children("*", "MeshInstance3D", true, false):
-		for k in mi.mesh.get_surface_count():
-			var cur = mi.get_surface_override_material(k)
-			if cur == null: cur = mi.mesh.surface_get_material(k)
-			if cur == CarKit.tailMat:
-				mi.set_surface_override_material(k, tail)
 	if car.get("beam") != null:
 		car.beam.visible = false
 	# the headlight is player 1's (JS: if(activeP===1)attachHeadlights()): player 2's car in split screen has none
@@ -264,6 +255,7 @@ func updateTraffic(dt: float, withPlayer: bool) -> void:
 		c.vz = Trk.T[i].z * v + Trk.R[i].z * lv
 		for w in c.m.wheels:
 			w.spin.rotation.x += wheelSpin(c.cur, w.r, dt)
+		CarKit.autoBrake(c.m, c.cur, dt)
 
 # ================================================================== bots
 func clearBots() -> void:
@@ -369,6 +361,7 @@ func updateBots(dt: float) -> void:
 				if fposmod(b.s - Trk.S_START, Trk.TRACK_LEN) < rel: b.lap += 1
 			poseOnTrack(b.m.g, b.s, b.lat, b.yawOff)
 			for w in b.m.wheels: w.spin.rotation.x += wheelSpin(b.speed, w.r, dt)
+			CarKit.autoBrake(b.m, b.speed, dt)
 			continue
 		if b.out:
 			b.speed = maxf(0, b.speed - 14 * dt)
@@ -505,6 +498,7 @@ func updateBots(dt: float) -> void:
 		b.vz = Trk.T[i2].z * b.speed + Trk.R[i2].z * lv
 		for w in b.m.wheels:
 			w.spin.rotation.x += wheelSpin(b.speed, w.r, dt)
+		CarKit.autoBrake(b.m, b.speed, dt)
 	botCollisions()
 
 func playerPosition() -> int:
@@ -1019,12 +1013,9 @@ func syncCar(dt: float) -> void:
 		var w: Dictionary = car.wheels[k]
 		w.spin.rotation.x += wheelSpin(player.speed, w.r, dt)
 		if k < 2: w.pivot.rotation.y = -player.steer * 0.4
-	if car.get("tail") != null:
-		var br := (state == "racing" or state == "finished") and (player.brk > 0.3 or player.hand) and absf(player.speed) > 0.5
-		var base: Color = CarKit.tailMat.emission if CarKit.tailMat.emission_enabled else Color.BLACK
-		car.tail.emission_enabled = true
-		car.tail.emission = base * (2.2 if br else 1.0)
-		car.tail.albedo_color = MathX.col(0xff3a30 if br else 0x6e0b0b)
+	# brake lights and reversing lamps (CarKit swaps the tail lamps' material)
+	var br := (state == "racing" or state == "finished") and (player.brk > 0.3 or player.hand) and absf(player.speed) > 0.5
+	CarKit.setLights(car, br, state == "racing" and player.speed < -0.5)
 
 func cycleCam() -> void:
 	if not (state == "racing" or state == "countdown" or state == "finished"): return
