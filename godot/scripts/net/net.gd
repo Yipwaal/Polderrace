@@ -1599,8 +1599,13 @@ func _migHost() -> void:
 	net.resAt = 0
 	net.cdAt = 0
 	net.final = net.res is Dictionary and net.res.get("final", false) == true and int(net.res.get("id", 0)) == int(net.raceId)
-	# was it the host that fell away, or me? Keep asking at the old address for a while (see _probeTick)
-	if m.why == "lost" and str(net.addr) != "": _probeStart([str(net.addr)])
+	# was it the host that fell away, or me? And did another player take over too (the players did not all see the same
+	# moment)? Keep asking at the old address and at the others' for a while: a game there with players wins (_probeTick)
+	var addrs := []
+	if m.why == "lost" and str(net.addr) != "": addrs.append(str(net.addr))
+	for c in m.cands:
+		if c.id != m.me and str(c.ip) != "" and not str(c.ip) in addrs: addrs.append(str(c.ip))
+	if not addrs.is_empty(): _probeStart(addrs)
 	# the game goes on with the old host's settings
 	var cf: Dictionary = net.cfg
 	var S := G.settings
@@ -1672,7 +1677,7 @@ func _probeTick(now: int) -> void:
 			netLeave()
 			netJoin(ip)
 			if back or true: Menu.netOpen()
-			netStatus("Je verbinding was even weg. Je gaat terug naar %s." % NetRoom._text(d.get("name", "de game"), 40))
+			netStatus("De anderen spelen in %s: je gaat daarheen (je plek en je punten blijven)." % NetRoom._text(d.get("name", "de game"), 40))
 			return
 
 func _migTick(now: int) -> void:
