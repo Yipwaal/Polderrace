@@ -1636,7 +1636,7 @@ func _probeTick(now: int) -> void:
 				u.set_dest_address(str(a), LanDiscovery.DISCO_PORT)
 				u.put_packet(LanDiscovery.QUERY.to_utf8_buffer())
 	while u.get_available_packet_count() > 0:
-		var d = JSON.parse_string(u.get_packet().get_string_from_utf8())
+		var d = NetRoom.parse_json(u.get_packet().get_string_from_utf8())
 		var ip := u.get_packet_ip()
 		if not (d is Dictionary) or d.get("pr", 0) != 1 or str(d.get("id", "")) == _game_id: continue
 		if not NetRoom._num(d.get("v")) or int(d.v) != NetRoom.PROTO or d.get("open", true) != true: continue

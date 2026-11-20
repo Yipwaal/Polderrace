@@ -251,12 +251,12 @@ func _process(dt: float) -> void:
 				selftest = "ok"
 				diag_changed.emit()
 		elif _browsing and data.length() < 4000:
-			_answer(JSON.parse_string(data), ip, false)
+			_answer(NetRoom.parse_json(data), ip, false)
 	while _bc != null and _bc.get_available_packet_count() > 0:
 		var data := _bc.get_packet().get_string_from_utf8()
 		var ip := _bc.get_packet_ip()
 		if _browsing and data.begins_with(BEACON) and data.length() < 4000:
-			_answer(JSON.parse_string(data.substr(BEACON.length())), ip, true)
+			_answer(NetRoom.parse_json(data.substr(BEACON.length())), ip, true)
 
 ## player: a host's lobby, as its answer to our question or as its beacon
 func _answer(d, ip: String, beacon: bool) -> void:

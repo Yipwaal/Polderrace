@@ -34,14 +34,13 @@ Gast:
   grid-volgorde, volgende baan (host/rot/rand/vote), meekijken (spec/watch), dead reckoning met st[10], naamlabels, host-migratie (ook midden in race),
   Windows-firewall check/openzetten (PowerShell, NIET getest op Windows).
 
-## Stand van het werk
-- [x] net_room.gd, lan.gd, net.gd herschreven (nog niet gedraaid!)
-- [ ] game.gd: pauze online bevriest niet (frozen()), specCam-hook; menu.gd: officialRows, pt/dnf, Lobby/Naar lobby, Herstart weg, padNav-hook;
-      hud.gd: minimap-dots
-- [ ] net_ui.gd nieuw (lobby 2 kolommen, hulp na 10 s, IP-knoppen, stand, stem, meekijkbalk, aftelbanner)
-- [ ] NetRoom: TIMEOUT 6-10 s, RECONNECT 15 s, my_uid(); Net: probe (eenzame host vindt de oude game terug), host wist `race` na de race
-- [ ] tests: net_ctl (tok per speler via store), test_net.py, test_net_more.py scenario's, net_lossy met stuurkanaal (blackhole), shot-tool
-- [ ] docs PLAN.md/README.md, CI
+## Stand van het werk (opvolger, 20 nov avond)
+- [x] net_room/lan/net herschreven, net_ui, haken in game/menu/hud, tests, shot-tool (commits f8841a9..87f4cfe)
+- [x] overname: _close vertelt eerst (closed) en ruimt dan op, anders was de presence van de anderen weg (valse "verlaten")
+- [x] JSON van de lijn stil parsen (NetRoom.parse_json): JSON.parse_string gaf ERROR-regels bij elk kapot pakketje
+- [x] test hostile: "bye" uit de rommel (een bye is gewoon weggaan)
+- [ ] scenario 2, 3, 4 groen; docs PLAN.md/README.md; CI (test_net_more?)
 - [ ] merge claude/new-session-vj6qwu, alle tests, eindverslag (LAN_NOTES.md verwijderen)
 
 ## Gemeten / bekeken (aanvullen)
+- test_net.py: 13/13, 17 s. Scenario 1: 103 s.

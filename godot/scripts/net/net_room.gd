@@ -456,7 +456,7 @@ func _process(_dt: float) -> void:
 			continue
 		else:
 			_host_heard = now
-		var msg = JSON.parse_string(raw.get_string_from_utf8())
+		var msg = parse_json(raw.get_string_from_utf8())
 		if not (msg is Dictionary):
 			dropped += 1
 			continue
@@ -638,6 +638,11 @@ func _apply(id: String, raw) -> void:
 		else: p[k] = patch[k]
 	_presence[id] = p
 	_updated[id] = _stamp()
+
+## JSON from the wire: null when it is not JSON (quietly: JSON.parse_string prints an error for every broken packet)
+static func parse_json(text: String):
+	var j := JSON.new()
+	return j.data if j.parse(text) == OK else null
 
 func _close(reason: String) -> void:
 	if _left:

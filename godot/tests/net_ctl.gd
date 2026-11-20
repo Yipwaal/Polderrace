@@ -270,7 +270,7 @@ func _run(line: String) -> void:
 				{"t": "p", "p": {"st": ["1", null, {}, [], 1, 1, 1, 1, 1, 1, 1]}},
 				{"t": "p", "p": {"look": {"num": "veel", "rim": 5, "stripe": big, "wing": {"x": 1}, "exhaust": null}}},
 				{"t": "p", "p": {"nick": big, "e": [1, big]}},
-				{"t": "p", "p": deep}, {"t": "p"}, {"t": 5}, {"t": "all", "you": "h", "peers": {}}, {"t": "end"}, {"t": "kick"}, {"t": "bye", "id": "h"},
+				{"t": "p", "p": deep}, {"t": "p"}, {"t": 5}, {"t": "all", "you": "h", "peers": {}}, {"t": "end"}, {"t": "kick"},
 				{"t": "f", "m": {"h": {"st": null}}}, {"t": "hi", "v": 3, "tok": "een-andere-token-0123456789"}, {"p": {"nick": "x"}}, []]
 			for j in junk:
 				room.enet.set_target_peer(1)

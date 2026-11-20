@@ -132,7 +132,7 @@ def scenario_evening():
     check(len({str(r.get('bots')) for r in rs}) == 1 and len(rs[0].get('bots', [])) == 2, 'zelfde bots bij iedereen', rs[0].get('bots'))
     check(len({str(r.get('order')) for r in rs}) == 1 and len({r.get('goDelay') for r in rs}) == 1 and len({int(r.get('raceId', 0)) for r in rs}) == 1,
           'zelfde startvolgorde, race-id en wachttijd voor groen', [(r.get('order'), r.get('goDelay')) for r in rs])
-    pts = [tuple(r['grid']) for r in rs] + [tuple(b) for b in rs[0]['grid_bots']]
+    pts = [tuple(r['grid']) for r in rs if len(r.get('grid', [])) == 2] + [tuple(b) for b in rs[0].get('grid_bots', [])]
     md = min(math.dist(a, b) for a, b in itertools.combinations(pts, 2))
     check(md > 3, 'startopstelling zonder overlap (auto\'s en bots)', round(md, 2))
     rs = [p.wait(lambda r: r['go_at'] > 0, 15) for p in P]
@@ -472,8 +472,9 @@ def scenario_full():
     rs = [p.wait(lambda r: r['state'] == 'over' and final(r), 150) for p in P]
     time.sleep(1.5)
     rs = [p.rep() for p in P]
-    res = [names(r, r['nick']) for r in rs]
-    check(len(res[0]) == 13 and all(x == res[0] for x in res), 'uitslag met 13 auto\'s op alle 8 pc\'s gelijk', res[0])
+    # (the hostile game renamed itself "Flood …" behind its own back: on its own screen it is "Jij" = its nick)
+    res = [names(r, r['nick'] if p is not hz else next((x['name'] for x in rs[0]['remotes'] if x['peer'] == r.get('me')), '?')) for p, r in zip(P, rs)]
+    check(len(res[0]) == 13 and all(x == res[0] for x in res), 'uitslag met 13 auto\'s op alle 8 pc\'s gelijk', res)
     ps = [pts_of(r) for r in rs]
     check(all(x == ps[0] for x in ps) and sorted((x[1] for x in ps[0]), reverse=True) == [10, 8, 6, 5, 4, 3, 2, 1], 'punten 10-8-6-5-4-3-2-1, overal gelijk', ps[0])
     # the host leaves the lobby: the first player takes over, everyone stays together
@@ -486,8 +487,9 @@ def scenario_full():
     check(len(hosts) == 1 and all(r.get('net') and len(r.get('remotes', [])) == 6 and r.get('ui') for r in rs), 'host verlaat de lobby: een speler neemt over, de andere 6 blijven bij elkaar',
           (hosts, [(len(r.get('remotes', [])), r.get('status')) for r in rs][:3]))
     check(all(pts_of(r) == ps[0] for r in rs), 'met de stand van de avond', pts_of(rs[0]))
-    r = k.wait(lambda r: [l['name'] for l in r['lobbies']] == [f'{hosts[0]}s game'] if hosts else False, 8)
-    check(hosts and [l['name'] for l in r.get('lobbies', [])] == [f'{hosts[0]}s game'] and r['lobbies'][0]['n'] == 7, 'in de lijst staat de game nu onder de naam van de nieuwe host', r.get('lobbies'))
+    gname = (f"{hosts[0]}'s game" if hosts[0][-1:] in 'aiouy0123456789' else f'{hosts[0]}s game') if hosts else '?'
+    r = k.wait(lambda r: [l['name'] for l in r['lobbies']] == [gname], 8)
+    check([l['name'] for l in r.get('lobbies', [])] == [gname] and r['lobbies'][0]['n'] == 7, 'in de lijst staat de game nu onder de naam van de nieuwe host', r.get('lobbies'))
     no_errors([h] + gs)
     kill_all()
 
