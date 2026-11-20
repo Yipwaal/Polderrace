@@ -82,8 +82,10 @@ func _ready() -> void:
 		await get_tree().create_timer(1.0).timeout
 	else:
 		var t1 := Time.get_ticks_msec()
-		while Net.net != null and Time.get_ticks_msec() - t1 < 8000:
+		# the host leaves: this player takes the game over (host migration)
+		while not Net.isHost() and Time.get_ticks_msec() - t1 < 8000:
 			await get_tree().process_frame
-		say("closed_by_host", Net.net == null)
+		say("took_over", Net.isHost())
 		say("status", Net.status)
+		say("results", Net.net.res if Net.net != null else null)
 	get_tree().quit()

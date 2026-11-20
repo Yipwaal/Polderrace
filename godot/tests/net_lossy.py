@@ -1,13 +1,17 @@
 """A bad network between players and a host, for the online tests: a UDP relay that loses, delays and reorders packets.
-    python net_lossy.py <listen ip> <port> <host ip> [loss 0.05] [delay s 0.03] [jitter s 0.02]
+    python net_lossy.py <listen ip> <port> <host ip> [loss 0.05] [delay s 0.03] [jitter s 0.02] [control file]
 Every player that sends to <listen ip>:<port> gets its own socket towards <host ip>:<port>; packets both ways are dropped
-with chance `loss` and arrive after delay ± jitter (so some overtake each other). Used by test_net_more.py (scenario 4)."""
-import socket, select, sys, time, random, heapq
+with chance `loss` and arrive after delay ± jitter (so some overtake each other). While the control file holds the word
+"block" nothing gets through at all (the Wi-Fi is gone). Used by test_net_more.py (scenario 4)."""
+import socket, select, sys, time, random, heapq, os
 
 lip, port, hip = sys.argv[1], int(sys.argv[2]), sys.argv[3]
 loss = float(sys.argv[4]) if len(sys.argv) > 4 else 0.05
 delay = float(sys.argv[5]) if len(sys.argv) > 5 else 0.03
 jitter = float(sys.argv[6]) if len(sys.argv) > 6 else 0.02
+control = sys.argv[7] if len(sys.argv) > 7 else ''
+blocked = False
+checked = 0.0
 front = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 front.bind((lip, port))
 backs = {}            # player address -> socket towards the host
@@ -19,7 +23,7 @@ stats = {'in': 0, 'lost': 0}
 def later(sock, data, addr):
     global n
     stats['in'] += 1
-    if random.random() < loss:
+    if blocked or random.random() < loss:
         stats['lost'] += 1
         return
     n += 1
@@ -43,6 +47,12 @@ while True:
         else:
             later(front, data, owner[s])
     now = time.time()
+    if control and now - checked > 0.05:
+        checked = now
+        try:
+            blocked = os.path.exists(control) and 'block' in open(control).read()
+        except OSError:
+            pass
     while queue and queue[0][0] <= now:
         _, _, s, data, addr = heapq.heappop(queue)
         try:

@@ -340,9 +340,9 @@ func _build_game() -> void:
 	pts_list.add_theme_constant_override("separation", 1)
 	pts_box.add_child(pts_list)
 	game_box.add_child(pts_box)
-	# ---- host: what the network says
+	# ---- host: what the network says (can the others find this game? always in view)
 	ip_note = _note("")
-	game_box.add_child(ip_note)
+	outer.add_child(ip_note)
 	var hr := HBoxContainer.new()
 	hr.add_theme_constant_override("separation", 8)
 	fw_btn = _small("Windows-firewall openzetten")
@@ -711,6 +711,7 @@ func refresh() -> void:
 	lobby_box.visible = not inGame
 	game_box.visible = inGame
 	act.visible = inGame
+	ip_note.visible = inGame and Net.net.host
 	leave_btn.visible = inGame
 	status.text = Net.status
 	status.visible = Net.status != ""
@@ -724,6 +725,7 @@ func refresh() -> void:
 	else: _fill_game(w)
 	# all of it when it fits, else a scroll bar inside the sign (name, status and the buttons below stay in view)
 	var fixed := 150.0 + (status.get_combined_minimum_size().y + 8 if status.visible else 0.0) + (act.get_combined_minimum_size().y + 8 if inGame else 0.0)
+	if ip_note.visible: fixed += ip_note.get_combined_minimum_size().y + 8
 	scroll.custom_minimum_size = Vector2(minf(w, vp.x - 72), minf(box.get_combined_minimum_size().y, vp.y - fixed))
 	var fnow := get_viewport().gui_get_focus_owner()
 	if fnow == null or not fnow.is_visible_in_tree(): _focus_main.call_deferred()
@@ -856,7 +858,6 @@ func _fill_game(w: float) -> void:
 		for c in [p, nm, info, pt]: h.add_child(c)
 		pts_list.add_child(h)
 	# ---- host: the network
-	ip_note.visible = host
 	fw_btn.visible = host and (Net.fw_state == "block" or Net.fw_state == "none")
 	up_btn.visible = host
 	upnp_note.text = Net.upnp_status

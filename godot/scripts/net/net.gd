@@ -240,8 +240,11 @@ func _onClosed(room: NetRoom, reason: String) -> void:
 ## out of the game with a message, back to the list of games (from wherever we were: race, results, replay, lobby)
 func _leaveToList(msg: String, toast: String) -> void:
 	var racing: bool = Game.state != "menu"
+	var watching: bool = net.watch
 	netLeave()
-	if racing:
+	if watching:
+		Menu.netOpen()
+	elif racing:
 		# from the race, its results or the replay back to the online screen, where the message is
 		Game.toMenu(-1)
 		Menu.netOpen()
@@ -1279,13 +1282,15 @@ func specTargets() -> Array:
 	var now := Time.get_ticks_msec()
 	for r in net.remotes.values():
 		if _onRoad(r, now) and r.shown:
-			out.append({"key": "p:" + str(r.peer), "name": r.name, "node": r.car.g, "g": netRemoteProg(r), "done": r.done})
+			out.append({"key": "p:" + str(r.peer), "name": r.name, "node": r.car.g, "g": netRemoteProg(r), "done": r.done, "bot": false})
 	for i in Game.bots.size():
 		var b: Mover = Game.bots[i]
 		if b.m.g.visible and not b.out:
-			out.append({"key": "b:%d" % i, "name": b.name, "node": b.m.g, "g": Game.progressOf(b.lap, b.s, b.finished, b.finishTime), "done": b.finished})
-	out.sort_custom(func(a, b): return (a.g > b.g) if a.done == b.done else (not a.done))
-	# (players before bots when nobody is racing any more)
+			out.append({"key": "b:%d" % i, "name": b.name, "node": b.m.g, "g": Game.progressOf(b.lap, b.s, b.finished, b.finishTime), "done": b.finished, "bot": true})
+	# the players before the bots, who is still racing before who is in, the leader first
+	out.sort_custom(func(a, b):
+		if a.bot != b.bot: return not a.bot
+		return (a.g > b.g) if a.done == b.done else (not a.done))
 	return out
 
 func spectating() -> bool:
@@ -1296,7 +1301,7 @@ func specStart() -> void:
 	if net == null or net.spec != null: return
 	var ts := specTargets()
 	if ts.is_empty(): return
-	net.spec = {"key": ts[0].key, "pos": Vector3.ZERO, "look": Vector3.ZERO, "init": false}
+	net.spec = {"key": ts[0].key, "pos": Vector3.ZERO, "look": Vector3.ZERO, "init": false, "at": Vector3.ZERO}
 	net.noRoad = 0
 	if Game.state == "over": Menu.overOv.visible = false
 	changed.emit()
@@ -1350,9 +1355,14 @@ func specCam(dt: float) -> bool:
 	if not sp.init or sp.pos.distance_to(want) > 40.0:
 		sp.pos = want; sp.look = look; sp.init = true
 	else:
+		# along with the car (whatever the frame rate), and easing round to behind it when it turns
+		var moved: Vector3 = p - sp.at
+		if moved.length() < 30.0:
+			sp.pos += moved; sp.look += moved
 		var k := 1.0 - exp(-dt * 5.0)
 		sp.pos += (want - sp.pos) * k
 		sp.look += (look - sp.look) * (1.0 - exp(-dt * 9.0))
+	sp.at = p
 	var cam: Camera3D = Game.camera
 	cam.position = sp.pos
 	cam.look_at(sp.look, Vector3.UP)
@@ -1389,7 +1399,7 @@ func watchStart() -> void:
 	net.preloaded = false
 	Menu.hideAll()
 	NetUi.ov.visible = false
-	net.spec = {"key": "", "pos": Vector3.ZERO, "look": Vector3.ZERO, "init": false}
+	net.spec = {"key": "", "pos": Vector3.ZERO, "look": Vector3.ZERO, "init": false, "at": Vector3.ZERO}
 	net.noRoad = 0
 	changed.emit()
 
