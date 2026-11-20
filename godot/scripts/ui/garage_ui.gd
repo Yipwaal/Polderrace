@@ -36,6 +36,7 @@ var darkBtn: UiKit.Btn
 var fitBar: PanelContainer
 var fitText: Label
 var fitNote: Label
+var fitBtns: Control
 var fitBuy: UiKit.Btn
 var fitUndo: UiKit.Btn
 
@@ -573,6 +574,9 @@ func syncLook() -> void:
 			for nd in needs:
 				col = UiKit.DETOUR
 				t += (" · " if t != "" else "") + (G.fmtCr(nd[1]) if nd[3] == "" else "nog vrijspelen")
+			# a set you do not have yet: what it costs, before you try it
+			if needs.is_empty() and it.has("kit") and not G.lookHas(k): t += (" · " if t != "" else "") + "set " + G.fmtCr(it.kit)
+			if needs.is_empty() and it.get("mix", false) and k == "paint" and not G.lookHas("mix"): t += " · eigen kleur " + G.fmtCr(CarLook.MIX_PRICE)
 			r.info.text = t
 			r.info.add_theme_color_override("font_color", col)
 		match it.type:
@@ -621,18 +625,26 @@ func syncLook() -> void:
 # ------------------------------------------------------------------ the fitting room bar and the buttons under the panel
 func _build_nav() -> void:
 	var v := UiKit.vbox(10)
-	fitBar = UiKit.panel(UiKit.flat(UiKit.WELL_HI, 16, Vector4(16, 12, 12, 12)))
-	var fv := UiKit.vbox(8)
-	fitBar.add_child(fv)
-	var top := UiKit.vbox(2)
+	# the fitting room: what is on the car but not paid for (one or two lines), its buttons beside Terug below
+	fitBar = UiKit.panel(UiKit.flat(UiKit.WELL_HI, 14, Vector4(14, 8, 14, 8)))
+	var top := UiKit.vbox(1)
+	fitBar.add_child(top)
 	top.add_child(UiKit.eyebrow("In de paskamer", UiKit.DETOUR))
 	fitText = UiKit.lbl("", 700, 13, UiKit.SIGN_INK, true, 0, false, 1.3)
+	fitText.max_lines_visible = 2
+	fitText.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(fitText)
 	fitNote = UiKit.lbl("", 600, 12, UiKit.SUB, true, 0, false, 1.3)
 	top.add_child(fitNote)
-	fv.add_child(top)
-	var fr := UiKit.hbox(8)
-	fitBuy = UiKit.cta("Kopen", Vector4(18, 10, 18, 10), 15)
+	fitBar.visible = false
+	v.add_child(fitBar)
+	var n := HomeUI.back_nav()
+	var h: HBoxContainer = n[0]
+	back = n[1]
+	h.add_child(UiKit.expander())
+	var small := Vector4(16, 12, 16, 12)
+	fitBtns = UiKit.hbox(8)
+	fitBuy = UiKit.cta("Kopen", small, 14)
 	fitBuy.dis_alpha = 0.5
 	fitBuy.pressed.connect(func() -> void:
 		if not G.fitBuy(): return
@@ -640,21 +652,16 @@ func _build_nav() -> void:
 		Game.rebuildPlayerCar()
 		syncLook()
 		if not fitBar.visible: UiKit.focus(groupRadio.checked_item()))
-	fitUndo = UiKit.ghost("Terugzetten", true, Vector4(18, 10, 18, 10), 15)
+	fitUndo = UiKit.ghost("Terugzetten", false, small, 14)
+	fitUndo.tooltip_text = "Alles wat niet betaald is, gaat van de auto af"
 	fitUndo.pressed.connect(func() -> void:
 		if G.fitClear(): Game.rebuildPlayerCar()
 		syncLook()
 		UiKit.focus(groupRadio.checked_item()))
-	fr.add_child(fitBuy); fr.add_child(fitUndo)
-	fv.add_child(fr)
-	fitBar.visible = false
-	v.add_child(fitBar)
-	var n := HomeUI.back_nav()
-	var h: HBoxContainer = n[0]
-	back = n[1]
-	h.add_child(UiKit.expander())
+	fitBtns.add_child(fitUndo); fitBtns.add_child(fitBuy)
+	fitBtns.visible = false
+	h.add_child(fitBtns)
 	lookTools = UiKit.hbox(8)
-	var small := Vector4(16, 12, 16, 12)
 	var rnd := UiKit.ghost("Willekeurig", false, small, 14)
 	rnd.tooltip_text = "Een willekeurig uiterlijk uit wat je hebt"
 	rnd.pressed.connect(randomLook)
@@ -676,6 +683,8 @@ func _syncFit() -> void:
 	var c := G.fitCost()
 	var on: bool = tab == "look" and not c.items.is_empty()
 	fitBar.visible = on
+	fitBtns.visible = on
+	lookTools.visible = tab == "look" and not on
 	if not on: return
 	var parts := []
 	var locked := []
@@ -699,7 +708,9 @@ func leaveLook() -> void:
 	if GarageRoom.dark:
 		GarageRoom.setDark(false)
 		UiKit.btn_text(darkBtn, "Licht uit")
-	if fitBar != null: fitBar.visible = false
+	if fitBar != null:
+		fitBar.visible = false
+		fitBtns.visible = false
 
 ## a random look out of what you own (and what is free), so nothing lands in the fitting room
 func randomLook() -> void:

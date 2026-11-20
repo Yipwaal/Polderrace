@@ -180,13 +180,15 @@ static func aim(view: String) -> void:
 	var a1: float = a0 + fposmod(CAR_YAW + v[0] - a0 + PI, TAU) - PI      # the short way round
 	var h0: float = orb.h
 	var r0: float = orb.get("r", 7.4)
+	# a narrow window leaves less room beside the panel: stand a little further back
+	var r1: float = v[2] * clampf(1280.0 / maxf(1.0, Menu.get_viewport().get_visible_rect().size.x), 1.0, 1.3)
 	orb.vel = 0.0
 	orb.idle = -20.0       # stays put while you choose; turns on its own again after a while
 	if _tween != null and _tween.is_valid(): _tween.kill()
 	_tween = Menu.create_tween()
 	_tween.tween_method(func(t: float) -> void:
 		var e := t * t * (3.0 - 2.0 * t)
-		orb.a = lerpf(a0, a1, e); orb.h = lerpf(h0, v[1], e); orb.r = lerpf(r0, v[2], e), 0.0, 1.0, 0.45)
+		orb.a = lerpf(a0, a1, e); orb.h = lerpf(h0, v[1], e); orb.r = lerpf(r0, r1, e), 0.0, 1.0, 0.45)
 
 static func leaveGarageScene() -> void:
 	if not inGarage: return
