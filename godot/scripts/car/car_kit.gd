@@ -74,6 +74,7 @@ static func applyEnv(t: String, lamps: bool) -> void:
 	lampMat.emission = MathX.col(0xfff0c0 if t == "night" else (0xd8ccaa if lamps else 0x807860))
 	tailMat.emission_enabled = true
 	tailMat.emission = MathX.col(0xff3a30 if t == "night" else 0xc81d1d)
+	CarLook.envChanged(1.0 if t == "night" else (0.6 if lamps else 0.3))   # tinted lamps and neon follow
 
 static func _col(c) -> Color:
 	if c is Color: return c
@@ -1111,9 +1112,15 @@ static func _meshes_of(n: Node, out: Array) -> Array:
 		_meshes_of(c, out)
 	return out
 
-## rims, stripes, race number, wing and exhaust of a built car from the garage (id) or an upgrades Dictionary
+## the looks of a built car from the garage (id) or a look Dictionary: CarLook checks the look and does everything of the
+## catalogue (paint, liveries, glass, plate, ...) around the standard parts below
 static func styleCar(m: Dictionary, id) -> void:
-	var u := carUp(id)
+	var u := CarLook.pre(m, carUp(id))
+	_styleStd(m, u)
+	CarLook.post(m)
+
+## rims, stripes, race number, wing and exhaust (the HTML game's styleCar)
+static func _styleStd(m: Dictionary, u: Dictionary) -> void:
 	var rim := _PM(Cars.RIMS[u.rim][1] if Cars.RIMS.has(u.rim) else 0xa1a4a8, {"specular": 0xd0d0d0, "shininess": 70})
 	styleExtras(m, u, rim)
 	setRims(m, u.rimStyle if Cars.RIMSTYLES.has(u.rimStyle) else "std", rim)

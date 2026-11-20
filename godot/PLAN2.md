@@ -76,16 +76,23 @@ groen zijn (een groene build komt automatisch op de downloadpagina).
 9. **Eindverslag:** wat je verbeterd hebt (met de screenshots die je bekeek), wat je bewust niet deed en waarom,
    wijzigingen buiten je eigen bestanden, testuitslagen na de laatste merge, en wat je de bugjacht aanraadt te bekijken.
 
+## Wisseling (20 november, avond)
+
+De eerste ronde draaide op Fable 5.2; die limiet was na drie werkblokken op (tot 25 november). Op Yips verzoek leidt
+Opus 5.5 vanaf nu het project en nemen Opus-agents elke rol over **in dezelfde werkkopie** (`.claude/worktrees/agent-…`),
+met de commits en notities van hun voorganger (`*_NOTES.md`, `LOOKS.md`, `tools/view_car_notes.md`). Commits eindigen nu
+met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+
 ## Stand
 
 | Onderdeel | Stand |
 |---|---|
 | Basis: golden vanuit Godot, plan | klaar |
-| Rijgedrag | loopt |
-| Automodellen | loopt |
-| Aanpassen | loopt (deel 1) |
-| Banen A | loopt |
-| Banen B | loopt |
-| Beeld | loopt |
-| LAN | loopt |
+| Rijgedrag | klaar en samengevoegd (bandenmodel, gewichtsverplaatsing, driften, bots, camera; test `handling`) |
+| Automodellen | loopt (Opus neemt over) |
+| Aanpassen | deel 1 klaar en samengevoegd (27 onderdelen, 203 opties); deel 2 wacht op Automodellen |
+| Banen A | gereedschap op main; banen loopt (Opus neemt over) |
+| Banen B | loopt (Opus neemt over) |
+| Beeld | klaar en samengevoegd (lucht-shader, licht per pixel, water, regen/nat wegdek, nacht, effecten, kwaliteitsniveaus) |
+| LAN | loopt (Opus neemt over) |
 | Bugjacht | wacht op ronde 1 en 2 |

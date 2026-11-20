@@ -65,3 +65,35 @@ pr_fog_range={
 "type": "vec4",
 "value": Vector4(160, 1150, 0, 0)
 }
+pr_glow={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 6)
+}
+pr_sky={
+"type": "vec4",
+"value": Vector4(0.27, 0.41, 0.6, 0)
+}
+pr_wet={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 2)
+}
+pr_wind={
+"type": "vec4",
+"value": Vector4(0.95, 0.3, 1, 0)
+}
+pr_head0={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+pr_head0_dir={
+"type": "vec4",
+"value": Vector4(0, 0, 1, 80)
+}
+pr_head1={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+pr_head1_dir={
+"type": "vec4",
+"value": Vector4(0, 0, 1, 80)
+}

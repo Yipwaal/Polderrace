@@ -48,8 +48,8 @@ func _init() -> void:
 	_load_settings()
 
 func _ready() -> void:
-	# the car module styles cars from the garage entry (JS carUp)
-	CarKit.up_of = carUp
+	# the car module styles cars from the garage entry (JS carUp), plus what hangs in the fitting room
+	CarKit.up_of = styleUp
 
 func store_get(k: String, d = null):
 	return _store.get(k, d)
@@ -121,7 +121,12 @@ func _load_settings() -> void:
 	prefs.merge(_json("polderrace3d-prefs", {}), true)
 	if not prefs.has("quality"):
 		prefs.quality = "low" if prefs.get("shadows", true) == false else "high"
-	garage.merge(_json("polderrace3d-garage", {}), true)
+	var saved = _json("polderrace3d-garage", null)
+	garage.merge(saved if saved is Dictionary else {}, true)
+	# looks you own (see "looks" below). A save from before the catalogue keeps the free colour picker it had.
+	if not (garage.get("looks") is Dictionary):
+		garage.looks = {"mix": 1} if saved is Dictionary else {}
+	fit = {"car": "", "look": {}}
 	# damage was removed: refund what was spent on the old 'Versteviging' upgrade
 	var refund := 0
 	for id in garage.cars:
@@ -149,11 +154,7 @@ const UPG := [{"k": "eng", "name": "Motor", "desc": "Topsnelheid +3% per niveau"
 	{"k": "tyre", "name": "Banden", "desc": "Grip +4% per niveau", "cost": [450, 900, 1700]},
 	{"k": "brake", "name": "Remmen", "desc": "Remkracht +8% per niveau", "cost": [300, 650, 1200]}]
 const CLS_COST := {"B": 1, "A": 1.4, "S": 1.9}
-const RIMS := {"silver": ["Zilver", 0xa1a4a8], "black": ["Zwart", 0x222428], "gold": ["Goud", 0xc9a227], "white": ["Wit", 0xf2f2ee]}
-const STRIPES := {"std": ["Standaard", "std"], "none": ["Geen", null], "white": ["Wit", 0xf7f7f2], "black": ["Zwart", 0x1d1f24], "yellow": ["Geel", 0xf2c200]}
-const WINGS := {"std": "Af fabriek", "duck": "Ducktail", "gt": "GT-vleugel"}
-const RIMSTYLES := {"std": "Standaard", "spoke": "Spaken", "dish": "Diep"}
-const EXHAUSTS := {"std": "Af fabriek", "sport": "Sport", "dual": "Dubbel", "center": "Centraal"}
+## (the looks of a car, their names and prices: the catalogue CarLook.ITEMS in scripts/car/car_look.gd)
 
 func saveGarage() -> void:
 	store_set("polderrace3d-garage", JSON.stringify(garage))
@@ -174,7 +175,133 @@ func carUp(id: String) -> Dictionary:
 		u.num = 0; u.wing = "std"; u.rimStyle = "std"
 	if not u.get("exhaust", ""):
 		u.exhaust = "std"
+	# stripes from before the catalogue: the colour was the choice
+	var st = u.get("stripe")
+	if st is String and CarLook.OLD_STRIPES.has(st):
+		u.sc = CarLook.OLD_STRIPES[st]
+		u.stripe = "twin"
 	return u
+
+# ------------------------------------------------------------------ looks (catalogue: CarLook.ITEMS)
+# A car's look lives in its garage entry (carUp) next to the upgrades, one value per catalogue key; its paint colour in
+# `col` (settings.color is the colour of the car you sit in). What you own is account-wide: garage.looks holds
+# "<key>:<option>" for a bought option, "<key>" for a bought kit (neon, own plate, ...) and "mix" for the colour mixer.
+# Looking is free: a choice you do not own hangs in the fitting room (fit) and shows on the car in the garage only; it
+# is never saved on the car and never part of lookOf().
+
+## the fitting room: the unpaid choices shown on `car` in the garage
+var fit := {"car": "", "look": {}}
+
+## the appearance of a car as a small JSON-safe Dictionary: everything CarKit.styleCar needs (CarKit.buildCar(type,
+## look.paint) + CarKit.styleCar(m, look) gives the same car anywhere), without the performance upgrades
+func lookOf(id: String) -> Dictionary:
+	var u: Dictionary = carUp(id) if Cars.CARS.has(id) else {}
+	var L := CarLook.compact(CarLook.clean(u, id))
+	var c = settings.color if id == settings.car else u.get("col", settings.color)
+	L.paint = ("#" + Color(str(c)).to_html(false)) if Color.html_is_valid(str(c)) else "#ffffff"
+	return L
+
+## what CarKit styles a car of yours from: its garage entry, with the fitting room's choices on top
+func styleUp(id: String) -> Dictionary:
+	var u := carUp(id)
+	if fit.car != id or fit.look.is_empty(): return u
+	var o := u.duplicate()
+	o.merge(fit.look, true)
+	return o
+
+## the paint colour belongs to the car: the car you leave remembers its colour, a car that has one gets it back
+func carPicked(old: String, new: String) -> void:
+	if old == new or not Cars.CARS.has(new): return
+	if Cars.CARS.has(old): carUp(old).col = settings.color
+	var c = carUp(new).get("col")
+	if c is String and Color.html_is_valid(c): settings.color = c
+	saveGarage()
+
+func lookHas(key: String) -> bool:
+	return garage.get("looks", {}).has(key)
+
+## what a value still costs you: [[own key, price, label, locked], ...]; empty = free or yours. locked (a text) = not for
+## sale: an achievement unlocks it
+func lookNeeds(k: String, v) -> Array:
+	var it := CarLook.item(k)
+	var out := []
+	if it.is_empty() or (typeof(v) == typeof(it.def) and v == it.def): return out
+	if it.has("kit") and not lookHas(k): out.append([k, int(it.kit), it.name, ""])
+	var o = CarLook.option(k, v)
+	if o != null:
+		var ex: Dictionary = o[3] if o.size() > 3 else {}
+		if ex.has("ach"):
+			if not Ach.got(ex.ach): out.append([k + ":" + o[0], 0, "%s: %s" % [it.name, o[1]], Ach.achInfo(ex.ach)[2]])
+		elif int(o[2]) > 0 and not lookHas(k + ":" + o[0]):
+			out.append([k + ":" + o[0], int(o[2]), "%s: %s" % [it.name, o[1]], ""])
+	elif it.type == "color" and v is String and v != "" and not lookHas("mix"):
+		out.append(["mix", CarLook.MIX_PRICE, "Kleurenmenger", ""])
+	return out
+
+## the value of a key as the garage shows it on the car: the fitting room's, else the saved one
+func lookShown(car: String, k: String):
+	if fit.car == car and fit.look.has(k): return fit.look[k]
+	if k == "paint": return lookOf(car).paint
+	return CarLook.clean(carUp(car), car)[k]
+
+## choose a value in the garage: yours (or free) is saved on the car, anything else goes to the fitting room
+func lookPick(car: String, k: String, v) -> void:
+	if CarLook.item(k).is_empty() or not Cars.CARS.has(car): return
+	if fit.car != car: fit = {"car": car, "look": {}}
+	v = CarLook.cleanValue(k, v)
+	if k == "paint" and v == "": return
+	if lookNeeds(k, v).is_empty():
+		fit.look.erase(k)
+		_lookSave(car, k, v)
+	else:
+		fit.look[k] = v
+
+func _lookSave(car: String, k: String, v) -> void:
+	var u := carUp(car)
+	if k == "paint":
+		u.col = v
+		if car == settings.car:
+			settings.color = v
+			saveSettings()
+	else:
+		u[k] = v
+	saveGarage()
+
+## what is in the fitting room and what it costs: {items: [[own key, price, label, locked], ...], total, locked}
+func fitCost() -> Dictionary:
+	var items := []
+	var seen := {}
+	var total := 0
+	var locked := 0
+	for k in fit.look:
+		for n in lookNeeds(k, fit.look[k]):
+			if seen.has(n[0]): continue
+			seen[n[0]] = true
+			items.append(n)
+			if n[3] != "": locked += 1
+			else: total += int(n[1])
+	return {"items": items, "total": total, "locked": locked}
+
+## pay for what is in the fitting room; what is still locked stays there. false = not enough credits
+func fitBuy() -> bool:
+	var c := fitCost()
+	if c.total > int(garage.credits): return false
+	garage.credits -= c.total
+	for n in c.items:
+		if n[3] == "": garage.looks[n[0]] = 1
+	var car: String = fit.car
+	for k in fit.look.keys():
+		if lookNeeds(k, fit.look[k]).is_empty():
+			_lookSave(car, k, fit.look[k])
+			fit.look.erase(k)
+	saveGarage()
+	return true
+
+## put back everything that is not paid for; true = there was something
+func fitClear() -> bool:
+	var had: bool = not fit.look.is_empty()
+	fit = {"car": "", "look": {}}
+	return had
 
 func upCost(id: String, u: Dictionary, lvl: int) -> int:
 	return int(round(u.cost[lvl] * CLS_COST[Cars.CARS[id].cls] / 50.0)) * 50

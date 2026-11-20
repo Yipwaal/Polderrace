@@ -135,9 +135,11 @@ static func stage(bg: int, fogNear: float, fogFar: float, hs: int, hg: int, hi: 
 	e._set_lights(MathX.col(hs), MathX.col(hg), hi, MathX.col(sc), si, d)
 	e.sun.look_at_from_position(Vector3.ZERO, -d, Vector3.UP if absf(d.y) < 0.99 else Vector3.FORWARD)
 
-static func carLamps(lamp: int, tail: int) -> void:
+## glow: how strong neon under a car shows on this stage (0..1, CarLook.envChanged)
+static func carLamps(lamp: int, tail: int, glow := 0.8) -> void:
 	if CarKit.lampMat != null: CarKit.lampMat.emission_enabled = true; CarKit.lampMat.emission = MathX.col(lamp)
 	if CarKit.tailMat != null: CarKit.tailMat.emission_enabled = true; CarKit.tailMat.emission = MathX.col(tail)
+	CarLook.envChanged(glow)
 
 static func enterGarageScene() -> void:
 	if garageRoom == null or not is_instance_valid(garageRoom): buildGarageRoom()
@@ -145,12 +147,57 @@ static func enterGarageScene() -> void:
 	inGarage = true
 	garageRoom.visible = true
 	Game.clearBots(); Game.clearTraffic()
-	stage(0x1a1d22, 80, 300, 0xffffff, 0x5a5f66, 0.95, 0xffffff, 0.5, Vector3(0.35, 1, 0.55))
-	carLamps(0x807860, 0xc81d1d)
+	dark = false
+	_light()
+
+## the garage lights: on, or off to judge lamps and neon in the dark (the look tab's "Licht uit")
+static var dark := false
+
+static func setDark(on: bool) -> void:
+	dark = on
+	if inGarage: _light()
+
+static func _light() -> void:
+	if dark:
+		stage(0x05070c, 60, 240, 0x7f8fc0, 0x0b0d13, 0.3, 0xa8b8ff, 0.2, Vector3(0.35, 1, 0.55))
+		carLamps(0xfff0c0, 0xff3a30, 1.0)
+	else:
+		stage(0x1a1d22, 80, 300, 0xffffff, 0x5a5f66, 0.95, 0xffffff, 0.5, Vector3(0.35, 1, 0.55))
+		carLamps(0x807860, 0xc81d1d, 0.45)
+
+## where the garage camera stands for a part of the car (the look tab turns to what you are changing):
+## [angle from the car's nose, height, distance]. Menu's orbit camera (Menu.orb) is eased to it; dragging still works.
+const VIEWS := {"q": [0.75, 1.9, 7.4], "front": [0.14, 1.2, 6.3], "rear": [PI - 0.2, 1.5, 6.4], "side": [PI / 2, 1.3, 6.6], "top": [0.55, 4.1, 6.6],
+	"wheel": [-1.15, 0.95, 5.6], "low": [0.95, 0.8, 7.0]}
+const CAR_YAW := 0.5
+static var _tween: Tween = null
+
+static func aim(view: String) -> void:
+	if not inGarage or not VIEWS.has(view): return
+	var v: Array = VIEWS[view]
+	var orb: Dictionary = Menu.orb
+	var a0: float = orb.a
+	var a1: float = a0 + fposmod(CAR_YAW + v[0] - a0 + PI, TAU) - PI      # the short way round
+	var h0: float = orb.h
+	var r0: float = orb.get("r", 7.4)
+	# a narrow window leaves less room beside the panel: stand a little further back
+	var r1: float = v[2] * clampf(1280.0 / maxf(1.0, Menu.get_viewport().get_visible_rect().size.x), 1.0, 1.3)
+	orb.vel = 0.0
+	orb.idle = -20.0       # stays put while you choose; turns on its own again after a while
+	if _tween != null and _tween.is_valid(): _tween.kill()
+	_tween = Menu.create_tween()
+	_tween.tween_method(func(t: float) -> void:
+		var e := t * t * (3.0 - 2.0 * t)
+		orb.a = lerpf(a0, a1, e); orb.h = lerpf(h0, v[1], e); orb.r = lerpf(r0, r1, e), 0.0, 1.0, 0.45)
 
 static func leaveGarageScene() -> void:
 	if not inGarage: return
 	inGarage = false
+	# what was only being fitted goes back, the lights go on, the camera of the car menus stands where it stood
+	if Menu.garageUI != null: Menu.garageUI.leaveLook()
+	if _tween != null and _tween.is_valid(): _tween.kill()
+	Menu.orb.r = 7.4
+	Menu.orb.idle = maxf(Menu.orb.idle, 0.0)
 	if garageRoom != null and is_instance_valid(garageRoom): garageRoom.visible = false
 	World.root.visible = true
 	if Env.me != null:
