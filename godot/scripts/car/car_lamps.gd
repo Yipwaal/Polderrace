@@ -21,6 +21,7 @@ const CELLS := {
 	"g_mesh": [0, 4], "g_slats": [1, 4], "g_vent": [2, 4], "dark": [3, 4],
 	"red": [0, 5], "rev": [1, 5], "chmsl": [2, 5], "t_van": [3, 5],
 	"h_van": [0, 6], "g_truck": [1, 6], "refl": [2, 6], "t_tri": [3, 6],
+	"t_slats3": [0, 7],
 }
 
 static var head: LMat = null
@@ -155,7 +156,8 @@ static func _draw(c, layer: int) -> void:
 	cellf.call("t_bar", func():
 		_rect(c, layer, 0, 0, CW, CH, "#1c0606")
 		_rect(c, layer, 0, 18, CW, 28, RED, rg)
-		_rect(c, layer, 0, 28, CW, 8, "#e03a2c", rg))
+		_rect(c, layer, 0, 28, CW, 8, "#e03a2c", rg)
+		_rect(c, layer, 52, 20, 24, 24, "#dfe3e6", "#000000", "#ffffff"))   # reversing lamp in the middle of the bar
 	cellf.call("t_round", func():
 		_rect(c, layer, 0, 0, CW, CH, HOUSE)
 		for q in [[34, 28], [94, 28]]:
@@ -168,10 +170,17 @@ static func _draw(c, layer: int) -> void:
 		for k in 3:
 			_rect(c, layer, 5 + k * 41, 5, 36, 54, RED, rg)
 			_rect(c, layer, 5 + k * 41, 30, 36, 3, "#7a1010", ""))
+	cellf.call("t_slats3", func():   # three slats, the reversing lamp in the lower half of the middle one
+		_rect(c, layer, 0, 0, CW, CH, "#c2c7cc", "")
+		for k in 3:
+			_rect(c, layer, 5 + k * 41, 5, 36, 54, RED, rg)
+			_rect(c, layer, 5 + k * 41, 30, 36, 3, "#7a1010", "")
+		_rect(c, layer, 46, 36, 36, 23, "#dfe3e6", "#000000", "#ffffff"))
 	cellf.call("t_full", func():
 		_rect(c, layer, 0, 0, CW, CH, "#1c0606")
 		_rect(c, layer, 0, 14, CW, 36, RED, rg)
-		_rect(c, layer, 0, 26, CW, 12, "#e84434", rg))
+		_rect(c, layer, 0, 26, CW, 12, "#e84434", rg)
+		_rect(c, layer, 50, 16, 28, 32, "#dfe3e6", "#000000", "#ffffff"))
 	cellf.call("t_wide", func():
 		_rect(c, layer, 0, 0, CW, CH, "#3c0a0a")
 		_rect(c, layer, 32, 6, 92, 52, RED, rg)

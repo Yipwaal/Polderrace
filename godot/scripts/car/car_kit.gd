@@ -68,6 +68,7 @@ static var up_of: Callable = Callable()
 static var KITS := {}
 static var WGEO := {}
 static var PLATES := {}
+static var GLASS := {}
 static var _beamGeo: Geo = null
 static var _beamTex: ImageTexture = null
 static var _blobGeo: Geo = null
@@ -128,6 +129,20 @@ static func autoBrake(m: Dictionary, speed: float, dt: float) -> void:
 static func setBrake(m: Dictionary, on: bool) -> void:
 	var st = m.get("lights", null)
 	setLights(m, on, st.rev if st != null else false)
+
+## tint of a car's glass: colour (hex) and how see-through it is (opacity 0.3 light .. 0.9 nearly black); cached per tint
+static func setGlass(m: Dictionary, color: int, opacity: float) -> void:
+	var o = m.get("glass", null)
+	if o == null: return
+	var key := "%06x/%.2f" % [color, opacity]
+	if not GLASS.has(key): GLASS[key] = CarPaint.glass(color, opacity)
+	o.set_surface_override_material(0, GLASS[key])
+
+## colour of the brake calipers (Color or hex int)
+static func setCalipers(m: Dictionary, color) -> void:
+	for wh in m.wheels:
+		var c = wh.get("cal", null)
+		if c != null: set_geo(c, _calGeo(wheelGeos(wh.r, wh.w, wh.style).rb, _col(color)))
 
 ## show or hide the driver (the garage shows an empty car)
 static func setDriver(m: Dictionary, on: bool) -> void:
@@ -351,15 +366,17 @@ static func addWheel(parent: Node3D, x: float, y: float, z: float, r: float, w: 
 	pivot.add_child(spin)
 	var wm := mesh(spin, G.all, detailMat, true)
 	wm.set_meta("rim", true)
+	var cmesh: MeshInstance3D = null
 	if cal != null and style != "steel" and style != "tractor":
 		var c := mesh(null, _calGeo(G.rb, cal), detailMat)
+		cmesh = c
 		var a := 2.3 if z > 0 else 0.85
 		var rb: float = G.rb
 		c.position = Vector3(side * (G.face - 0.085), sin(a) * rb * 0.72, cos(a) * rb * 0.72)
 		O3.rot(c, -a + PI / 2, 0, 0)
 		c.visibility_range_end = 45.0
 		pivot.add_child(c)
-	return {"pivot": pivot, "spin": spin, "r": r, "w": w, "style": style, "mesh": wm}
+	return {"pivot": pivot, "spin": spin, "r": r, "w": w, "style": style, "mesh": wm, "cal": cmesh}
 
 ## rim style and colour of a car's wheels (col: Color, hex int, or a material whose colour is taken); shine 0..1
 static func setRims(m: Dictionary, style: String, col = null, shine := 0.72) -> void:
@@ -580,6 +597,19 @@ static func _cl(f: Callable, x0: float, x1: float, y0: float, y1: float) -> Arra
 	var m := maxf(absf(a), absf(b))
 	while m > 0.05 and not _fits(f, m, y0, y1):
 		m -= 0.01
+	# walk out from the inner edge: stop where the end skin jumps (further out, the front face of a wheel-arch flare also faces
+	# forward, but it sits far behind the nose: a panel stretched to it ran back along the flank)
+	var s := 0.0 if a < 0 and b > 0 else minf(absf(a), absf(b))
+	var ym := (y0 + y1) / 2
+	var prev = f.call(s, ym)
+	var x := s + 0.01
+	while prev != null and x <= m + 1e-4:
+		var q = f.call(x, ym)
+		if q == null or absf(q[0].z - prev[0].z) > 0.05:
+			m = x - 0.01
+			break
+		prev = q
+		x += 0.01
 	var na := maxf(a, -m) if a < 0 else minf(a, m)
 	var nb := minf(b, m)
 	return [na, nb] if x0 <= x1 else [nb, na]
@@ -728,9 +758,21 @@ static func _dressStd(K: CarBody, D: Dictionary, o: Dictionary) -> void:
 		if x > 0:
 			for sx in [1.0, -1.0]:
 				var arm := Geo.box(0.13, 0.04, 0.075); arm.rotate_z(sx * 0.3); arm.translate(sx * (x + 0.035), y - 0.04, mz - 0.03); D.trim.geo(arm)
-				var h := Geo.sphere(1, 12, 7, 0, PI * 2, 0, PI / 2); h.rotate_x(PI / 2); h.scale(0.1, 0.064, 0.085); h.translate(sx * (x + 0.14), y, mz - 0.065); D.paint.geo(h)
-				var rim := Geo.ring(0.8, 1, 14, 1); rim.rotate_y(PI); rim.scale(0.1, 0.064, 1); rim.translate(sx * (x + 0.14), y, mz - 0.065); D.paint.geo(rim)
-				var gl := Geo.circle(1, 14); gl.rotate_y(PI); gl.scale(0.083, 0.052, 1); gl.translate(sx * (x + 0.14), y, mz - 0.055)
+				var h := Geo.sphere(1, 12, 7, 0, PI * 2, 0, PI / 2); h.rotate_x(PI / 2)
+				for i in h.pos.size():   # squarer: a rounded box, not a ball
+					var q := h.pos[i]
+					h.pos[i] = Vector3(signf(q.x) * pow(absf(q.x), 0.6), signf(q.y) * pow(absf(q.y), 0.6), q.z)
+				h.scale(0.1, 0.064, 0.085); h.translate(sx * (x + 0.14), y, mz - 0.065); D.paint.geo(h)
+				var rim := Geo.ring(0.8, 1, 16, 1)
+				var gl := Geo.circle(0.82, 16)
+				for gq in [rim, gl]:
+					for i in gq.pos.size():
+						var q: Vector3 = gq.pos[i]
+						var l := maxf(q.length(), 1e-6)
+						var e := q / l
+						gq.pos[i] = Vector3(signf(e.x) * pow(absf(e.x), 0.6), signf(e.y) * pow(absf(e.y), 0.6), 0) * l
+				rim.rotate_y(PI); rim.scale(0.1, 0.064, 1); rim.translate(sx * (x + 0.14), y, mz - 0.065); D.paint.geo(rim)
+				gl.rotate_y(PI); gl.scale(0.1, 0.064, 1); gl.translate(sx * (x + 0.14), y, mz - 0.058)
 				D.det.color(sc(0x93a4b2, 0.95)).geo(gl)
 	# door handles: chrome on the classics, else in the body colour over a dark recess
 	var hk: String = S.get("handle", "paint")
@@ -791,8 +833,18 @@ static func exhaustZ(K: CarBody, x: float, y: float, r: float) -> float:
 
 # stock spoilers: a lip on the boot, or a wing on two posts; they go into the wingP/wingT sets so a tuned wing can hide them
 static func lipSpoiler(K: CarBody, D: Dictionary, z: float, span: float) -> void:
-	var y := K.topY(z, 0)
-	D.wingP.box(span, 0.05, 0.26, 0, y + 0.03, z - 0.02, -0.2)
+	# a lip that hugs the boot lid (not a slab on top of it): 2 cm proud at its front edge, rising to about 7 cm at the tail
+	# edge, the ends a little lower; never wider than the deck, never past the tail
+	var z0 := maxf(z - 0.15, K.zR + 0.035)
+	var z1 := z + 0.12
+	var xw := span / 2
+	var q := z0
+	while q <= z1 + 1e-4:
+		xw = minf(xw, K.shoulderX(q) * 0.96)
+		q += 0.02
+	var shape := func(u: float, v: float) -> float:
+		return 0.022 + 0.05 * pow(1.0 - v, 1.4) * (1.0 - 0.45 * pow(absf(u * 2.0 - 1.0), 6.0))
+	patch(D.wingP, K.on_top, -xw, xw, z0, z1, 12, 4, shape)
 	K.topRects.append([-span / 2, span / 2, z - 0.16, z + 0.12])
 
 static func postWing(K: CarBody, D: Dictionary, z: float, span: float, h: float, chord: float, roof := false, ep := false) -> void:
@@ -806,10 +858,19 @@ static func postWing(K: CarBody, D: Dictionary, z: float, span: float, h: float,
 			D.wingT.box(0.03, 0.2, chord + 0.1, s * (span / 2 + 0.015), y0 + h + 0.05, z - 0.06)
 
 static func postWingRoof(K: CarBody, D: Dictionary, z := -1.66, span := 1.5) -> void:
-	var y := K.cabY(z + 0.06, 0)
-	D.wingP.box(span, 0.05, 0.34, 0, y + 0.03, z - 0.06, -0.1)
+	# a roof spoiler as wide as the roof (not wider): a thin airfoil from the roof's rear edge out over the tailgate glass,
+	# trailing edge down, with small side fins that run down to the roof
+	var zl := z + 0.12
+	var y := K.cabY(zl, 0)
+	var xr := 0.0
+	while xr < span / 2 and K.cabY(zl, xr + 0.02) > y - 0.06: xr += 0.02
+	var half := minf(span / 2, xr + 0.01)
+	var foil := airfoil(zl, y + 0.012, 0.38, 0.1, 0.02, -0.1)
+	finPlate(D.wingP, foil, 0, half * 2)
 	for s in [-1.0, 1.0]:
-		D.wingP.box(0.04, 0.1, 0.34, s * (span / 2 - 0.01), y - 0.005, z - 0.06)
+		var yr := K.cabY(zl, half - 0.02)
+		if yr < 0: yr = y - 0.06
+		finPlate(D.wingP, [[zl, yr - 0.02], [zl - 0.36, y - 0.035], [zl - 0.38, y + 0.03], [zl - 0.04, y + 0.03]], s * (half - 0.014), 0.028)
 
 ## twin stripes over bonnet, roof and boot (the glass is left free). hole: the roof number (numSpot); the stripe stops 3 cm short
 ## of it with an end that follows the disc
@@ -875,12 +936,18 @@ static func finPlate(A: CarAcc, pts: Array, x: float, t: float) -> void:
 
 static func diffuser(K: CarBody, D: Dictionary) -> void:
 	K.diff = true
-	var z := K.zR + 0.24
+	# a ramp that rises towards the tail (so it reads as a diffuser, not as teeth under the bumper) with fins under it that
+	# follow it: flush at the front, 5 cm deep at the tail
+	var zf := K.zR + 0.45
+	var zb := K.zR + 0.04
+	var yf := 0.1
+	var yb := maxf(yf + 0.04, K.bot(zb + 0.02) - 0.015)
+	var dz := zf - zb
+	var dy := yb - yf
+	D.trim.box(1.36, 0.02, sqrt(dz * dz + dy * dy), 0, (yf + yb) / 2, (zf + zb) / 2, atan2(dy, dz))
 	var x := -0.6
 	while x <= 0.61:
-		var top := K.bot(z) + 0.03
-		var y0 := 0.08
-		D.trim.box(0.035, top - y0, 0.42, x, (top + y0) / 2, z)
+		finPlate(D.trim, [[zf, K.bot(zf) + 0.03], [zf, yf - 0.01], [zb, yb - 0.05], [zb, K.bot(zb) + 0.03]], x, 0.035)
 		x += 0.3
 
 ## airfoil outline [[z, y], ...] with the leading edge at (zLE, yLE), chord towards -z; camber bulges down (downforce), aoa lifts
@@ -1110,7 +1177,7 @@ static func _dress_gt(K: CarBody, D: Dictionary) -> void:
 
 static func _dress_muscle(K: CarBody, D: Dictionary) -> void:
 	var o := {"grille": [{"x": [-0.92, 0.92], "y": [0.6, 0.9], "kind": "g_slats", "tile": 0.46}], "rtrim": [{"x": [-0.9, 0.9], "y": [0.32, 0.44]}], "plateR": 0.62, "mz": 0.5, "my": 1.08, "handles": [-0.35], "hy": 0.94, "sill": [0.34, 0.4], "exh": [-0.7, -0.5, 0.5, 0.7], "exR": 0.04,
-		"tl": [{"x": [-0.88, 0.88], "y": [0.8, 0.92], "kind": "t_slats", "flat": true, "tile": 0.44}]}
+		"tl": [{"x": [-0.88, 0.88], "y": [0.8, 0.92], "kind": "t_slats", "flat": true, "tile": 0.44}, {"x": [0.33, 0.45], "y": [0.58, 0.67], "kind": "rev", "flat": true}]}
 	_dressStd(K, D, o)
 	# round lamps in the grille (4 cm in front of it), chrome bumpers, hood scoop, boot lip
 	for x in [0.5, 0.74]:
@@ -1125,7 +1192,7 @@ static func _dress_muscle(K: CarBody, D: Dictionary) -> void:
 
 static func _dress_fastback(K: CarBody, D: Dictionary) -> void:
 	var o := {"grille": [{"x": [-0.62, 0.62], "y": [0.54, 0.84], "tile": 0.31}], "rtrim": [{"x": [-0.88, 0.88], "y": [0.32, 0.44]}], "plateF": 0.48, "plateR": 0.56, "mz": 0.5, "my": 1.06, "handles": [-0.3], "hy": 0.9, "sill": [0.34, 0.4], "exh": [-0.6, 0.6],
-		"tl": [{"x": [0.3, 0.85], "y": [0.74, 0.88], "kind": "t_slats", "flat": true}]}
+		"tl": [{"x": [0.3, 0.85], "y": [0.74, 0.88], "kind": "t_slats3", "flat": true}]}
 	_dressStd(K, D, o)
 	for x in [0.8]:
 		_roundLamps(K, D, x, 0.72, 0.11, "h_round", 0.01)
