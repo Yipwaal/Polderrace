@@ -89,8 +89,8 @@ met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 |---|---|
 | Basis: golden vanuit Godot, plan | klaar |
 | Rijgedrag | klaar en samengevoegd (bandenmodel, gewichtsverplaatsing, driften, bots, camera; test `handling`) |
-| Automodellen | loopt (Opus neemt over) |
-| Aanpassen | deel 1 klaar en samengevoegd (27 onderdelen, 203 opties); deel 2 wacht op Automodellen |
+| Automodellen | klaar en samengevoegd (nieuwe carrosserieën, lak met afwerkingen, lampen, interieur, verkeer; body-API `CarKit.anchors`) |
+| Aanpassen | deel 1 klaar en samengevoegd (27 onderdelen, 203 opties); deel 2 (bodykit) loopt |
 | Banen A | klaar en samengevoegd (gereedschap + polder, dorp, circuit, afsluitdijk, haven) |
 | Banen B | klaar en samengevoegd (veluwe, grachten, limburg, rotterdam, zeeland; kaarttests op alle tien banen) |
 | Beeld | klaar en samengevoegd (lucht-shader, licht per pixel, water, regen/nat wegdek, nacht, effecten, kwaliteitsniveaus) |
