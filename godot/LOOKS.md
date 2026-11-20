@@ -51,6 +51,43 @@ Werknotities van de Aanpassen-agent (fase 2, zie `PLAN2.md`). Wordt bijgehouden 
 Gereedschap: `xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl3 --resolution 1280x720
 res://tools/shot_looks.tscn -- out=/map [only=groups,looks,cars] [car=gt]`.
 
+## Catalogus (deel 1): 27 items, 203 opties
+
+| Groep | Item (sleutel) | Opties | Prijs |
+|---|---|---|---|
+| Lak | Lakkleur (`paint`) | 7 klassiek + 21 speciaal + eigen kleur | klassiek gratis, speciaal € 150, kleurenmenger € 600 (eenmalig, voor alle kleur-items) |
+| | Afwerking (`finish`) | glans, metallic, zijdeglans, mat, parelmoer, chroom | 0 / 400 / 300 / 500 / 900 / 2.500 |
+| | Dak in tweede kleur (`roof`) | 8 kleuren + eigen | set € 350 (auto's met dak) |
+| Striping | Ontwerp (`stripe`) | af fabriek, geen, dubbele streep, middenstreep, drie strepen, zijstreep, rally, finishvlag, vlammen, rood-wit-blauw, Delfts blauw, tulpen, Oranje leeuw | 0–700; tulpen en leeuw vrijspelen |
+| | Kleur, Tweede kleur (`sc`, `sc2`) | 10 + eigen | gratis |
+| Wielen | Velgmodel (`rimStyle`) | 3 | gratis |
+| | Velgkleur (`rim`) | 4 + 8 + eigen | 4 gratis, rest € 100 |
+| | Remklauwen (`cal`) | 8 + eigen | rood gratis, rest € 50 |
+| | Banden (`tw`) | zwart, witte wand, rode lijn, witte/gele letters | 0 / 300 / 250 / 350 / 350 |
+| Ruiten & licht | Ruiten (`tint`) | 7 | 0–700 |
+| | Koplampen (`lamp`) | 6 | 0–400; xenon-blauw vrijspelen |
+| | Neon onder de auto (`glow`) | 8 kleuren + eigen | set € 900 |
+| Nummer | Startnummer (`num`), Vorm, Vlak, Cijfers, Lettertype, Plek | 0–99; 4 vormen; 10 + 8 kleuren; 3 letters; 3 plekken | gratis |
+| | Kenteken (`plate`) + plaat (`plateStyle`) | eigen tekst (8 tekens); geel, blauw, zwart, wit | set € 250; platen € 150 |
+| Stickers | Sticker voor / achter (`d1`, `d2`) | 14 stickers | € 120; 5 vrijspelen |
+| | Voorruitband (`ban`, `banCol`) | eigen tekst (14 tekens), 10 kleuren | set € 300 |
+| Onderdelen | Spoiler (`wing`), Uitlaat (`exhaust`) | 3, 4 (zoals het was) | gratis |
+
+## Voor andere agents
+
+- **LAN**: stuur `G.lookOf(G.settings.car)` mee in de presence (bijv. sleutel `look`; < 600 tekens JSON) en bouw een
+  speler bij de ander met `CarKit.buildCar(carId, look.paint)` + `CarKit.styleCar(m, look)`. Opnieuw sturen als
+  `JSON.stringify(G.lookOf(car))` verandert (nu alleen auto + kleur). Rommel is veilig (`CarLook.clean`). Het podium
+  neemt een look aan via `entries[k].look`; bots krijgen daar hun botlook vanzelf.
+- **Automodellen**: `CarKit.styleCar` is nu `CarLook.pre` + `_styleStd` (jullie code, ongewijzigd) + `CarLook.post`.
+  `CarLook.finish(paint, id)` is een noodoplossing voor de lak-afwerking (past glans/kleur van de Phong-lak aan); zet
+  `paint.set_meta("finish", true)` zodra het lakmateriaal `m.look.finish` zelf afhandelt, dan blijft CarLook eraf.
+  CarLook leunt op: `K.on_side/on_top/on_cab`, `K.top/bot`, `K.ra`, `K.S.wz`, `K.C.sg/ws/z0`, `K.csec` (punt 8 = eind
+  van de dakronding), `K.sideRects`, `CarKit.patch/stripeGeo/numSpot/mesh/set_geo`, `K.stripes/stripeNum/numGeo`,
+  `K.G.stripe`, de meta `rim` op velgmeshes, en de gedeelde materialen `carGlass`, `lampMat`, `caliperMat`, `tyreMat`,
+  `carPlate` (worden per auto vervangen). Band-uv: draaiing rond het wiel = u, dwars = v (buitenwand = bovenste 29 %).
+- **Rijgedrag**: één regel in `setupBots` (bots krijgen `CarLook.botLook`).
+
 ## Wacht op deel 2
 
 Bodykit-onderdelen op de nieuwe carrosserieën, meer velgmodellen, tweekleurige motorkap/spiegels, deurontwerpen
