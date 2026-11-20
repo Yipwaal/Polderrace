@@ -1,13 +1,13 @@
 extends CanvasLayer
 ## Screen effects of the race (JS: radial blur post pass, speed lines overlay, rear-view mirror frame), between the 3D
 ## picture and the HUD. One instance in the game scene (main.gd). Plus a vignette with a slight colour cast per time of
-## day (one multiplied quad, no screen copy). Quality "laag": none of the full-screen effects.
+## day (one alpha-blended quad, no screen copy). Both full-screen effects only on "hoog": at 1440p on integrated graphics a
+## screen copy (blur) or an extra full-screen layer (vignette) costs real fill rate, so "middel" and "laag" keep only the
+## speed lines (thin lines, next to nothing).
 
 var blur: ColorRect
 var grade: ColorRect
 var _grade_key := ""
-var _blur_q := ""
-var _blur_sh := {}
 var lines: SpeedLines
 var mirror_frame: Panel
 var mirror_img: TextureRect
@@ -65,12 +65,10 @@ func _ready() -> void:
 	blur.set_anchors_preset(Control.PRESET_FULL_RECT)
 	blur.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sm := ShaderMaterial.new()
-	# two versions, made up front (swapping the code of a shader in use left the blur white): 10 samples on "hoog", 6 on "middel"
-	for k in ["high", "mid"]:
-		var sh := Shader.new()
-		sh.code = BLUR_SHADER.replace("TAPS", "10" if k == "high" else "6")
-		_blur_sh[k] = sh
-	sm.shader = _blur_sh.high
+	# 8 samples, and only on "hoog" (made up front: swapping the code of a shader in use left the blur white)
+	var bsh := Shader.new()
+	bsh.code = BLUR_SHADER.replace("TAPS", "8")
+	sm.shader = bsh
 	blur.material = sm
 	blur.visible = false
 	add_child(blur)
@@ -109,18 +107,16 @@ func _ready() -> void:
 func tick(dt: float) -> void:
 	var g := Game
 	var fxOn: bool = g.fxOn()
-	# radial blur by speed (JS: fxOn && quality != low ? speedFx * 0.055)
+	# radial blur by speed (JS: fxOn && quality != low ? speedFx * 0.055; here "hoog" only, see the top)
 	var q: String = G.prefs.get("quality", "high")
-	var b: float = g.speedFx * 0.055 if fxOn and q != "low" and not g.split else 0.0
+	var high := q != "low" and q != "mid"
+	var b: float = g.speedFx * 0.055 if fxOn and high and not g.split else 0.0
 	blur.visible = b > 0.002
 	if blur.visible:
-		if q != _blur_q:
-			_blur_q = q
-			blur.material.shader = _blur_sh.get(q, _blur_sh.high)
 		blur.material.set_shader_parameter("strength", b)
 	# vignette and colour cast: in the race and the menus over the track, not in the garage or on the podium
 	var staged: bool = World.root != null and not World.root.visible
-	grade.visible = q != "low" and Env.me != null and not staged
+	grade.visible = high and Env.me != null and not staged
 	if grade.visible:
 		var key: String = Env.me.time + Env.me.weather
 		if key != _grade_key:

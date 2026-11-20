@@ -60,8 +60,13 @@ Tijdelijk bestand van de Beeld-agent (fase 2). De hoofdagent mag het na het same
       -> de extra lichtpas bestaat en "unshaded" slaat hem over.
 - [x] merge main f697bff (aa9a3e0); headless flow 30/30, memory 13/13, perf 19/19, menus 93/93
 - [x] bekeken: polder, afsluitdijk, dorp, grachten, haven, rotterdam (dag/avond/nacht, droog/regen), garage, podium
-- [ ] perf_render na (`tests/.out/beeld/perf_after.json`), runner perf memory met renderer
-- [ ] nog bekijken: mist, laag/middel, split screen, rev, veluwe/limburg/zeeland/circuit; volledige na-set + contactvellen voor|na
+- [x] (opvolger) na-set alle banen x 9 combinaties x 2 punten in `tests/.out/beeld/now/` + contactvellen voor|na
+      (`now/sheet_<baan>.jpg`); laag/middel (`q_low`, `q_mid`), split (`split/`) bekeken: leesbaar, ook nacht+regen+mist
+- [x] vignet/kleurwas en snelheidsvervaging alleen op "hoog" (geen schermpassen op middel/laag), blur 8 monsters
+- [x] perf_render na (`tests/.out/beeld/perf_now.json`): gemiddelde tekenaanroepen per beeld, som over 10 banen,
+      voor > na: hoog 7796 > 8230 (+6%), middel 7814 > 7503 (-4%), laag 6559 > 5964 (-9%), nacht 7712 > 8426 (+9%),
+      regen 8096 > 8313, split 11176 > 12068 (+8%). Videogeheugen 107 > 124 MB (texturen 74 > 86 MB: mipmaps, ruis, lucht).
+- [ ] runner perf memory met renderer
 - [ ] alle tests na de laatste merge (track build laps cars flow audio menus rules memory perf, play, test_net), eindverslag
 - Niet gedaan (bewust): WorldEnvironment-glow (schermpassen; gloed-sprites doen het werk), druppels op de camera,
   echte spiegeling op nat wegdek, podium-spots op onbelichte materialen (useLights bestaat als optie)
