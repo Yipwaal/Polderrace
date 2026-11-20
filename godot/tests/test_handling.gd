@@ -379,6 +379,20 @@ func body() -> void:
 	r.check(rollMax > 0.02 and rollMax < 0.09, "de carrosserie helt in de bocht", "max %.1f gr" % rad_to_deg(rollMax))
 	r.check(pitchMax > 0.01 and pitchMax < 0.06 and pitchMin < -0.003, "duikt bij remmen, zakt achter door bij gas geven", "%.1f gr duik, %.1f gr hurk" % [rad_to_deg(pitchMax), rad_to_deg(-pitchMin)])
 	r.check(gapMax < 0.035, "de wielen blijven op de weg terwijl de carrosserie beweegt", "max %.3f m" % gapMax)
+	# the chase camera turns round when you reverse, not when the car rolls back off a wall
+	H.start("haven", "gt"); H.free_plane(); H.put(40, 0, 0, 0); Game.snapCamera()
+	for k in 240:
+		H.tick(0, 0, 1)
+		Game.updateCamera(H.DT)
+	var revCam := absf(H.angDiff(Game.camHeading, Game.player.heading))
+	H.put(40, 0, 0, 0); Game.snapCamera()
+	Game.player.speed = -4.0
+	for k in 60:
+		H.tick(0, 0, 0)
+		Game.updateCamera(H.DT)
+	var bounceCam := absf(H.angDiff(Game.camHeading, Game.player.heading))
+	r.check(revCam > 2.8 and bounceCam < 0.2, "camera: achteruit rijden kijkt achterom, terugstuiteren van een muur niet",
+		"%.0f gr en %.0f gr" % [rad_to_deg(revCam), rad_to_deg(bounceCam)])
 	# standstill: nothing moves, also on bricks and in a pause
 	H.start("dorp", "gt")
 	for k in 60: H.tick(0, 0, 0)

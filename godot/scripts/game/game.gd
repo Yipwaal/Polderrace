@@ -1467,7 +1467,10 @@ func updateCamera(dt: float) -> void:
 	speedFx = clamp_((maxf(0, player.speed) - 20) / 50, 0, 1) if (state == "racing" or state == "finished") else 0.0
 	if Menu.menuCamera(dt): return   # menus: podium, home fly-over, orbit round the car, garage (Menu.menuCamera)
 	var c := camParams()
-	var back := PI if player.speed < -1 else 0.0
+	# reversing (holding the brake below walking pace) turns the camera round; rolling back off a wall does not
+	if player.speed < -1 and player.brk > 0.3: player.camBack = true
+	elif player.speed > -0.5 or player.gasIn > 0.3: player.camBack = false
+	var back := PI if player.camBack else 0.0
 	# in a slide the camera looks between the nose and where the car is going, so you see the car turned in its slide
 	var live := state == "racing" or state == "finished"
 	var slipLook := clamp_(player.beta, -0.9, 0.9) * 0.55 if live and player.speed > 3 else 0.0
