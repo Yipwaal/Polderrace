@@ -49,6 +49,10 @@ jobs:
       - name: Tests
         run: ~/godot/godot --headless --path godot res://tests/runner.tscn -- track build laps cars flow audio menus rules looks memory
 
+      - name: Map tests (nothing on the road, no flicker, nothing floating) for the tracks that are done
+        # veluwe, grachten, limburg and zeeland (Banen B) join once their fixes are merged: drop TRACKS then
+        run: TRACKS=polder,dorp,circuit,afsluitdijk,haven,rotterdam ~/godot/godot --headless --path godot res://tests/runner.tscn -- roadclear zfight ground
+
       - name: Playthrough with real keys and mouse clicks (own run, about 11 minutes)
         run: ~/godot/godot --headless --path godot res://tests/runner.tscn -- play
 
