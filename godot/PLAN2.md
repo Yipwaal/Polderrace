@@ -92,7 +92,7 @@ met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 | Automodellen | loopt (Opus neemt over) |
 | Aanpassen | deel 1 klaar en samengevoegd (27 onderdelen, 203 opties); deel 2 wacht op Automodellen |
 | Banen A | klaar en samengevoegd (gereedschap + polder, dorp, circuit, afsluitdijk, haven) |
-| Banen B | loopt (Opus neemt over) |
+| Banen B | klaar en samengevoegd (veluwe, grachten, limburg, rotterdam, zeeland; kaarttests op alle tien banen) |
 | Beeld | klaar en samengevoegd (lucht-shader, licht per pixel, water, regen/nat wegdek, nacht, effecten, kwaliteitsniveaus) |
 | LAN | loopt (Opus neemt over) |
 | Bugjacht | wacht op ronde 1 en 2 |

@@ -12,8 +12,11 @@ extends RefCounted
 ## measured after the batching (World.batch, 300 m instancing cells) plus a third
 const DRAWS := {
 	"polder": [750, 520, 850000], "dorp": [600, 200, 450000], "circuit": [750, 150, 600000], "afsluitdijk": [700, 160, 500000],
-	"haven": [650, 170, 280000], "veluwe": [780, 360, 1200000], "grachten": [600, 150, 350000], "limburg": [570, 160, 880000],
-	"rotterdam": [620, 280, 350000], "zeeland": [640, 130, 450000]}
+	"haven": [650, 170, 280000], "veluwe": [780, 360, 1200000], "grachten": [640, 170, 420000], "limburg": [640, 240, 880000],
+	"rotterdam": [680, 320, 350000], "zeeland": [640, 140, 450000]}
+## (fase 2, Banen B, measured after the Beeld merge: grachten 548 / 144 / 365k with the canal houses on three rows,
+##  limburg 559 / 200 / 539k with the village, castle and orchards in the mirror on the climb, rotterdam 593 / 274 / 277k
+##  with the city behind the first row, zeeland 556 / 116 / 366k with beach and dunes: budgets about 15 % above that)
 
 var host: Node
 var L
