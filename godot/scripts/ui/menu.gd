@@ -647,6 +647,9 @@ func closePauseSettings() -> void:
 func setPausedUI(p: bool) -> void:
 	if not p: closePauseSettings()
 	pauseOv.visible = p
+	# online the race is the host's: no restart of your own, and "menu" is the game's lobby
+	overUI.restartBtn.visible = Net.net == null
+	UiKit.btn_text(overUI.quitBtn, "Naar lobby" if Net.net != null else "Naar menu")
 	if p and TrackDefs.TRACKS.has(Trk.TRACK_ID):
 		var g := Game
 		var t: String = TrackDefs.TRACKS[Trk.TRACK_ID].name + (" (omgekeerd)" if Trk.TRACK_DIR == "rev" else "") + " · " + Hud.lapT.text.to_lower().replace("/", " van ")
@@ -677,7 +680,9 @@ func showOver() -> void:
 	if Net.net != null:
 		# online: only the host starts the next race; the others get it automatically
 		UiKit.btn_text(O.againBtn, "Nieuwe race")
+		UiKit.btn_text(O.menuBtn, "Lobby")
 		O.againBtn.visible = Net.isHost()
+	NetUi.overShown()      # online: standings, next track, watching (and gone again offline)
 	get_tree().create_timer(0.7, true, false, true).timeout.connect(func() -> void:
 		if Game.state == "over" and overOv.visible: UiKit.focus(O.againBtn))
 
@@ -699,7 +704,7 @@ func buildResults() -> void:
 		UiKit.pill_text(O.recordTag, "Nieuwe ghost opgeslagen")
 		O.recordTag.visible = g.ghostSaved
 		return
-	var rows: Array = g.resultOrder()
+	var rows: Array = Net.officialRows(g.resultOrder())    # online: the host's official order
 	g.resultRows = rows
 	var winner = null
 	for r in rows:
@@ -710,9 +715,9 @@ func buildResults() -> void:
 		var tm: String
 		if g.mode == "elim": tm = "eruit" if r.out else ("winnaar" if k == 0 and not g.playerOut else "rijdt nog")
 		elif r.finished: tm = G.fmtLap(r.ft) if r == winner else "+" + G.toFixed(r.ft - winner.ft, 1).replace(".", ",") + " s"
-		else: tm = "rijdt nog"
+		else: tm = r.get("dnf", "rijdt nog")
 		r.tm = tm
-		O.results.add_child(O.row(r.get("me", false), "%d." % (k + 1), r.name, r.car, tm, ("+%d" % (Champ.CHAMP_PTS[k] if k < Champ.CHAMP_PTS.size() else 0)) if g.mode == "champ" else null))
+		O.results.add_child(O.row(r.get("me", false), "%d." % (k + 1), r.name, r.car, tm, ("+%d" % (Champ.CHAMP_PTS[k] if k < Champ.CHAMP_PTS.size() else 0)) if g.mode == "champ" else r.get("pt")))
 	var pos := 0
 	for k in rows.size():
 		if rows[k].get("me", false): pos = k + 1; break
@@ -1052,9 +1057,7 @@ func _input(e: InputEvent) -> void:
 func padNav(now: Dictionary, prev: Dictionary) -> bool:
 	var edge := func(k: String) -> bool: return now.get(k, false) and not prev.get(k, false)
 	var g := Game
-	if g.state == "menu" and NetUi.is_open():
-		if edge.call("b"): NetUi.close()
-		return true
+	if NetUi.padNav(now, prev): return true     # the online screens (lobby, watching)
 	if g.state == "menu" and menuStep < 0:
 		if edge.call("up"): padFocus(-1)
 		if edge.call("down"): padFocus(1)

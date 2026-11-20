@@ -58,6 +58,9 @@ jobs:
       - name: Online test (host and player as two processes)
         run: PATH="$HOME/godot:$PATH" python3 godot/tests/test_net.py
 
+      - name: Online evening with up to 9 players (about 6 minutes; the multi-PC LAN scenario needs root and is skipped here)
+        run: PATH="$HOME/godot:$PATH" python3 godot/tests/test_net_more.py
+
       - name: Export Windows and Linux
         run: |
           mkdir -p godot/build/windows godot/build/linux

@@ -1,5 +1,6 @@
 """Online test: a host and a guest Godot process on this PC. The guest must find the host's game by LAN discovery
-(no codes), join, start the same race when the host starts, and both must see each other's car and the same bots.
+(no codes), join, start the same race when the host starts, and both must see each other's car and the same bots;
+when the host leaves, the guest takes the game over.
 usage: python godot/tests/test_net.py"""
 import subprocess, sys, json, pathlib, shutil, time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -40,6 +41,6 @@ if hr and gr:
     check(abs(hr[0]['s'] - Gd.get('me_s', -99)) < 60, 'positie van de speler komt aan bij de host', (hr[0]['s'], Gd.get('me_s')))
 hb, gb = H.get('bot_rel', []), Gd.get('bot_rel', [])
 check(hb and gb and all(abs(a - b) < 15 for a, b in zip(hb, gb)), 'bots staan bij beiden op dezelfde plek (t.o.v. de auto van de host)', (hb, gb))
-check(Gd.get('closed_by_host'), 'speler merkt dat de host stopt', Gd.get('status'))
+check(Gd.get('took_over') and 'Jij bent nu de host' in Gd.get('status', ''), 'de host stopt: de speler neemt de game over', Gd.get('status'))
 print(f'-- online: {11 + 2 - len(bad)}/{13} geslaagd' + ('' if not bad else '  | mislukt: ' + ', '.join(bad)))
 sys.exit(1 if bad else 0)

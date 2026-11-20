@@ -277,6 +277,10 @@ static func podiumEntries(rows: Array, subOf: Callable) -> Array:
 			if found != null:
 				carId = found.type; color = found.color
 				look = CarLook.botLook(r.name, carId, color, found.rival)
+			elif Net.inRace():
+				# another player of an online game: in its own car and look
+				var rc = Net.remoteCar(r.name)
+				if rc != null: carId = rc.carId; color = rc.color; look = rc.look
 		out.append({"name": r.name, "sub": subOf.call(r), "carId": carId, "color": color, "me": r.get("me", false), "look": look})
 	return out
 
