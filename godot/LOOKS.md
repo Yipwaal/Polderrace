@@ -46,7 +46,13 @@ Werknotities van de Aanpassen-agent (fase 2, zie `PLAN2.md`). Wordt bijgehouden 
 - [x] tests: `tests/test_looks.gd` (106 controles), varianten look/flag/triple in `test_cars.gd` (golden: 54 nieuwe
       sleutels, 94 ongewijzigd), `test_menus.gd`/`test_play.gd` bijgewerkt, workflow
 - [x] screenshots: `tools/shot_looks.tscn` (groepen, looks, alle 18 auto's; contactbladen `sheet_*.png`)
-- [ ] perf (tekenaanroepen) onder xvfb, volledige tests na merge van main
+- [x] perf (tekenaanroepen) onder xvfb: 49/49, bots met eigen look kosten geen merkbare tekenaanroepen (polder 566 van 750)
+- [x] garage in een smal venster (1024x600): de auto staat midden in de ruimte naast het paneel (`menu.gd` `_wideOff`,
+      alleen in de garage), niet meer half achter het paneel
+- [x] volledige tests na merge van main (20 november, avond): track build laps cars flow audio menus rules memory perf
+      looks groen, play 324/324, test_net 13/13
+- [ ] toeter: niet gedaan (er is geen toetertoets, geen toetergeluid en niets online; raakt invoer, Sfx en net)
+- [ ] verkeer: kleurt al willekeurig (`Vehicles`, eigendom Automodellen/Rijgedrag); geen looks op verkeer gezet
 
 Gereedschap: `xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl3 --resolution 1280x720
 res://tools/shot_looks.tscn -- out=/map [only=groups,looks,cars] [car=gt]`.
