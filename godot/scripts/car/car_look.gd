@@ -651,7 +651,8 @@ static func _glow(m: Dictionary, L: Dictionary) -> void:
 		_glowGeo.rotate_x(-PI / 2)
 	var o := CarKit.mesh(m.g, _glowGeo, mat)
 	o.scale = Vector3(float(m.wid) + 1.5, 1, float(m.len) + 1.3)
-	o.position = Vector3(0, 0.035, float(m.get("off", 0.0)))
+	# (the road surface lies 7 cm above the height a car drives at, kerbs 9 cm)
+	o.position = Vector3(0, 0.105, float(m.get("off", 0.0)))
 	o.set_meta("glow", true)
 
 ## the light changed (CarKit.applyEnv, the garage, the podium): tinted lamps follow the lamp glass, the neon its level

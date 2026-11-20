@@ -5,6 +5,8 @@ extends Node
 ##     res://tools/shot_looks.tscn -- out=/abs/dir [only=groups,looks,cars] [car=gt] [credits=3450]
 ## groups: garage_<group>.png per group; looks: look_<name>.png for LOOKS below (panel hidden, the car alone);
 ## cars: car_<id>.png for every model in one busy look (fit check).
+## race: race_<time>_<s>.png, a race with bots (their own looks) and the player's car in a look with neon, by day and
+## by night (the test autopilot drives).
 ## The looks and cars also come as contact sheets (sheet_<n>.png: the car cut out and enlarged, eight to a sheet).
 ## Plays on its own save file.
 
@@ -79,6 +81,11 @@ func _ready() -> void:
 		await shot("look_front_dark", 34, true)
 		GarageRoom.setDark(false)
 		_sheets("looks")
+	if only.has("race"):
+		Menu.homePanel("main")
+		await _race()
+		get_tree().quit()
+		return
 	if _want("cars"):
 		Menu.home.visible = false
 		for id in Cars.CARS:
@@ -88,6 +95,36 @@ func _ready() -> void:
 			await shot("car_" + id + "_side", 34, true)
 		_sheets("cars")
 	get_tree().quit()
+
+func _race() -> void:
+	var stepper = load("res://tests/test_laps.gd").new()
+	var S := G.settings
+	for tm in ["day", "night"]:
+		G.settings.car = car
+		var u := G.carUp(car)
+		u.merge({"stripe": "flames", "sc": "yellow", "sc2": "red", "num": 7, "glow": "purple", "rim": "gold", "tw": "letter", "lamp": "ice", "ban": "POLDERRACE", "plate": "YIP-01"}, true)
+		S.track = "polder"; S.mode = "race"; S.bots = 7; S.laps = 2; S.time = tm; S.weather = "dry"; S.grid = "mid"
+		Menu.loadTrack("polder", "fwd")
+		Menu.applyEnv(tm, "dry")
+		Game.rebuildPlayerCar()
+		Game.startRace()
+		Game.set_process(false)
+		var t := 0.0
+		for at in [3.0, 9.0]:
+			stepper.step(at - t, t >= 4.5)
+			t = at
+			Game.syncCar(1.0 / 60)
+			Game.updateCamera(1.0 / 60)
+			Hud.tick()
+			Fx.me.updateMirror()
+			Game.fx_overlay.tick(1.0 / 60)
+			await Canvas2D.flush(get_tree().current_scene)
+			for _i in 4: await RenderingServer.frame_post_draw
+			var p := "%s/race_%s_%d.png" % [out, tm, int(at)]
+			get_viewport().get_texture().get_image().save_png(p)
+			print("saved ", p)
+		Game.set_process(true)
+		Game.toMenu(-1)
 
 func _want(n: String) -> bool:
 	return only.is_empty() or only.has(n)
