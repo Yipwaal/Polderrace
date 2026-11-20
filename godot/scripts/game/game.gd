@@ -300,6 +300,7 @@ func setupBots(n: int, defs = null) -> void:
 		var type: String = defs[k].type
 		var col: String = defs[k].color
 		var m := CarKit.buildCar(type, Color(col))
+		CarKit.styleCar(m, CarLook.botLook(defs[k].name, type, col, defs[k].get("rival", false)))   # a look of their own, the same on every computer
 		var cdf: Dictionary = Cars.CARS[type]
 		var sk := 1.015 if defs[k].get("rival", false) else 1.0   # a career rival drives a touch sharper
 		get_tree().current_scene.add_child(m.g)
