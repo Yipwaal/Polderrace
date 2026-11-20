@@ -629,7 +629,6 @@ const WT_K := 0.0035         ## weight moved per m/s2 of acceleration (share of 
 const TYRE_LS := 0.8         ## a tyre with twice the load has 2^0.8 times the grip
 const BRAKE_USE_F := 0.62    ## share of the front / rear tyres' grip that full braking takes
 const BRAKE_USE_R := 0.64
-const POWER_USE_MAX := 0.86  ## traction: power never takes more than this share of the driven tyres' grip
 const STEER_AID := 1.0      ## how far the stability aid opens the steering when the tail slides (0 = off)
 const POWER_GRIP := 0.78     ## grip along the car against grip across it (lower: power slides sooner)
 const HAND_GRIP := 0.4       ## rear grip left with the handbrake on
@@ -637,21 +636,22 @@ const SCRUB := 0.4          ## share of the natural speed loss of a slipping tyr
 const BETA_LIFT := 0.14      ## slip angle (rad) past which the car helps you catch the slide: off the gas,
 const BETA_GAS := 0.42       ## on the gas (a power slide),
 const BETA_HAND := 1.1       ## with the handbrake on
-const LOAD_G := 32.0         ## "gravity" for crests and dips (m/s2): the car gets light when v2 x curvature nears it
+const LOAD_G := 70.0         ## "gravity" for crests and dips (m/s2): the car gets light when v2 x curvature nears it
 
 ## what kind of car each model is (how fast it is stays in Cars.CARS): driven wheels (f front, r rear, a all), share of
-## the weight on the front wheels, how planted the rear is (1.04 lively .. 1.18 very steady), how much the body leans
+## the weight on the front wheels, how planted the rear is (1.04 lively .. 1.18 very steady), how much the body leans,
+## and how much of the driven tyres' grip full power may take (traction: 0.6 tidy .. 0.86 a handful)
 const FEEL := {
-	"hatch": ["f", 0.61, 1.16, 1.15], "rally": ["a", 0.56, 1.10, 1.25], "coupe": ["f", 0.59, 1.14, 1.05], "roadster": ["r", 0.50, 1.07, 1.0],
-	"mini": ["f", 0.62, 1.12, 1.2], "retro": ["r", 0.53, 1.06, 1.3],
-	"gt": ["r", 0.50, 1.10, 0.9], "muscle": ["r", 0.55, 1.04, 1.35], "fastback": ["r", 0.53, 1.07, 1.1], "sedan": ["r", 0.53, 1.13, 1.0],
-	"wagon": ["a", 0.55, 1.16, 1.1], "evo": ["a", 0.57, 1.11, 0.95],
-	"super": ["r", 0.43, 1.10, 0.6], "hyper": ["a", 0.45, 1.14, 0.55], "longtail": ["r", 0.42, 1.12, 0.6], "proto": ["r", 0.46, 1.16, 0.45],
-	"v12": ["r", 0.51, 1.08, 0.75], "speedster": ["r", 0.47, 1.07, 0.65]}
+	"hatch": ["f", 0.61, 1.16, 1.15, 0.7], "rally": ["a", 0.56, 1.10, 1.25, 0.8], "coupe": ["f", 0.59, 1.14, 1.05, 0.7],
+	"roadster": ["r", 0.50, 1.07, 1.0, 0.76], "mini": ["f", 0.62, 1.12, 1.2, 0.7], "retro": ["r", 0.53, 1.06, 1.3, 0.8],
+	"gt": ["r", 0.50, 1.10, 0.9, 0.72], "muscle": ["r", 0.55, 1.05, 1.35, 0.86], "fastback": ["r", 0.53, 1.07, 1.1, 0.78],
+	"sedan": ["r", 0.53, 1.13, 1.0, 0.66], "wagon": ["a", 0.55, 1.16, 1.1, 0.7], "evo": ["a", 0.57, 1.11, 0.95, 0.8],
+	"super": ["r", 0.43, 1.10, 0.6, 0.64], "hyper": ["a", 0.45, 1.14, 0.55, 0.7], "longtail": ["r", 0.42, 1.12, 0.6, 0.62],
+	"proto": ["r", 0.46, 1.16, 0.45, 0.58], "v12": ["r", 0.51, 1.08, 0.75, 0.7], "speedster": ["r", 0.47, 1.07, 0.65, 0.68]}
 var _feel := {}
 
 ## the handling numbers of a model: L wheelbase, a/b centre of gravity to front/rear axle, k2 yaw inertia per mass,
-## wf front weight share, df share of the power on the front wheels, kr rear grip margin, roll body lean
+## wf front weight share, df share of the power on the front wheels, kr rear grip margin, roll body lean, pw traction
 func handling(id: String) -> Dictionary:
 	if _feel.has(id): return _feel[id]
 	var F: Array = FEEL.get(id, FEEL.gt)
@@ -660,7 +660,7 @@ func handling(id: String) -> Dictionary:
 	var wf: float = F[1]
 	var m: float = Cars.CARS[id].mass if Cars.CARS.has(id) else 1.0
 	var h := {"L": L, "a": L * (1 - wf), "b": L * wf, "k2": L * L * wf * (1 - wf) * (0.8 + 0.25 * m), "wf": wf,
-		"df": 1.0 if F[0] == "f" else (0.0 if F[0] == "r" else 0.4), "kr": F[2], "roll": F[3], "drv": F[0]}
+		"df": 1.0 if F[0] == "f" else (0.0 if F[0] == "r" else 0.4), "kr": F[2], "roll": F[3], "drv": F[0], "pw": F[4]}
 	_feel[id] = h
 	return h
 
@@ -718,12 +718,12 @@ func groundAt(a: float, i: int) -> Array:
 	t = t * t * (3 - 2 * t)
 	return [t, V[1], V[2], V[3], maxf(rum, V[4] * t)]
 
-## how hard the road pushes back at sample i at speed v: less over a crest, more in a dip (0.7 .. 1.25)
+## how hard the road pushes back at sample i at speed v: less over a crest, more in a dip (0.85 .. 1.15)
 func roadLoad(i: int, v: float) -> float:
 	var NS := Trk.NS
 	var d := 3
 	var k: float = (Trk.HT[(i + d) % NS] - 2 * Trk.HT[i] + Trk.HT[(i - d + NS) % NS]) / (d * d * Trk.SPC * Trk.SPC)
-	return clamp_(1 + v * v * k / LOAD_G, 0.7, 1.25)
+	return clamp_(1 + v * v * k / LOAD_G, 0.85, 1.15)
 
 func drive(dt: float, inp: Dictionary) -> void:
 	# the tyre model wants short steps (the game loop gives at most 8.5 ms; anything longer is cut up here)
@@ -755,7 +755,8 @@ func driveStep(dt: float, inp: Dictionary) -> void:
 	var gL := groundAt(absf(pl.lat - 0.8), pl.idx)
 	var gR := groundAt(absf(pl.lat + 0.8), pl.idx)
 	var off: float = (gL[0] + gR[0]) * 0.5
-	var surf: float = 1 - (gL[0] * (1 - gL[1]) + gR[0] * (1 - gR[1])) * 0.5
+	# loose ground has less grip; at walking pace that does not matter (you can always steer out of the gravel)
+	var surf: float = 1 - (gL[0] * (1 - gL[1]) + gR[0] * (1 - gR[1])) * 0.5 * clamp_((av - 6) / 10, 0, 1)
 	var dragL: float = gL[0] * gL[2] * clamp_((av - gL[3]) / 5.0, 0, 1)
 	var dragR: float = gR[0] * gR[2] * clamp_((av - gR[3]) / 5.0, 0, 1)
 	pl.offroad = off
@@ -803,8 +804,8 @@ func driveStep(dt: float, inp: Dictionary) -> void:
 	var useR := braking * BRAKE_USE_R * (1 - 0.85 * clamp_((pl.slipR - 0.8) / 0.6, 0, 1))
 	if aDrive > 0:
 		var Ax := A * POWER_GRIP
-		useF = minf(POWER_USE_MAX, aDrive * H.df / (Ax * Nf))
-		useR = minf(POWER_USE_MAX, aDrive * (1 - H.df) / (Ax * (1 - Nf))) * (1 - 0.7 * clamp_((pl.slipR - 1.8) / 1.5, 0, 1))
+		useF = minf(H.pw, aDrive * H.df / (Ax * Nf))
+		useR = minf(H.pw, aDrive * (1 - H.df) / (Ax * (1 - Nf))) * (1 - 0.7 * clamp_((pl.slipR - 1.8) / 1.5, 0, 1))
 	capF *= sqrt(1 - useF * useF)
 	capR *= sqrt(1 - useR * useR)
 	if pl.hand: capR *= HAND_GRIP
