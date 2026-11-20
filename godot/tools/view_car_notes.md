@@ -94,7 +94,10 @@ Gevonden en opgelost:
 | getuned | — | 18-19 meshes |
 | verkeer hatch / bus / vrachtwagen / trekker | 21 / 18 / 26 / 23 | 13 / 13 / 14 / 11 |
 
-Tekenaanroepen (perf met renderer, polder): beeld 408 (budget 750), spiegel 382 (budget 520); alle banen groen.
+Wielen na de Beeld-merge lichter gemaakt (band 22 segmenten, velgrand 22, schijven 18): 1284 → 1102 driehoeken per wiel,
+want Rotterdam kwam 126 driehoeken boven het nieuwe budget (beeld + spiegel 350k); nu 338k.
+Na de laatste merge (perf met renderer): polder beeld 457 / spiegel 374 tekenaanroepen (budget 750 / 520), alle banen
+groen, ook de driehoekbudgetten.
 
 ## Carrosserie-API voor onderdelen (Aanpassen)
 
@@ -150,6 +153,18 @@ Hoofdmaten (car space: +z vooruit, +x links, meters):
 - `view_car.py ... look`: set met een volle look (bandopdruk, remklauwen, ruit, lampkleur, dak, vlammen, sticker, band).
 - Gezien (tests/.out/looks/sheet_cars_*.png): alles zit op de nieuwe carrosserieën. Proto: flank te laag, het deurontwerp
   zakt onder de witte fabrieksstreep en er is geen plek voor stickers (de test staat dat al toe).
+
+## Samenvoegen met Rijgedrag en Beeld
+
+- `game.gd` syncCar: de wielen van Rijgedrag (sturen, aandrijving, handrem) + `CarKit.setLights` voor rem/achteruit
+  (het blok van Rijgedrag dat `car.tail.emission` zette, werkt niet op het atlas-materiaal en is vervangen).
+- `CarPaint._patch`: ankers in de nieuwe LMat-shader (per pixel): `phong_spec(n, l, v, sc, sh)`, `float f = 0.0;`,
+  `float hl = 0.0;` (LMat's luchtspiegeling uit voor autolak: de lak spiegelt zelf), `vec3 lit = ...`, `ALPHA = c.a;`.
+  De lak leest `pr_hemi_*`, `pr_sun`, `pr_sun_dir`, `pr_fog`, `pr_sky`; koplampen (`pr_head*`) en mist komen uit LMat zelf.
+- `fx.gd` (Beeld): lampgloed zoekt ook `brakeMat/revMat/brakeRevMat` en getinte lampen (meta `lamp`); de schaduwvlek
+  van Fx vervangt in het spel CarKit's `blob` (die wordt verborgen; garage/gereedschap houden hem).
+- Spiegels (melding Beeld: "zwevende oranje ringen" bij de GT van achteren): nu afgeronde doos met spiegelglas in de rand,
+  gecontroleerd met `view_car.py gt,hatch,super,muscle mirror` (close-up van achter en voor).
 
 ## Nog open / ideeën
 
