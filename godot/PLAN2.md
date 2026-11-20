@@ -90,9 +90,9 @@ met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 | Basis: golden vanuit Godot, plan | klaar |
 | Rijgedrag | klaar en samengevoegd (bandenmodel, gewichtsverplaatsing, driften, bots, camera; test `handling`) |
 | Automodellen | klaar en samengevoegd (nieuwe carrosserieën, lak met afwerkingen, lampen, interieur, verkeer; body-API `CarKit.anchors`) |
-| Aanpassen | deel 1 klaar en samengevoegd (27 onderdelen, 203 opties); deel 2 (bodykit) loopt |
+| Aanpassen | klaar en samengevoegd: 40 onderdelen, 244 opties (lak, striping, wielen, ruiten en licht, nummer, stickers, bodykit, onderdelen) |
 | Banen A | klaar en samengevoegd (gereedschap + polder, dorp, circuit, afsluitdijk, haven) |
 | Banen B | klaar en samengevoegd (veluwe, grachten, limburg, rotterdam, zeeland; kaarttests op alle tien banen) |
 | Beeld | klaar en samengevoegd (lucht-shader, licht per pixel, water, regen/nat wegdek, nacht, effecten, kwaliteitsniveaus) |
 | LAN | klaar en samengevoegd (lobby, klaar + aftellen, stand, meekijken, host-overname, opnieuw verbinden, looks online, PROTO 4) |
-| Bugjacht | loopt: spel/banen/menu's en online; garage/looks na Aanpassen deel 2 |
+| Bugjacht | loopt: spel/banen/menu's, online, garage/looks |
