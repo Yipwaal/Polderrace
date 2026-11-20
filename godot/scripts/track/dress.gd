@@ -24,9 +24,15 @@ static func alongSides(every: float, latFn: Callable, fn: Callable) -> void:
 			var lat = latFn.call(i, s)
 			if lat != null:
 				var xz := Trk.onTrack(i, s * lat)
-				if not (Trk.distToTrack(xz[0], xz[1]) < (12.0 if Trk.TRK.get("terrain", false) else Trk.ROAD_HALF + 1)):
+				if not (Trk.distToTrack(xz[0], xz[1]) < (12.0 if Trk.TRK.get("terrain", false) else Trk.ROAD_HALF + 1)) and not _kept(xz[0], xz[1]):
 					fn.call(xz[0], xz[1], i, s)
 		d += every * (0.7 + rnd() * 0.6)
+
+## inside one of World.noDress (a few metres of margin: the tufts and reeds spread around their spot)
+static func _kept(x: float, z: float) -> bool:
+	for q in World.noDress:
+		if x > q[0] - 3 and x < q[2] + 3 and z > q[1] - 3 and z < q[3] + 3: return true
+	return false
 
 static func edgeLat(i: int, extra: float) -> float:
 	return Trk.SHOULDER + Trk.EMB[i] + extra

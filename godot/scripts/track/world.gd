@@ -16,6 +16,8 @@ static var beaconMats: Array = []
 static var trackLights: Array = []
 static var cpGates: Array = []
 static var sailGroups: Array = []
+## [x0, z0, x1, z1] areas the shared roadside dressing (Dress.alongSides) leaves alone: water cut into the land, a monument
+static var noDress: Array = []
 
 static func pick(a: Array):
 	return a[int(floor(rnd.next() * a.size()))]
@@ -51,7 +53,7 @@ static func clear() -> void:
 		if parent != null:
 			parent.add_child(root)
 	roadMats = []; lampMats = []; hillMats = []; winMats = []; reflMats = []; beaconMats = []
-	trackLights = []; cpGates = []; sailGroups = []
+	trackLights = []; cpGates = []; sailGroups = []; noDress = []
 
 static func add(n: Node) -> Node:
 	root.add_child(n)

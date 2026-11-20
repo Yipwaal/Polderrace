@@ -27,7 +27,14 @@ static func grassTex(base: String, seed_dark: String, seed_light: String) -> Ima
 		g.fillStyle = base; g.fillRect(0, 0, w, h)
 		for _i in 260:
 			g.fillStyle = seed_dark if randf() < 0.55 else seed_light
-			g.beginPath(); g.ellipse(randf() * w, randf() * h, 6 + randf() * 22, 4 + randf() * 12, randf() * 3, 0, PI * 2); g.fill()
+			var ex: float = randf() * w; var ey: float = randf() * h
+			var rx := 6 + randf() * 22; var ry := 4 + randf() * 12; var ra := randf() * 3
+			# also its copies one tile over where it crosses an edge: the texture repeats without a visible seam
+			for dx in [-1, 0, 1]:
+				for dy in [-1, 0, 1]:
+					var cx: float = ex + dx * w; var cy: float = ey + dy * h
+					if cx + rx < 0 or cx - rx > w or cy + rx < 0 or cy - rx > h: continue
+					g.beginPath(); g.ellipse(cx, cy, rx, ry, ra, 0, PI * 2); g.fill()
 		for _i in 900:
 			g.fillStyle = "rgba(20,50,10,.10)" if randf() < 0.5 else "rgba(235,245,170,.10)"
 			g.fillRect(randf() * w, randf() * h, 2, 5), true)

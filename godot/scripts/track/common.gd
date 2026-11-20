@@ -10,8 +10,12 @@ static func waterPlane(w: float, d: float, x: float, z: float, y: float, col := 
 	World.add(m)
 	return m
 
-static func landPlane(tex: Texture2D, x0: float, z0: float, x1: float, z1: float, tile: float) -> MeshInstance3D:
-	var m := O3.mesh(Geo.plane(x1 - x0, z1 - z0), Mats.M(0xffffff, {"map": tex, "repeat": Vector2((x1 - x0) / tile, (z1 - z0) / tile), "receiveShadow": true}))
+## cell: > 0 cuts the plane into squares of about that size (fog and light are worked out per vertex: on one big quad
+## they show the seam of its two triangles)
+static func landPlane(tex: Texture2D, x0: float, z0: float, x1: float, z1: float, tile: float, cell := 0.0) -> MeshInstance3D:
+	var nx := 1 if cell <= 0 else maxi(1, int(round((x1 - x0) / cell)))
+	var nz := 1 if cell <= 0 else maxi(1, int(round((z1 - z0) / cell)))
+	var m := O3.mesh(Geo.plane(x1 - x0, z1 - z0, nx, nz), Mats.M(0xffffff, {"map": tex, "repeat": Vector2((x1 - x0) / tile, (z1 - z0) / tile), "receiveShadow": true}))
 	O3.rot(m, -PI / 2, 0, 0)
 	m.position = Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2)
 	O3.receive(m)
