@@ -8,6 +8,37 @@ static func M(c: int, o: Dictionary = {}) -> LMat:
 static func rnd() -> float:
 	return World.rnd.next()
 
+## places kept for the landmarks beside the road ([x0, z0, x1, z1]): the scattered decor stays out of them
+static var reserved: Array = []
+static func spare(x: float, z: float, r := 0.0) -> bool:
+	for q in reserved:
+		if x > q[0] - r and x < q[2] + r and z > q[1] - r and z < q[3] + r: return false
+	return true
+
+## is the point lat metres beside sample i nearer to its own piece of road than to any other? On the inside of a tight
+## bend on the dike the strips beside the road (ditch, cycle path) would otherwise fold over each other and the slope
+static func own(i: int, lat: float) -> bool:
+	var xz := Trk.onTrack(i, lat)
+	return Trk.distToTrack(xz[0], xz[1]) > absf(lat) - Trk.EMB[i] - 1.5
+
+## mottled meadow grass (verges, dike slopes): the flat colour made the big slopes look like plastic
+static func grassTex(base: String, seed_dark: String, seed_light: String) -> ImageTexture:
+	return Canvas2D.tex(256, 256, func(g, w, h):
+		g.fillStyle = base; g.fillRect(0, 0, w, h)
+		for _i in 260:
+			g.fillStyle = seed_dark if randf() < 0.55 else seed_light
+			var ex: float = randf() * w; var ey: float = randf() * h
+			var rx := 6 + randf() * 22; var ry := 4 + randf() * 12; var ra := randf() * 3
+			# also its copies one tile over where it crosses an edge: the texture repeats without a visible seam
+			for dx in [-1, 0, 1]:
+				for dy in [-1, 0, 1]:
+					var cx: float = ex + dx * w; var cy: float = ey + dy * h
+					if cx + rx < 0 or cx - rx > w or cy + rx < 0 or cy - rx > h: continue
+					g.beginPath(); g.ellipse(cx, cy, rx, ry, ra, 0, PI * 2); g.fill()
+		for _i in 900:
+			g.fillStyle = "rgba(20,50,10,.10)" if randf() < 0.5 else "rgba(235,245,170,.10)"
+			g.fillRect(randf() * w, randf() * h, 2, 5), true)
+
 static func windmill(x: float, z: float, rot: float) -> void:
 	var g := O3.group(x, 0, z)
 	O3.rot(g, 0, rot, 0)
@@ -52,32 +83,144 @@ static func farm(x: float, z: float, rot: float) -> void:
 	World.box(4, 4, 0.15, green, 11, 2, 5.05, g, false)
 	World.add(g)
 
+## a flat-bottomed sailing barge on the canal (hull, cabin, mast, brown sail)
+static func barge(x: float, z: float, rot: float, sail: int) -> void:
+	var g := O3.group(x, 0, z)
+	O3.rot(g, 0, rot, 0)
+	var hull := M(0x2e2a26); var deck := M(0x8a6a4a)
+	World.box(2.6, 0.9, 8.5, hull, 0, 0.4, 0, g)
+	World.box(2.0, 0.5, 1.6, hull, 0, 0.4, 4.8, g)
+	World.box(2.3, 0.12, 8.0, deck, 0, 0.9, 0, g, false)
+	World.box(1.8, 0.9, 2.4, M(0xe8e2d0), 0, 1.4, -2.6, g)
+	World.box(2.0, 0.12, 2.6, M(0x2d5a3a), 0, 1.9, -2.6, g, false)
+	O3.mesh(Geo.cylinder(0.09, 0.12, 8.5, 6), M(0x6b4a2e), 0, 5.1, 1.2, g, true)
+	var sl := O3.mesh(Geo.extrude([Vector2(0, 0), Vector2(4.6, 0), Vector2(0.5, 6.6)], 0.06), M(sail, {"side": "double"}), 0, 1.9, 1.0, g, true)
+	O3.rot(sl, 0, PI / 2, 0)
+	World.add(g)
+
+## the village church: tower with a spire, nave with a steep roof
+static func church(x: float, z: float, rot: float) -> void:
+	var g := O3.group(x, 0, z)
+	O3.rot(g, 0, rot, 0)
+	var brick := M(0x8a5a40); var slate := M(0x39404a); var cream := M(0xf3efe4)
+	World.winMats.append(cream)
+	World.box(6, 22, 6, brick, 0, 11, 0, g)
+	var sp := O3.mesh(Geo.cone(4.4, 11, 4), slate, 0, 27.5, 0, g, true)
+	O3.rot(sp, 0, PI / 4, 0)
+	World.box(1.6, 3.2, 0.2, cream, 0, 16.5, 3.02, g, false)
+	World.box(1.6, 3.2, 0.2, cream, 0, 16.5, -3.02, g, false)
+	World.box(0.2, 3.2, 1.6, cream, 3.02, 16.5, 0, g, false)
+	World.box(0.2, 3.2, 1.6, cream, -3.02, 16.5, 0, g, false)
+	World.box(1.5, 2.6, 0.2, M(0x3a2a1c), 0, 1.3, 3.02, g, false)
+	World.box(9, 8, 20, brick, 0, 4, -13, g)
+	var r := TrackCommon.roofMesh(9.8, 6.5, 20.6, slate); r.position = Vector3(0, 8, -13); g.add_child(r)
+	for k in 4:
+		World.box(0.2, 3.6, 1.5, cream, 4.52, 4.4, -6.5 - k * 4.4, g, false)
+		World.box(0.2, 3.6, 1.5, cream, -4.52, 4.4, -6.5 - k * 4.4, g, false)
+	World.add(g)
+
+## Landmarks beside the road (Godot only): a canal with a row of windmills and barges next to the start, tulip fields along
+## the first straight, the farm at the S-bend the track is named after, and a village with its church inside the lap.
+static func landmarks(tulipTex: Array) -> void:
+	var water := Mats.phong(0x55829f, {"specular": 0x9fb3c6, "shininess": 70, "receiveShadow": true})
+	var bank := M(0x5d7f3a)
+	# ---- the canal ("vaart") right of the start straight, three mills on its far bank
+	var cz := 60.0
+	for part in [[165.0, 0.03, 26.0, bank], [165.0, 0.06, 19.0, water]]:
+		var m := O3.mesh(Geo.plane(340, part[2]), part[3])
+		O3.rot(m, -PI / 2, 0, 0)
+		m.position = Vector3(part[0], part[1], cz)
+		O3.receive(m)
+		World.add(m)
+	for x in [70.0, 165.0, 260.0]:
+		windmill(x, cz + 26, PI + (rnd() - 0.5) * 0.3)
+	barge(120, cz - 2, PI / 2 + 0.05, 0x7a3b22)
+	barge(232, cz + 3, -PI / 2 - 0.08, 0x8a4a2a)
+	var reed := []
+	for k in 150:
+		var rx := -2 + rnd() * 334
+		var side := -1.0 if rnd() < 0.5 else 1.0
+		var rh := 1.1 + rnd() * 0.9
+		reed.append(World.mtx(rx, rh / 2, cz + side * (9.7 + rnd() * 1.6), rnd() * 6, 0.12, rh, 0.12))
+	World.inst(Geo.cone(1, 1, 4), M(0x8a9a4a, {"sway": 0.3}), reed, null, false)
+	# ---- tulip fields in strips of colour left of the start straight
+	for k in 5:
+		var m := O3.mesh(Geo.plane(44, 30), M(0xffffff, {"map": tulipTex[k], "repeat": Vector2(4.4, 30 / 1.6), "receiveShadow": true}))
+		O3.rot(m, -PI / 2, 0, 0)
+		m.position = Vector3(46 + k * 47, 0.08, -44)
+		O3.receive(m)
+		World.add(m)
+	# ---- the farm at the S-bend, with its yard
+	farm(328, -556, 3.0)
+	var bales := []
+	for k in 7:
+		bales.append(Transform3D(O3.euler(0, 0.4, PI / 2), Vector3(309 + (k % 4) * 1.5, 0.62 + (1.1 if k > 3 else 0.0), -574 - (k % 4) * 1.2 - (0.9 if k > 3 else 0.0))))
+	World.inst(Geo.cylinder(0.62, 0.62, 1.2, 12), M(0xeeeee6), bales, null, true)
+	# ---- the village inside the lap: a church and a handful of brick houses with lit windows at night
+	var vx := 150.0; var vz := -522.0
+	church(vx, vz, 0.5)
+	var body := []; var bcol := []; var roof := []; var rcol := []; var win := []
+	var bricks := [0x8c3f2c, 0x9a5a3a, 0xa0623f, 0x7c4a34, 0xb9a98a]
+	var tiles := [0x7a3524, 0x3b3530, 0x8a4028, 0x4a4038]
+	for k in 16:
+		var a := k / 16.0 * PI * 2 + rnd() * 0.25
+		var rad := 26 + rnd() * 26
+		var hx := vx + cos(a) * rad
+		var hz := vz - 8 + sin(a) * rad
+		var yaw := a + PI / 2 + (rnd() - 0.5) * 0.5
+		var w := 6.5 + rnd() * 2.5
+		var d := 7.5 + rnd() * 3
+		var hh := 3.2 + rnd() * 1.4
+		if Trk.distToTrack(hx, hz) < 30: continue
+		body.append(World.mtx(hx, hh / 2, hz, yaw, w, hh, d)); bcol.append(MathX.col(World.pick(bricks)))
+		roof.append(World.mtx(hx, hh, hz, yaw, w + 0.6, 2.4 + rnd() * 1.2, d + 0.6)); rcol.append(MathX.col(World.pick(tiles)))
+		for sd in [-1.0, 1.0]:
+			for wx in [-0.26, 0.26]:
+				win.append(Transform3D(Basis(Vector3.UP, yaw), Vector3(hx, 1.9, hz)) * Transform3D(Basis().scaled(Vector3(1.1, 1.2, 0.12)), Vector3(wx * w, 0, sd * (d / 2 + 0.01))))
+	World.inst(Geo.box(1, 1, 1), M(0xffffff), body, bcol, true)
+	World.inst(TrackCommon.roofGeo(), M(0xffffff), roof, rcol, true)
+	var wm := M(0xf3efe4)
+	World.winMats.append(wm)
+	World.inst(Geo.box(1, 1, 1), wm, win, null, false)
+
 static func build() -> void:
 	var NS := Trk.NS
 	var T := Trk.T
+	reserved = [[-10.0, 40.0, 350.0, 98.0], [20.0, -64.0, 262.0, -24.0], [80.0, -590.0, 215.0, -455.0], [296.0, -586.0, 362.0, -528.0]]
+	# the land: long narrow meadows in slightly different greens, a ditch between every two, mowing lines and some mottling
 	World.groundPlane(Canvas2D.tex(512, 512, func(g, w, h):
-		var cols := ["#6f9e45", "#79a84e", "#689742", "#80ae56"]
+		var cols := ["#6c9a47", "#74a24c", "#659443", "#7aa651"]
 		for p in 4:
-			g.fillStyle = cols[p]; g.fillRect(p * 128, 0, 128, h); g.fillStyle = "rgba(0,0,0,.05)"
+			g.fillStyle = cols[p]; g.fillRect(p * 128, 0, 128, h); g.fillStyle = "rgba(0,0,0,.035)"
 			var x := p * 128 + 4
 			while x < (p + 1) * 128:
 				g.fillRect(x, 0, 2, h); x += 7
-		g.fillStyle = "#5f8aa8"
+		for _i in 420:
+			g.fillStyle = "rgba(30,70,20,.07)" if randf() < 0.5 else "rgba(225,240,150,.07)"
+			g.beginPath(); g.ellipse(randf() * w, randf() * h, 5 + randf() * 16, 3 + randf() * 8, randf() * 3, 0, PI * 2); g.fill()
 		for p in 4:
-			g.fillRect(p * 128, 0, 3, h)
-		g.fillRect(0, 0, w, 3), true), 36)
-	var grassMat := M(0x77a64c)
+			g.fillStyle = "#4f6f2f"; g.fillRect(p * 128 - 2, 0, 7, h)
+			g.fillStyle = "#5f8aa8"; g.fillRect(p * 128, 0, 3, h)
+		g.fillStyle = "#4f6f2f"; g.fillRect(0, 0, w, 6)
+		g.fillStyle = "#5f8aa8"; g.fillRect(0, 1, w, 3), true), 36)
+	var grassMat := M(0xffffff, {"map": grassTex("#73a24b", "rgba(40,90,25,.16)", "rgba(215,235,140,.14)")})
+	var slopeMat := M(0xffffff, {"map": grassTex("#6d9c47", "rgba(40,90,25,.18)", "rgba(215,235,140,.16)"), "repeat": Vector2(2, 1)})
 	var waterMat := Mats.phong(0x5a88ad, {"specular": 0x9fb3c6, "shininess": 70})
 	var RH := Trk.ROAD_HALF
 	var SH := Trk.SHOULDER
 	World.ribbon(-RH, RH, World.roadMat(World.roadTexture("#636567", [1.0 / 3, 2.0 / 3], true, false, 0.25)), 12, 0.07)
 	World.ribbon(-SH, -RH, grassMat, 10, 0.05)
 	World.ribbon(RH, SH, grassMat, 10, 0.05)
-	World.ribbon(func(i): return -(SH + Trk.EMB[i]), -SH, grassMat, 10, 0.05)
-	World.ribbon(SH, func(i): return SH + Trk.EMB[i], grassMat, 10, 0.05)
-	World.ribbon(func(i): return -(Trk.DIT[i] + 2.6), func(i): return -Trk.DIT[i], waterMat, 10, 0.06)
-	World.ribbon(func(i): return Trk.DIT[i], func(i): return Trk.DIT[i] + 2.6, waterMat, 10, 0.06)
-	World.ribbon(func(i): return -(Trk.DIT[i] + 7.2), func(i): return -(Trk.DIT[i] + 4.6), M(0xa94d3d), 10, 0.06)
+	World.ribbon(func(i): return -(SH + Trk.EMB[i]), -SH, slopeMat, 14, 0.05)
+	World.ribbon(SH, func(i): return SH + Trk.EMB[i], slopeMat, 14, 0.05)
+	# ditch and cycle path stop where a tight bend on the dike would fold them over the slope of the road further on
+	var NSr := Trk.NS
+	World.ribbon(func(i): return -(Trk.DIT[i] + 2.6), func(i): return -Trk.DIT[i], waterMat, 10, 0.06,
+		func(i): return own(i, -(Trk.DIT[i] + 2.6)) and own((i + 1) % NSr, -(Trk.DIT[(i + 1) % NSr] + 2.6)))
+	World.ribbon(func(i): return Trk.DIT[i], func(i): return Trk.DIT[i] + 2.6, waterMat, 10, 0.06,
+		func(i): return own(i, Trk.DIT[i] + 2.6) and own((i + 1) % NSr, Trk.DIT[(i + 1) % NSr] + 2.6))
+	World.ribbon(func(i): return -(Trk.DIT[i] + 7.2), func(i): return -(Trk.DIT[i] + 4.6), M(0xa94d3d), 10, 0.06,
+		func(i): return own(i, -(Trk.DIT[i] + 7.2)) and own((i + 1) % NSr, -(Trk.DIT[(i + 1) % NSr] + 7.2)))
 	World.startLine()
 	World.gates(Trk.TRK)
 
@@ -116,11 +259,11 @@ static func build() -> void:
 		for k in n:
 			var x: float = s[0] + cos(a) * k * 10
 			var z: float = s[1] + sin(a) * k * 10
-			if Trk.distToTrack(x, z) > 20:
+			if Trk.distToTrack(x, z) > 20 and spare(x, z, 4):
 				poplar.call(x, z)
 	for _k in 240:
 		var s = Trk.randPos(World.rnd, 19)
-		if s != null:
+		if s != null and spare(s[0], s[1], 5):
 			willow.call(s[0], s[1])
 	for _k in 90:
 		var a := rnd() * PI * 2
@@ -130,9 +273,9 @@ static func build() -> void:
 		for _j in 5:
 			poplar.call(x + (rnd() - .5) * 40, z + (rnd() - .5) * 40)
 	World.inst(Geo.cylinder(0.22, 0.34, 4, 6), M(0x4a3a2a), popTrunk, null, true)
-	World.inst(Geo.sphere(1, 9, 8), M(0xffffff), popCrown, popCol, true)
+	World.inst(Geo.sphere(1, 9, 8), M(0xffffff, {"sway": 0.15, "swayBase": -1.0, "swaySpan": 2.0}), popCrown, popCol, true)
 	World.inst(Geo.cylinder(0.55, 0.8, 2.6, 7), M(0x5b4a36), wilTrunk, null, true)
-	World.inst(Geo.icosahedron(1, 1), M(0xffffff), wilCrown, wilCol, true)
+	World.inst(Geo.icosahedron(1, 1), M(0xffffff, {"sway": 0.15, "swayBase": -1.0, "swaySpan": 2.0}), wilCrown, wilCol, true)
 
 	var postB := []; var postT := []
 	var dd := 0.0
@@ -150,12 +293,16 @@ static func build() -> void:
 
 	for _k in 16:
 		var s = Trk.randPos(World.rnd, 35)
-		if s != null: windmill(s[0], s[1], rnd() * PI * 2)
+		if s != null:
+			var wr := rnd() * PI * 2
+			if spare(s[0], s[1], 14): windmill(s[0], s[1], wr)
 	var w40 := Trk.onTrack(40, 34)
 	windmill(w40[0], w40[1], Trk.heading_of(T[40]) + PI * 0.8)
 	for _k in 12:
 		var s = Trk.randPos(World.rnd, 40)
-		if s != null: farm(s[0], s[1], rnd() * PI * 2)
+		if s != null:
+			var fr := rnd() * PI * 2
+			if spare(s[0], s[1], 24): farm(s[0], s[1], fr)
 
 	var cowTex := Canvas2D.tex(128, 64, func(g, w, h):
 		g.fillStyle = "#f4f2ec"; g.fillRect(0, 0, w, h); g.fillStyle = "#1f1f1f"
@@ -169,7 +316,7 @@ static func build() -> void:
 		for _k in n:
 			var x: float = s[0] + (rnd() - .5) * 22
 			var z: float = s[1] + (rnd() - .5) * 22
-			if Trk.distToTrack(x, z) < 20: continue
+			if Trk.distToTrack(x, z) < 20 or not spare(x, z, 3): continue
 			var cm := Transform3D(Basis(Vector3.UP, rnd() * 6.28), Vector3(x, 0, z))
 			cowBody.append(cm * Transform3D(Basis(), Vector3(0, 1.15, 0)))
 			cowHead.append(cm * Transform3D(Basis(), Vector3(0, 1.35, 1.35)))
@@ -206,6 +353,7 @@ static func build() -> void:
 		var d := 24 + rnd() * 30
 		var t: Texture2D = World.pick(tulipTex)
 		var f := {"x": s[0], "z": s[1], "w": w, "d": d, "r": rnd() * PI, "lv": 0}
+		if not spare(s[0], s[1], 50): continue
 		for o in fields:
 			if fieldHit.call(o, f): f.lv = maxi(f.lv, o.lv + 1)
 		fields.append(f)
@@ -214,6 +362,9 @@ static func build() -> void:
 		m.position = Vector3(s[0], 0.08 + f.lv * 0.025, s[1])
 		O3.receive(m)
 		World.add(m)
+
+	landmarks(tulipTex)
+	TrackCommon.chevrons(Trk.ROAD_HALF + 1.4)
 
 	TrackCommon.signs([["Kinderdijk", "8"], ["Gouda", "23"], ["Edam", "61"], ["Lelystad", "34"], ["Zwolle", "88"], ["Delft", "17"], ["Urk", "52"], ["Giethoorn", "96"]], 10.2)
 
@@ -281,7 +432,7 @@ static func details() -> void:
 		while y < 24:
 			World.box(2.2, 0.18, 2.2, steel, 0, y, 0, g, false)
 			y += 4.5
-		World.box(15, 0.5, 0.6, steel, 0, 21, 0, g); World.box(10, 0.5, 0.6, steel, 0, 25.5, 0, g); World.box(0.8, 2.5, 0.8, steel, 0, 27.5, 0, g)
+		World.box(15, 0.5, 0.6, steel, 0, 21, 0, g); World.box(10, 0.5, 0.6, steel, 0, 25.5, 0, g); World.box(0.8, 2.5, 0.8, steel, 0, 27.0, 0, g)
 		World.add(g)
 		towers.append(g)
 	for k in towers.size() - 1:
@@ -302,6 +453,7 @@ static func details() -> void:
 		if s == null: continue
 		var n2 := 5 + int(floor(rnd() * 7))
 		var yaw := rnd() * 6
+		if not spare(s[0], s[1], 14): continue
 		for k in n2:
 			bales.append(Transform3D(O3.euler(0, yaw, PI / 2), Vector3(s[0] + cos(yaw) * k * 1.9, 0.62, s[1] - sin(yaw) * k * 1.9)))
 	World.inst(Geo.cylinder(0.62, 0.62, 1.2, 12), M(0xeeeee6), bales, null, true)
