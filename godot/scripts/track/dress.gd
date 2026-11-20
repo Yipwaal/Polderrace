@@ -59,14 +59,14 @@ static func reeds(every: float, near: float, far: float) -> void:
 			var pz: float = z + (rnd() - .5) * 2
 			var h := 1.2 + rnd() * 0.8
 			m.append(World.mtx(px, groundY(px, pz) + h / 2, pz, rnd() * 6, 0.12, h, 0.12)))
-	World.inst(Geo.cone(1, 1, 4), M(0x8a9a4a), m, null, false)
+	World.inst(Geo.cone(1, 1, 4), M(0x8a9a4a, {"sway": 0.3}), m, null, false)
 
 static func bushes(every: float, near: float, far: float, col := 0x4f7a3a) -> void:
 	var m := []
 	alongSides(every, func(i, _s): return edgeLat(i, near + rnd() * (far - near)), func(x, z, _i, _s):
 		var s := 0.8 + rnd() * 1.2
 		m.append(World.mtx(x, groundY(x, z) + s * 0.6, z, rnd() * 6, s, s * 0.8, s)))
-	World.inst(Geo.sphere(1, 7, 5), M(col), m, null, true)
+	World.inst(Geo.sphere(1, 7, 5), M(col, {"sway": 0.1, "swayBase": -1.0, "swaySpan": 2.0}), m, null, true)
 
 static func fences(every: float, lat: float) -> void:
 	var p := []; var r := []
@@ -312,7 +312,7 @@ static func grassTufts(every: float, near: float, far: float) -> void:
 			var h := 0.35 + rnd() * 0.4
 			m.append(World.mtx(px, groundY(px, pz) + h / 2, pz, rnd() * 6, 0.22 + rnd() * 0.15, h, 0.22 + rnd() * 0.15))
 			c.append(World.pick(pal)))
-	World.inst(Geo.cone(1, 1, 4), M(0xffffff), m, c, false)
+	World.inst(Geo.cone(1, 1, 4), M(0xffffff, {"sway": 0.12}), m, c, false)
 
 static func dressTrack(id: String) -> void:
 	roadGrime()
