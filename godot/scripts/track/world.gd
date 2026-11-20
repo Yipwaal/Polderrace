@@ -147,6 +147,7 @@ static func mtx(x: float, y: float, z: float, ry := 0.0, sx := 1.0, sy := -1.0, 
 
 ## many copies of one geometry (JS InstancedMesh in cells of 150 m, for culling): transforms + optional colours
 ## tests set inst_log = [] to record every inst() call: [count, first origin, last origin] (see tests/test_build.gd)
+## and to keep every copy's transform on its node (meta "xfs", see tests/world_scan.gd)
 static var inst_log = null
 
 static func inst(geo: Geo, mat: Material, xfs: Array, colors = null, cast := false):
@@ -186,6 +187,9 @@ static func inst(geo: Geo, mat: Material, xfs: Array, colors = null, cast := fal
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if inst_log != null:
+			# the map tests (tests/world_scan.gd) need every copy's place, and headless Godot cannot read a MultiMesh back
+			mmi.set_meta("xfs", idxs.map(func(j): return xfs[j]))
 		root.add_child(mmi)
 	return true
 

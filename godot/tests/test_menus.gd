@@ -177,7 +177,8 @@ func run(host: Node) -> TestReport:
 	r.check(G.settings.car == "mini", "Terug: weer in een eigen auto", G.settings.car)
 	Menu.homePanel("garage")
 	Menu.garageUI.garTab("look")
-	Menu.garageUI.rimRadio.find("gold").press()
+	Menu.garageUI.lookGroup("wheel")
+	Menu.garageUI.radio("rim").find("gold").press()
 	r.check(G.carUp("mini").rim == "gold", "velgen goud")
 	Menu.homePanel("main")
 	# ---- championship: one round, standings, next round
