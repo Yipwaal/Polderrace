@@ -26,6 +26,8 @@ func _ready() -> void:
 	if a.info != "":
 		print("INFO NS ", Trk.NS, " cps ", Trk.cps, " taken ", World.pavTaken.slice(0, 6))
 		for b in BKit.bends(0.016): print("INFO bend ", b)
+		for i in Trk.NS:
+			if Trk.HT[i] > 1.5 and Trk.HT[i] >= Trk.HT[(i - 1 + Trk.NS) % Trk.NS] and Trk.HT[i] > Trk.HT[(i + 1) % Trk.NS]: print("INFO top ", i, " h ", Trk.HT[i], " at ", Trk.P[i])
 	if a.around != "":
 		# x,z,r,h[;...]: four views of the spot (x, z) from r metres away, h above the ground there
 		for ps in a.around.split(";"):

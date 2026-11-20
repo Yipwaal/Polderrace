@@ -58,8 +58,10 @@ static func litTex() -> ImageTexture:
 		var fh: float = h / 4.6
 		for f in 4:
 			for x in [14, 52, 90]:
-				if randf() < 0.6:
-					g.fillStyle = "#ffd890"; g.fillRect(x, h - fh * (f + 1) - 4, 24, fh * 0.62))
+				# four windows in ten are lit, each a little different: warm lamps, a dim room, a curtain
+				if randf() < 0.4:
+					g.fillStyle = "rgba(255,%d,%d,%f)" % [190 + randi() % 40, 110 + randi() % 70, 0.4 + randf() * 0.6]
+					g.fillRect(x, h - fh * (f + 1) - 4, 24, fh * 0.62))
 
 ## a gable outline (z across the front -0.5..0.5, y up 0..1) as a slab 1 thick in x, with a hoisting beam and hook
 static func gableGeo(kind: int) -> Geo:
@@ -83,9 +85,9 @@ static func gableGeo(kind: int) -> Geo:
 	slab.translate(-0.5, 0, 0)
 	return BKit.merge([
 		[slab, 0xffffff],
-		[Geo.box(1.0, 0.035, 0.6).translate(0.02, 1.0 if kind == 1 else 0.92, 0), 0xf4f1e8],   # white coping on top
-		[Geo.box(1.9, 0.05, 0.05).translate(0.9, 0.6, 0), 0x2a2622],
-		[Geo.box(0.12, 0.09, 0.09).translate(1.75, 0.53, 0), 0x2a2622]])
+		# a white coping stone on top, 4 cm proud of the slab all round
+		[Geo.box(1.16, 0.035, [0.3, 0.16, 0.5, 0.3][kind]).translate(0, [0.9, 1.0, 0.92, 0.98][kind] + 0.0175, 0), 0xf4f1e8],
+		[Geo.box(1.9, 0.05, 0.05).translate(0.9, 0.6, 0), 0x2a2622]])
 
 static func build() -> void:
 	var NS := Trk.NS
@@ -109,7 +111,9 @@ static func build() -> void:
 	var cols := ["#7a3a2c", "#5a2a22", "#8c4a32", "#3b3530", "#6b5a4a", "#9a8f7a", "#2f3033", "#84402e", "#6a3326"].map(func(c): return Color(c))
 	var roofs := ["#3a3432", "#4a3630", "#2e3034", "#5a3a2c"].map(func(c): return Color(c))
 	var H := {"hB": [], "hC": [], "rB": [], "rC": [], "g": [[], [], [], []], "gc": [[], [], [], []], "placed": []}
-	var addHouse := func(x: float, z: float, ry: float, w: float, dep: float, front: float) -> void:
+	var lots := BKit.Lots.new()
+	fronts = []
+	var addHouse := func(x: float, z: float, ry: float, w: float, dep: float, front: float, gable := true) -> void:
 		# ry: local +x looks at the street; front: where the facade stands on local x (dep / 2)
 		var hh := 10 + rnd() * 6
 		var c: Color = World.pick(cols)
@@ -119,38 +123,49 @@ static func build() -> void:
 		H.hB.append(Transform3D(Basis(Vector3.UP, ry).scaled_local(Vector3(dep, hh, w * 0.98)), Vector3(x, hh / 2, z))); H.hC.append(c)
 		H.rB.append(Transform3D(Basis(Vector3.UP, ry).scaled_local(Vector3(dep * 0.99, w * 0.5, w * 0.98)), Vector3(x, hh - 0.02, z))); H.rC.append(rc)
 		# the gable stands on the front, a hand's width proud of it
-		var gx := x + cos(ry) * (front - 0.12)
-		var gz := z - sin(ry) * (front - 0.12)
+		if not gable: return   # the back rows are only seen from afar: walls and roofs do
+		var proud := 0.1 + rnd() * 0.08   # (not all the same: the fronts of two rows that meet would lie in one plane)
+		var gx := x + cos(ry) * (front - proud)
+		var gz := z - sin(ry) * (front - proud)
 		H.g[kind].append(Transform3D(Basis(Vector3.UP, ry).scaled_local(Vector3(0.5, gh, w * 0.98)), Vector3(gx, hh - 0.04, gz))); H.gc[kind].append(c)
 	for sd in [-1, 1]:
 		var s := 0.0
 		while s < TRACK_LEN:
 			var w := 4.6 + rnd() * 2.4
 			var dep := 10 + rnd() * 3
-			var i := int(round((s + w / 2) / SPC)) % NS
 			var lat: float = sd * (SH + 0.3 + dep / 2)
-			var xz := Trk.onTrack(i, lat)
-			var x: float = xz[0]; var z: float = xz[1]
-			if Trk.distToTrack(x, z) < absf(lat) - 0.6 or inCanal(x, z, 10.0 + QUAY + w / 2) or H.placed.any(func(o): return sqrt((o[0] - x) * (o[0] - x) + (o[1] - z) * (o[1] - z)) < (w + o[2]) / 2 + 0.05):
-				s += 3; continue
-			H.placed.append([x, z, w])
+			var f := Trk.trackAt(s + w / 2)
+			var x: float = f.px + f.rx * lat
+			var z: float = f.pz + f.rz * lat
+			var hd := atan2(f.tx, f.tz)
+			if Trk.distToTrack(x, z) < absf(lat) - 0.6 or inCanal(x, z, 10.0 + QUAY + w / 2) or not lots.take(x, z, hd, dep / 2, w / 2, 0.4, -0.04):
+				s += 1.5; continue
 			# local +x = -R: the street side of a house on the right; the left ones turn round
-			addHouse.call(x, z, Trk.heading_of(T[i]) + (0.0 if sd > 0 else PI), w, dep, dep / 2)
+			addHouse.call(x, z, hd + (0.0 if sd > 0 else PI), w, dep, dep / 2)
+			var fry: float = hd + (0.0 if sd > 0 else PI)
+			fronts.append([x + cos(fry) * (dep / 2 - 0.06), z - sin(fry) * (dep / 2 - 0.06), fry])
 			s += w
 	# rows along both quays of every canal, where the track's own rows leave room
+	# three rows deep on both banks: the quay row, a row back to back with it, and one more across a back street, so
+	# the city goes on behind the first roofs when you look from a bridge or from above
 	for c in canals:
 		for bank in [-1.0, 1.0]:
-			var u := -CANAL + 2.0
-			while u < CANAL - 2:
-				var w := 4.8 + rnd() * 2.6
-				var dep := 9 + rnd() * 3
-				var p := cpos(c, u + w / 2, bank * (10.0 + QUAY + dep / 2))
-				u += w
-				if Trk.distToTrack(p.x, p.y) < Trk.SHOULDER + 15 + dep / 2 or onOtherCanal(c, p.x, p.y, dep): continue
-				if H.placed.any(func(o): return Vector2(o[0] - p.x, o[1] - p.y).length() < (dep + 13.0) / 2 + 1.0): continue
-				H.placed.append([p.x, p.y, w])
-				# the front looks at the canal: local +x = -bank * t
-				addHouse.call(p.x, p.y, atan2(-bank * c.t.z, bank * c.t.x) + PI, w, dep, dep / 2)
+			var deps := [9.0 + rnd() * 3, 9.0 + rnd() * 3, 9.0 + rnd() * 3]
+			var near := [10.0 + QUAY, 10.0 + QUAY + deps[0] + 4.2, 10.0 + QUAY + deps[0] + 4.2 + deps[1] + 1.5 + 9.0]
+			for row in 3:
+				# the front looks at the canal (rows 0 and 2) or away from it (row 1)
+				var face: float = bank if row == 1 else -bank
+				var ry := atan2(face * c.t.z, -face * c.t.x)
+				var u := -CANAL + 2.0
+				while u < CANAL - 2:
+					var w := 4.8 + rnd() * 2.6
+					var dep: float = deps[row] + rnd() * 1.5
+					var p := cpos(c, u + w / 2, bank * (near[row] + dep / 2))
+					u += w
+					if Trk.distToTrack(p.x, p.y) < Trk.SHOULDER + 0.5 + sqrt(dep * dep + w * w) / 2 or onOtherCanal(c, p.x, p.y, dep): continue
+					# (1.2 m of room at front and back: the hoisting beams of two rows that meet face to face must not cross)
+					if not lots.take(p.x, p.y, ry, dep / 2, w / 2, 1.2, -0.01): continue
+					addHouse.call(p.x, p.y, ry, w, dep, dep / 2, row == 0)
 		# and a block across both ends, so the canal does not run out into nothing
 		for e in [-1.0, 1.0]:
 			var v := -34.0
@@ -159,10 +174,10 @@ static func build() -> void:
 				var dep := 10.0
 				var p := cpos(c, e * (CANAL + 2.5 + dep / 2), v + w / 2)
 				v += w
-				if Trk.distToTrack(p.x, p.y) < Trk.SHOULDER + 15 + dep / 2 or onOtherCanal(c, p.x, p.y, dep): continue
-				if H.placed.any(func(o): return Vector2(o[0] - p.x, o[1] - p.y).length() < (dep + 13.0) / 2 + 1.0): continue
-				H.placed.append([p.x, p.y, w])
-				addHouse.call(p.x, p.y, atan2(-e * c.r.x, -e * c.r.z) + PI / 2, w, dep, dep / 2)
+				var ry := atan2(-e * c.r.x, -e * c.r.z) + PI / 2
+				if Trk.distToTrack(p.x, p.y) < Trk.SHOULDER + 0.5 + sqrt(dep * dep + w * w) / 2 or onOtherCanal(c, p.x, p.y, dep): continue
+				if not lots.take(p.x, p.y, ry, dep / 2, w / 2, 1.2, -0.01): continue
+				addHouse.call(p.x, p.y, ry, w, dep, dep / 2)
 	var fm := M(0xffffff, {"map": frontTex(), "emissive": 0x000000, "emissiveMap": litTex()})
 	World.winMats.append(fm)
 	World.inst(Geo.box(1, 1, 1), fm, H.hB, H.hC, true)
@@ -183,6 +198,9 @@ static func build() -> void:
 	boats()
 	tower()
 	streetLife()
+
+## the fronts of the houses along the track: [x, z, ry (local +x looks at the street)], for flags
+static var fronts: Array = []
 
 ## is (x, z) on the water or the quay of another canal than c (houses of one canal stay off the next one)
 static func onOtherCanal(c: Dictionary, x: float, z: float, dep: float) -> bool:
@@ -271,8 +289,8 @@ static func ground() -> void:
 	var CS := 12.0
 	var x0 := floorf((Trk.BX0 - 240) / CS) * CS
 	var z0 := floorf((Trk.BZ0 - 240) / CS) * CS
-	var nx := int(ceil((Trk.BX1 + 240 - x0) / CS))
-	var nz := int(ceil((Trk.BZ1 + 240 - z0) / CS))
+	var nx := int(ceil((Trk.BX1 + 240 - x0) / CS / 4.0)) * 4
+	var nz := int(ceil((Trk.BZ1 + 240 - z0) / CS / 4.0)) * 4
 	var g := Geo.new()
 	var quad := func(geo: Geo, ax: float, az: float, bx: float, bz: float, y: float, tile: float) -> void:
 		var o := geo.pos.size()
@@ -280,18 +298,24 @@ static func ground() -> void:
 		for k in 4: geo.nrm.append(Vector3.UP)
 		geo.uv.append_array([Vector2(ax / tile, az / tile), Vector2(bx / tile, az / tile), Vector2(bx / tile, bz / tile), Vector2(ax / tile, bz / tile)])
 		geo.idx.append_array([o, o + 2, o + 1, o, o + 3, o + 2])
-	for ix in nx:
-		for iz in nz:
-			var cx := x0 + (ix + 0.5) * CS
-			var cz := z0 + (iz + 0.5) * CS
-			var wet := false
-			for c in canals:
-				var u: float = (cx - c.p.x) * c.r.x + (cz - c.p.z) * c.r.z
-				var v: float = (cx - c.p.x) * c.t.x + (cz - c.p.z) * c.t.z
-				if absf(v) > 19.2: continue
-				for pt in c.parts:
-					if u > pt[0] - 9.2 and u < pt[1] + 9.2: wet = true
-			if not wet: quad.call(g, x0 + ix * CS, z0 + iz * CS, x0 + (ix + 1) * CS, z0 + (iz + 1) * CS, -0.02, 16.0)
+	# tiles of 48 m; a tile near a canal is cut into 4 x 4 small ones, and the small ones on the water are left out
+	var near := func(cx: float, cz: float, half: float) -> bool:
+		for c in canals:
+			var u: float = (cx - c.p.x) * c.r.x + (cz - c.p.z) * c.r.z
+			var v: float = (cx - c.p.x) * c.t.x + (cz - c.p.z) * c.t.z
+			if absf(v) > 10.7 + half * 1.4143: continue
+			for pt in c.parts:
+				if u > pt[0] - 0.7 - half * 1.4143 and u < pt[1] + 0.7 + half * 1.4143: return true
+		return false
+	for ix in range(0, nx, 4):
+		for iz in range(0, nz, 4):
+			if not near.call(x0 + (ix + 2) * CS, z0 + (iz + 2) * CS, CS * 2):
+				quad.call(g, x0 + ix * CS, z0 + iz * CS, x0 + (ix + 4) * CS, z0 + (iz + 4) * CS, -0.02, 16.0)
+				continue
+			for ax in 4:
+				for az in 4:
+					if not near.call(x0 + (ix + ax + 0.5) * CS, z0 + (iz + az + 0.5) * CS, CS / 2):
+						quad.call(g, x0 + (ix + ax) * CS, z0 + (iz + az) * CS, x0 + (ix + ax + 1) * CS, z0 + (iz + az + 1) * CS, -0.02, 16.0)
 	# the land beyond, out to the horizon
 	var X1 := x0 + nx * CS
 	var Z1 := z0 + nz * CS
@@ -351,8 +375,9 @@ static func bridges() -> void:
 	var brick := M(0x7a3a2c)
 	var overWater := func(i: int) -> bool:
 		for c in canals:
-			var d := absi(i - c.i)
-			if mini(d, NS - d) <= 5: return true
+			# the wall strip from sample i to i + 1 lies over the water for i = bridge - 5 .. bridge + 4 (the arch is 20 m long)
+			var d := posmod(i - c.i + 5, NS)
+			if d <= 9: return true
 		return false
 	var ramp := func(i): return Trk.HT[i] > 0.05 and not overWater.call(i)
 	var top := func(i): return Trk.HT[i] > 0.35
@@ -379,15 +404,17 @@ static func bridges() -> void:
 			var a := PI * k / 10.0
 			pts.append(Vector2(cos(a) * 8.6, -1.9 + sin(a) * (HT[ib] + 1.9 - 0.75)))
 		pts.append(Vector2(-hw, -1.9))
-		var arch := Geo.extrude(pts, SH * 2 + 0.5)
-		arch.translate(0, 0, -(SH + 0.25))
+		# (0.7 m wider than the road on both sides: the road bends a little over one of the bridges, and the ramp walls must
+		# end well inside the arch, not in the plane of its face)
+		var arch := Geo.extrude(pts, SH * 2 + 1.4)
+		arch.translate(0, 0, -(SH + 0.7))
 		# extrude: x = along the track, z = across; the bridge frame: local x -> t, local z -> r
 		var fr := Transform3D(Basis(Vector3(c.t.x, 0, c.t.z), Vector3.UP, Vector3(c.r.x, 0, c.r.z)), Vector3(c.p.x, 0, c.p.z))
 		A.frame = fr
 		A.add(arch, 0x74392c)
 		for s in [-1.0, 1.0]:
 			# a keystone band along the arch's face and the lantern posts on the four corners
-			A.box(hw * 2, 0.3, 0.3, 0, HT[ib] - 0.32, s * (SH + 0.3), 0xa8a196)
+			A.box(hw * 2, 0.3, 0.3, 0, HT[ib] - 0.32, s * (SH + 0.75), 0xa8a196)
 			for e in [-1.0, 1.0]:
 				var j := (ib + int(e * 7) + NS) % NS
 				var q := Trk.onTrack(j, s * (SH - 0.18))
@@ -430,9 +457,9 @@ static func bikeGeo() -> Geo:
 static func elmGeo() -> Geo:
 	return BKit.merge([
 		[Geo.cylinder(0.15, 0.22, 5.6, 6, 1, true).translate(0, 2.8, 0), 0x4a3828],
-		[Geo.icosahedron(1.0, 0).scale(1.75, 1.9, 1.75).translate(0, 7.0, 0), 0x4a7434],
-		[Geo.icosahedron(1.0, 0).scale(1.2, 1.1, 1.2).translate(0.5, 5.95, 0.3), 0x426a2e],
-		[Geo.box(1.1, 0.06, 1.1).translate(0, 0.03, 0), 0x3a322a]])
+		[Geo.icosahedron(1.0, 0).scale(1.6, 2.0, 1.6).translate(0, 7.0, 0), 0x4a7434],
+		[Geo.icosahedron(1.0, 0).scale(1.1, 1.1, 1.1).translate(0.4, 5.95, 0.25), 0x426a2e],
+		[Geo.box(1.1, 0.16, 1.1).translate(0, -0.03, 0), 0x3a322a]])
 
 static func trees() -> void:
 	var NS := Trk.NS
@@ -449,7 +476,7 @@ static func trees() -> void:
 		if Trk.HT[i] > 0.1: continue
 		var xz := Trk.onTrack(i, s * 5.78)
 		if inCanal(xz[0], xz[1], 12.0): continue
-		tr.append(World.mtx(xz[0], 0.2, xz[1], ry, 1.0, sc, 1.0)); tc.append(Color(tint, tint, tint * 0.92))
+		tr.append(World.mtx(xz[0], Trk.HT[i] + 0.2, xz[1], ry, 1.0, sc, 1.0)); tc.append(Color(tint, tint, tint * 0.92))
 		World.pavTaken.append([xz[0], xz[1], 1.0])
 	for c in canals:
 		for bank in [-1.0, 1.0]:
@@ -461,7 +488,7 @@ static func trees() -> void:
 				var p := cpos(c, u, bank * 12.2)
 				u += 13.0
 				if Trk.distToTrack(p.x, p.y) < Trk.SHOULDER + 3.5 or not onWaterSide(c, u - 13.0): continue
-				tr.append(World.mtx(p.x, 0.02 * c.k, p.y, ry, 1.0, sc, 1.0)); tc.append(Color(tint, tint, tint * 0.92))
+				tr.append(World.mtx(p.x, 0.02 * c.k + 0.01, p.y, ry, 1.0, sc, 1.0)); tc.append(Color(tint, tint, tint * 0.92))
 	World.inst(elmGeo(), M(0xffffff), tr, tc, true)
 
 ## is u (along canal c) beside a stretch of water (not on a street that dams the canal)
@@ -475,6 +502,7 @@ static func boats() -> void:
 	var A := BKit.Acc.new()
 	var hb := [0x2e5d3e, 0x7a2a2a, 0x1d4f9e, 0x3a3e45, 0x6b4a2e]
 	var sl := []; var sc := []
+	var berth := BKit.Spacing.new(6.5)
 	var spal := [Color(0.85, 0.85, 0.8), Color(0.15, 0.3, 0.5), Color(0.5, 0.15, 0.12), Color(0.2, 0.4, 0.25), Color(0.9, 0.75, 0.3)]
 	for c in canals:
 		var ry := atan2(c.r.x, c.r.z) - PI / 2
@@ -495,6 +523,7 @@ static func boats() -> void:
 			var turn := (rnd() - .5) * 0.12
 			if absf(u) < 12 or not onWaterSide(c, u - 3) or not onWaterSide(c, u + 3): continue
 			var p := cpos(c, u, s * 8.9)
+			if not berth.free_at(p.x, p.y): continue
 			sl.append(Transform3D(Basis(Vector3.UP, ry + PI / 2 + turn), Vector3(p.x, WATER_Y, p.y))); sc.append(col)
 		# the tour boat: a long low boat with a glass roof, on the middle of the widest stretch through the bridge
 		for pt in c.parts:
@@ -561,15 +590,12 @@ static func streetLife() -> void:
 		bcol.append(col)
 	World.inst(bikeGeo(), M(0xffffff), bikes, bcol, false)
 	# flags: red-black-red with three white crosses, on a pole slanting out from a front at 5 m
-	for _k in 60:
-		var i := int(floor(rnd() * NS))
-		var s := -1.0 if rnd() < 0.5 else 1.0
-		if HT[i] > 0.1: continue
-		var xz := Trk.onTrack(i, s * (SH + 0.25))
-		if inCanal(xz[0], xz[1], 10.0 + QUAY): continue
-		# local +x points from the front to the street
-		var ry := Trk.heading_of(Trk.T[i]) + (0.0 if s > 0 else PI)
-		var m := Transform3D(Basis(Vector3.UP, ry), Vector3(xz[0], 5.2, xz[1]))
+	for k in fronts.size():
+		var want := rnd() < 0.09
+		if not want: continue
+		# on a house front (the pole starts just inside the wall); local +x points to the street
+		var fr: Array = fronts[k]
+		var m := Transform3D(Basis(Vector3.UP, fr[2]), Vector3(fr[0], 5.2, fr[1]))
 		fp.append(m)
 		fl.append(m)
 	var flagTex := Canvas2D.tex(64, 96, func(g, w, h):
@@ -584,10 +610,10 @@ static func streetLife() -> void:
 	# fans behind the bollards: at the start and on both sides of every bridge
 	var ppl := []
 	for s in [-1.0, 1.0]:
-		ppl.append_array(BKit.crowdRow(Trk.START_I + 4, 22, s * 6.2, 1.5, 1))
+		ppl.append_array(BKit.crowdRow(Trk.START_I + 4, 22, s * 5.85, 1.5, 1))
 		for c in canals:
-			ppl.append_array(BKit.crowdRow(c.i - 16, 8, s * 6.2, 1.4, 1))
-			ppl.append_array(BKit.crowdRow(c.i + 10, 8, s * 6.2, 1.4, 1))
+			ppl.append_array(BKit.crowdRow(c.i - 16, 8, s * 5.85, 1.4, 1))
+			ppl.append_array(BKit.crowdRow(c.i + 10, 8, s * 5.85, 1.4, 1))
 	var keep := []
 	for p in ppl:
 		if not World.pavBusy(p[0], p[2], 0.6): keep.append(p)

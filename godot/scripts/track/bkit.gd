@@ -250,6 +250,40 @@ class Spacing:
 		grid[key].append(Vector2(x, z))
 		return true
 
+## building lots: turned rectangles that may not overlap (houses in rows that meet at corners and along canals).
+## Lots.new().take(x, z, ry, hx, hz) is true when the rectangle (half sizes hx along its local x, hz along its local z)
+## is free, and then keeps it. mx, mz: room kept round it along its own x and z (negative: it may touch or overlap that
+## much): a row house touches its neighbours (mz < 0) but keeps clear of a house of a row that crosses its own (mx > 0),
+## whose wall would otherwise lie in the plane of its front and flicker.
+class Lots:
+	var grid := {}
+	const C := 16.0
+	func take(x: float, z: float, ry: float, hx: float, hz: float, mx := -0.05, mz := -0.05) -> bool:
+		var ax := Vector2(cos(ry), -sin(ry))      # local x in world (x, z)
+		var az := Vector2(sin(ry), cos(ry))       # local z
+		var me := [Vector2(x, z), ax, az, hx + mx, hz + mz]
+		var r := sqrt(hx * hx + hz * hz)
+		var c0 := Vector2i(int(floor((x - r) / C)), int(floor((z - r) / C)))
+		var c1 := Vector2i(int(floor((x + r) / C)), int(floor((z + r) / C)))
+		for a in range(c0.x, c1.x + 1):
+			for b in range(c0.y, c1.y + 1):
+				for o in grid.get(Vector2i(a, b), []):
+					if _hit(me, o): return false
+		for a in range(c0.x, c1.x + 1):
+			for b in range(c0.y, c1.y + 1):
+				var k := Vector2i(a, b)
+				if not grid.has(k): grid[k] = []
+				grid[k].append(me)
+		return true
+	## separating axes of two turned rectangles
+	func _hit(p: Array, q: Array) -> bool:
+		var d: Vector2 = q[0] - p[0]
+		for ax in [p[1], p[2], q[1], q[2]]:
+			var rp: float = absf(ax.dot(p[1])) * p[3] + absf(ax.dot(p[2])) * p[4]
+			var rq: float = absf(ax.dot(q[1])) * q[3] + absf(ax.dot(q[2])) * q[4]
+			if absf(ax.dot(d)) >= rp + rq: return false
+		return true
+
 ## a cow: black-and-white (the instance colour tints the white patches: white or red-brown cattle)
 static func cowGeo() -> Geo:
 	var parts := [

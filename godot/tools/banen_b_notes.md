@@ -35,17 +35,25 @@ publiek in de twee scherpste bochten, pijlborden in alle bochten, reflectoren op
 Kosten na: 553/239/902k (was 583/270/1.19M).
 Bekeken: a_veluwe_* (voor), b_veluwe_*, c_veluwe_* (na; dag, nacht rev, regen rev, mist).
 
-## Grachten — TE DOEN
-Gezien (a_grachten_*): bomen zonder stam (zwevende bollen, te groot, door de gevels); langs de grachten buiten de eigen
-huizenrij is de wereld leeg (kale vlakte tot de horizon); gevels grof (enorme zwarte ramen), alle topgevels gelijk;
-brugleuning een donkere dichte muur; stoep bijna wit.
-Plan: straatbomen met stam, huizen/kades/bomen/bootjes langs de grachten, gevarieerde topgevels (trap/hals/klok) met
-hijsbalk, betere geveltextuur, brugleuningen met lantaarns en fietsen, rondvaartboot die vaart, kerktoren, terrasjes.
+## Limburg — KLAAR (eerste ronde)
+Fout: witte paaltjes zweefden 0,3 m; onzichtbare muur → vangrail op 11,3 m (buiten de uitloop); struiken van de
+dressing raakten de auto (nu 14,4–16,6 m).
+Verbeterd: akkers in stroken (gras, graan, koolzaad, geploegd), bos op de toppen, boomgaarden in bloei, populierenrijen,
+wijngaarden, mergelgroeve (in het terrein uitgesneden, open naar de weg, met blokken, gangen en graafmachine), kasteel
+op de hoogste heuvel, dorp van mergel- en vakwerkhuizen rond de kerk (verlicht 's nachts), koeien, wegkruisen,
+pijlborden, reflectoren, publiek + vlaggen + verf op de weg op de steilste klim.
+Kosten na: 497/208/688k (was 426/123/795k). Spiegelbudget 160 moet omhoog (gemeten 208).
+roadclear/zfight/ground: groen (op startlijn↔vuilstrook na: Banen A).
 
-## Limburg — TE DOEN
-Gezien: kale felgroene heuvels, bijna geen bomen, geen dorp; kerk alleen. Plan: boomgaarden, populieren, bosjes op de
-toppen, akkers in stroken, mergelgroeve, kasteel, vakwerkboerderijen, dorp rond de kerk, vangrail + pijlborden in de
-haarspelden, verf op de klim (Cauberg), wegkruis, publiek.
+## Grachten — KLAAR (eerste ronde)
+Fout: bomen zonder stam, kruin door camera en gevels (83 kruinen boven het asfalt) → iepen met 5,4 m stam, kruin boven
+4,8 m; water lag 5 cm BOVEN de straat → grachten 1,3 m verdiept (grond met sleuven, kademuren); de bultbrug was een
+dichte muur dwars door zijn eigen gracht → echte boog; huizen stonden op 2 m-monsters (overlap/gaten) → exact geplaatst
+met niet-overlappende kavels (BKit.Lots); wereld hield op achter de eerste rij → drie rijen langs elke kade + kopblok.
+Verbeterd: gevels met baksteen, hoge ramen, deur; trap-, hals-, klok- en tuitgevels met hijsbalk; pannendaken;
+stenen brugleuning, lantaarns, fietsen; woonboten, sloepen, varende rondvaartboot per gracht (AnimB); Westertoren;
+Amsterdamse vlaggen aan gevels; publiek bij start en bruggen; rustiger verlichte ramen 's nachts.
+Kosten na: 484/154/240k beeld (was 435/110/180k). roadclear/zfight groen; ground: alleen lampkoppen (Banen A).
 
 ## Rotterdam — TE DOEN
 Gezien: grote grijze vlakte met losse torens, niets langs de weg. Plan: bebouwing langs de weg, herkenbare torens
