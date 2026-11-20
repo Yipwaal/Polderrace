@@ -70,7 +70,11 @@ static func landV(x: float, z: float, nd: float) -> float:
 	return maxf(islandL(x, z), 16.0 - (nd - Trk.SHOULDER))
 
 static func heightOf(L: float) -> float:
-	return 0.0 if L >= 0.0 else maxf(-2.2, L * 0.11)
+	var y := 0.0 if L >= 0.0 else maxf(-2.2, L * 0.11)
+	# no grid point near the water level (-0.35) or the surf (-0.32): a big beach triangle lying just above or under
+	# the water would flicker with it; this way every triangle that meets the water crosses it at an angle
+	if absf(y + 0.35) < 0.09: y = -0.26 if y > -0.35 else -0.44
+	return y
 
 ## the north coast: z of the waterline at x (stepping out from the dunes), for the beach
 static func coastZ(x: float) -> float:

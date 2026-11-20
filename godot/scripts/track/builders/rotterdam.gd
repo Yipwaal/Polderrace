@@ -89,17 +89,18 @@ static func build() -> void:
 	lots = BKit.Lots.new()
 	fronts = [[[], []], [[], []], [[], []]]
 	TrackCommon.waterPlane(5000, RZ1 - RZ0, 400, (RZ0 + RZ1) / 2, -0.6, 0x44606e)
-	var pave := Canvas2D.tex(128, 128, func(g, w, h):
-		g.fillStyle = "#7d8083"; g.fillRect(0, 0, w, h); g.strokeStyle = "rgba(40,40,40,.2)"
-		var i := 0
-		while i < w:
-			g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke()
-			g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke()
-			i += 32
-		for _k in 90:
-			g.fillStyle = "rgba(0,0,0,%f)" % (randf() * 0.06); g.fillRect(randf() * w, randf() * h, 30, 30), true)
-	TrackCommon.landPlane(pave, Trk.BX0 - 500, RZ1, Trk.BX1 + 500, Trk.BZ1 + 500, 20)
-	TrackCommon.landPlane(pave, Trk.BX0 - 500, Trk.BZ0 - 500, Trk.BX1 + 500, RZ0, 20)
+	var pave := Canvas2D.tex(256, 256, func(g, w, h):
+		# city ground: slabs of concrete in slightly different greys, thin joints, stains
+		g.fillStyle = "#6c6f72"; g.fillRect(0, 0, w, h)
+		for a in 8:
+			for b in 8:
+				var v := 104 + randi() % 20
+				g.fillStyle = "rgb(%d,%d,%d)" % [v, v + 2, v + 5]; g.fillRect(a * 32 + 1, b * 32 + 1, 31, 31)
+		for _k in 260:
+			g.fillStyle = "rgba(0,0,0,%f)" % (randf() * 0.07)
+			g.beginPath(); g.ellipse(randf() * w, randf() * h, 2 + randf() * 14, 2 + randf() * 8, 0, 0, TAU); g.fill(), true)
+	TrackCommon.landPlane(pave, Trk.BX0 - 500, RZ1, Trk.BX1 + 500, Trk.BZ1 + 500, 40)
+	TrackCommon.landPlane(pave, Trk.BX0 - 500, Trk.BZ0 - 500, Trk.BX1 + 500, RZ0, 40)
 	for z in [RZ0, RZ1]:
 		World.box(Trk.BX1 - Trk.BX0 + 1000, 3, 1.2, M(0x5a5f63), (Trk.BX0 + Trk.BX1) / 2, -1, z, null, false)
 	var landF := func(i: int) -> bool: return land(i)
@@ -124,11 +125,11 @@ static func build() -> void:
 	streetBlocks()
 	deRotterdam()
 	markthal()
+	euromast()
 	skyline()
 	World.inst(Geo.box(1, 1, 1), frontMat(0), fronts[0][0], fronts[0][1], true)
 	World.inst(Geo.box(1, 1, 1), frontMat(1), fronts[1][0], fronts[1][1], true)
 	World.inst(Geo.box(1, 1, 1), frontMat(2), fronts[2][0], fronts[2][1], true)
-	euromast()
 	harbour()
 	river()
 	BKit.chevrons(14.6, 0.016, 9.0, 1.3, false)
@@ -433,7 +434,8 @@ static func markthal() -> void:
 ## the skyline: towers of 30 to 160 m further from the road, in the three kinds of front
 static func skyline() -> void:
 	var tcols := [Color(0.72, 0.84, 0.95), Color(0.9, 0.9, 0.88), Color(0.55, 0.62, 0.7), Color(0.95, 0.93, 0.86), Color(0.5, 0.56, 0.62), Color(0.72, 0.6, 0.46)]
-	for _k in 150:
+	parks()
+	for _k in 220:
 		var x := Trk.BX0 - 300 + rnd() * (Trk.BX1 - Trk.BX0 + 600)
 		var z := Trk.BZ0 - 300 + rnd() * (Trk.BZ1 - Trk.BZ0 + 600)
 		var h := (30.0 if z < RZ0 else 40.0) + rnd() * (120.0 if z > RZ1 else 60.0)
@@ -445,6 +447,48 @@ static func skyline() -> void:
 		if overRiver(x, z) or absf(z - RZ0) < 30 or absf(z - RZ1) < 30 or Trk.distToTrack(x, z) < 34: continue
 		if not lots.take(x, z, ry, w / 2, dz / 2, 2.0, 2.0): continue
 		addBlock(kind, x, z, ry, w, h, dz, tint)
+	# lower blocks of flats and offices in between (the city does not stop behind the first row)
+	for _k in 500:
+		var x := Trk.BX0 - 250 + rnd() * (Trk.BX1 - Trk.BX0 + 500)
+		var z := Trk.BZ0 - 250 + rnd() * (Trk.BZ1 - Trk.BZ0 + 500)
+		var w := 16 + rnd() * 22
+		var dz := 12 + rnd() * 10
+		var h := 9.0 + rnd() * rnd() * 26
+		var ry := 0.0 if rnd() < 0.5 else PI / 2
+		var kind := 2 if rnd() < 0.45 else int(floor(rnd() * 2))
+		var tint: Color = World.pick(tcols)
+		if overRiver(x, z) or absf(z - RZ0) < 26 or absf(z - RZ1) < 26 or Trk.distToTrack(x, z) < 30 + maxf(w, dz) / 2: continue
+		if not lots.take(x, z, ry, w / 2, dz / 2, 4.0, 4.0): continue
+		addBlock(kind, x, z, ry, w, h, dz, tint)
+
+## parks: lawns with trees and paths in a few open spots of the city
+static func parks() -> void:
+	var A := BKit.Acc.new(BKit.vmat(), false)
+	var trees := []; var tc := []
+	var n := 0
+	for _k in 60:
+		if n >= 7: break
+		var x := Trk.BX0 - 150 + rnd() * (Trk.BX1 - Trk.BX0 + 300)
+		var z := Trk.BZ0 - 150 + rnd() * (Trk.BZ1 - Trk.BZ0 + 300)
+		var w := 40 + rnd() * 40
+		var d := 40 + rnd() * 30
+		if overRiver(x, z) or absf(z - RZ0) < d / 2 + 10 or absf(z - RZ1) < d / 2 + 10 or Trk.distToTrack(x, z) < 22 + maxf(w, d) / 2: continue
+		if not lots.take(x, z, 0.0, w / 2, d / 2, 3.0, 3.0): continue
+		n += 1
+		# the lawn stands 6 cm proud of the pavement, the paths 3 cm on top of it
+		A.at(x, 0, z)
+		A.box(w, 0.12, d, 0, 0, 0, 0x5f8a3a)
+		A.box(w - 0.4, 0.03, 3.0, 0, 0.075, 0, 0xc8b89a)
+		A.box(3.0, 0.03, d - 0.4, 0, 0.075, 0, 0xc8b89a)
+		for _q in int(w * d / 180):
+			var tx := x + (rnd() - 0.5) * (w - 6)
+			var tz := z + (rnd() - 0.5) * (d - 6)
+			if absf(tx - x) < 3.5 or absf(tz - z) < 3.5: continue
+			var s := 0.75 + rnd() * 0.45
+			trees.append(World.mtx(tx, 0.06, tz, rnd() * 6, s)); tc.append(Color(1, 1, 1).darkened(rnd() * 0.25))
+		World.pavTaken.append([x, z, maxf(w, d) / 2])
+	A.commit()
+	World.inst(BKit.oakGeo(), BKit.vmat({"sway": 0.12, "swayBase": 3.0, "swaySpan": 6.0}), trees, tc, true)
 
 ## the Euromast: the shaft, the crow's nest at 96 m, the Space Tower on top and a red light
 static func euromast() -> void:
