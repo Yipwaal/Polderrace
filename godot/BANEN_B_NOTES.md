@@ -3,7 +3,11 @@
 Notities van de Banen B-agent, zodat het werk een onderbreking overleeft. De hoofdagent mag dit bestand na het
 samenvoegen weggooien; het eindverslag staat in het bericht aan de hoofdagent.
 
-## Gereedschap (eigen, tijdelijk)
+## Gereedschap
+- `tools/tour.py` (Banen A) is de standaard; testen draaien in ±30 s per baan (`TRACKS=zeeland run.py roadclear zfight ground`).
+- Snelle parse-check: `godot --headless --path godot --check-only -s res://scripts/track/builders/<baan>.gd` (alleen 'Parse Error' telt).
+
+## Gereedschap van de voorganger (tijdelijk)
 - `godot/tools/btour.gd/.tscn`: veel standpunten van één baan in één proces (chase/high/side/back, `pts=i:lat:h:li:llat:lh;…`,
   `info=1` drukt bochten en gereserveerde plekken af). Wordt vervangen door `tools/tour.*` van Banen A zodra die er is.
 - Contactbladen: scratchpad `b/tour.py <baan> [dir] [tijd] [weer] [mode] [n] [tag] [k=v …]` (met `/usr/bin/python3`, die heeft PIL),
@@ -55,13 +59,35 @@ stenen brugleuning, lantaarns, fietsen; woonboten, sloepen, varende rondvaartboo
 Amsterdamse vlaggen aan gevels; publiek bij start en bruggen; rustiger verlichte ramen 's nachts.
 Kosten na: 484/154/240k beeld (was 435/110/180k). roadclear/zfight groen; ground: alleen lampkoppen (Banen A).
 
-## Rotterdam — TE DOEN
-Gezien: grote grijze vlakte met losse torens, niets langs de weg. Plan: bebouwing langs de weg, herkenbare torens
-(De Rotterdam, kubuswoningen, Euromast beter), havenkranen, schepen (één varend), tram, neon/lichtreclame 's nachts.
+## Rotterdam — KLAAR (eerste ronde, door de opvolger afgemaakt)
+WIP van de voorganger nagekeken en gehouden (stadsblokken langs de straten, De Rotterdam, kubuswoningen, Markthal,
+Euromast met kraaiennest, containerkranen en containerschip, varende binnenvaart en watertaxi's, tram op het startrecht,
+lichtreclames, brugpijlers, pijlborden, publiek). Fout: drie parse-fouten (getypeerde variabelen uit een Dictionary,
+`floor`) — de testrunner bleef daarop hangen. Verbeterd: de stad houdt niet op achter de eerste rij (500 pogingen lagere
+blokken, 220 torens), zeven parken met paden en bomen (wuivend), betonplaten in plaats van het 5 m-raster, Euromast vóór
+de skyline (krijgt altijd een plek). roadclear/zfight groen; ground alleen lampkoppen (Banen A).
+Kosten (perf-test): 593 / 274 / 277k.
 
-## Zeeland — TE DOEN
-Gezien: zand bijna wit en leeg, felgroene berm, rechte eilandranden, lege zee. Plan: zandkleur, duinen en helmgras,
-paalhoofden, strandpaviljoens, windturbines op zee (draaiend), schepen, vliegers, dorpje, reflectoren.
+## Zeeland — KLAAR (eerste ronde)
+Fout: twee grondvlakken 1,2 cm boven elkaar (13.000 m², flikkerde) → één grondmesh met kustlijn; 22 paar keringdelen in
+één vlak (schuif ↔ onderbalk) → schuif 9,4 m hoog, 1 m korter; vuurtoren: dak en lantaarn raakten de toren niet → nieuw
+model (banden sluiten aan, omloop, lantaarn, koepel) en uit het dijktalud geschoven; strandhuisjes stonden op de
+waterlijn (z=440, eiland hield daar op).
+Verbeterd: eilanden met golvende kust en afgeronde stranden, schorren voor de dam (riet staat erop), basalt alleen onder
+op de dijk boven water, polders in kavels, dorp met kerk (klok verlicht), schapen; duinen met helm (één Acc-mesh per cel
+met strand), paalhoofden, paviljoens op palen (glaspui 's nachts verlicht), strandhuisjes, windschermen, parasols,
+mensen, zes vliegers (wiegen), branding die het strand oprolt (AnimB.bob), windpark op zee (statisch, één mesh) en vijf
+draaiende turbines langs de binnenkust (AnimB.spin), zeiljachten (twee varen), kotters (één vaart), containerschip aan de
+horizon, lampen op de kering, lichtbundel van de vuurtoren (alleen met lampen aan), pijlborden, publiek in de lus.
+Grondpunten nooit binnen 9 cm van het waterpeil (anders flikkert een plat strandstuk met het water).
+Kosten (perf-test): 556 / 116 / 366k. Reflectorpaaltjes weggelaten (spiegelbudget); riet in dress.gd van 10 naar 16 m.
+
+## Na de merge van Beeld + Rijgedrag (20 nov)
+- roadclear/zfight/ground op alle vijf: groen, behalve bekende Banen A-punten (lampkoppen naast hun paal op
+  grachten/rotterdam/zeeland, startlijn ↔ vuilstrook op veluwe/limburg).
+- test_perf-budgetten van grachten (driehoeken), limburg (spiegel), rotterdam (beeld/spiegel), zeeland (spiegel)
+  verhoogd met gemeten waarden (zie test_perf.gd).
+- Limburg in mist: de horizonheuvels (dress.horizonHills, hillMats) staan scherp boven de mistbank (Beeld/dress).
 
 ## Indelingsvoorstellen (niet uitgevoerd; baanvorm blijft)
 - (nog geen)
