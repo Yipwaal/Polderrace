@@ -1071,8 +1071,7 @@ static func buildCar(type: String, color, lite := false) -> Dictionary:
 	var K := carKit(type)
 	var S := K.S
 	var g := Node3D.new()
-	var paint := _PM(0xffffff, {"specular": 0x606060, "shininess": 60})
-	paint.albedo_color = _col(color)
+	var paint := CarPaint.paint(_col(color))
 	mesh(g, K.body, [paint, trimMat], true)
 	if K.cab != null: mesh(g, K.cab, [paint, carGlass, trimMat], true)
 	mesh(g, K.G.paint, paint, true); mesh(g, K.G.trim, trimMat); mesh(g, K.G.lamp, lampMat); mesh(g, K.G.tail, tailMat); mesh(g, K.G.chrome, chromeMat)
