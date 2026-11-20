@@ -77,6 +77,20 @@ func run(host: Node) -> TestReport:
 	L.step(20)
 	r.check(Game.player.s != p1s and Game.p2.pl.speed > 5, "2 spelers: allebei rijden", "p1 %.0f m/s, p2 %.0f m/s" % [Game.player.speed, Game.p2.pl.speed])
 	r.check(Game.otherProgress() != null, "2 spelers: voortgang van speler 2 telt mee")
+	# player 2's camera follows with the frame's own time step (it used a fixed 1/60: twice as fast at 120 fps)
+	var svPrev = SplitView.me
+	var sv := SplitView.new()
+	host.add_child(sv)
+	var turn := func(dt: float) -> float:
+		Game.p2.camHeading = Game.p2.pl.heading + 0.6
+		SplitView.me.tick(dt)
+		return absf(Game.p2.camHeading - (Game.p2.pl.heading + 0.6))
+	var big: float = turn.call(0.05)
+	var small: float = turn.call(0.0125)
+	r.check(small > 0 and big / small > 2.5, "2 spelers: camera van speler 2 volgt met de echte frametijd", "50 ms: %.3f rad, 12,5 ms: %.3f rad" % [big, small])
+	if sv._main_mask != 0: cam.cull_mask = sv._main_mask
+	sv.queue_free()
+	SplitView.me = svPrev
 	_drive_until(func(): return Game.state == "over", 220)
 	r.check(Game.state == "over", "2 spelers: uitslag na de finish", Game.state)
 	r.check(Game.resultRows.filter(func(x): return x.get("me", false)).size() == 2, "2 spelers: allebei in de uitslag")

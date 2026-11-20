@@ -124,7 +124,10 @@ func tick(dt: float) -> void:
 	cam1.global_transform = main_cam.global_transform; cam1.fov = main_cam.fov
 	var save_t := main_cam.global_transform
 	var save_f := main_cam.fov
-	g.asP2(func(): g.updateCamera(0.0 if g.paused else 1.0 / 60))
+	# (the frame's own time step, as player 1's camera gets: with a fixed 1/60 the second camera followed twice as
+	# fast at 120 fps and half as fast at 30 fps)
+	var cdt := 0.0 if g.frozen() else dt
+	g.asP2(func(): g.updateCamera(cdt))
 	cam2.global_transform = main_cam.global_transform; cam2.fov = main_cam.fov
 	main_cam.global_transform = save_t; main_cam.fov = save_f
 	# player 2's HUD
