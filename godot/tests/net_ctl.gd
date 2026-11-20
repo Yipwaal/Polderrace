@@ -44,7 +44,11 @@ func _ready() -> void:
 	for id in Cars.CARS: owned[id] = true
 	# (the same token every time this player starts: a game that crashed comes back as the same player)
 	var store := {"polderrace3d-garage": {"owned": owned}, "polderrace3d-online": {"tok": ("tok-%s-0123456789abcdef" % pname) if a.get("tok", "") == "" else a.tok}}
-	if a.get("look", "") != "": store["polderrace3d-garage"]["cars"] = {a.car: JSON.parse_string(a.look)}
+	if a.get("look", "") != "":
+		# a whole garage entry, as the game saves one (the looks given on top of the factory state)
+		var up := Cars.default_up()
+		up.merge(JSON.parse_string(a.look), true)
+		store["polderrace3d-garage"]["cars"] = {a.car: up}
 	G.use_store("user://test-netctl-%s.json" % pname, store)
 	Net.said.connect(func(who, text): said.append([who, text]))
 	G.prefs.nick = a.nick if a.nick != "" else pname
