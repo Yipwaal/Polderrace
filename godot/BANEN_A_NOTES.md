@@ -27,8 +27,22 @@ boerderij bij S-bocht; molenrij + vaart naast start; dorpje met kerk midden in d
 Fout (tests): reclameborden op lat 19.6 = EDGE (auto rijdt er 0,9 m doorheen), bandenstapels op 17.5 midden in uitloop,
 duin 70x9x87 raakt uitloop bij 420-438 m, 18 masten 1,26 m boven de grond, vuil/kerb 0,5 cm (opgelost via grime).
 
-## Afsluitdijk
-Fout (tests): dijkvoetstrook #6d6a64 1 cm boven zeevlak (7400 m2 flikkert), 84 schapen? (0.8x0.8x1.3 #efece2) 0,35 m boven de grond.
+## Afsluitdijk (klaar, commit 04308a5, opvolger)
+Fout (tests): dijkvoetstrook #6d6a64 1 cm boven zeevlak (7400 m2 flikkert), 84 schapen 0,35 m boven de grond. Opgelost.
+Zwak: neongroen egaal land, harde rand land/zee, "brug over de sluizen" was een bult in een grasdijk, sluizen dozen op het land.
+Gedaan: brug met landhoofden/pijlers over een schutsluis (deuren, spuisluis, kotter), Stevinsluizen in het water,
+Vlietermonument + loopbrug (s~450), basaltranden rond het land, 14 boten (kotters, jachten, coasters), fietspad,
+bochtschilden, naadloos gras (ook polder), land in vakken van 40 m, World.noDress (decor niet in zee/sluis).
+Tekenaanroepen high (4 punten): 529/118 (beeld/spiegel) -> 566/150 (budget 700/160).
 
-## Haven
-Fout (tests): 343 paren containers staan in elkaar (flikkeren), kraanonderdelen/containers zweven (ground).
+## Haven (klaar, commit 2a0e9d3, opvolger)
+Fout (tests): 343 paren containers in elkaar, kraangiek 0,5 m boven portaal, lantaarnpalen 1 m boven talud,
+geparkeerde trucks: container 12 cm boven chassis (model, vehicles.gd: gemeld, niet aangepast; test telt voertuig als geheel).
+Gedaan: containerblokken op raster met paden, viaduct op kolommen (VIA 2,6 m), kades rondom met fenders/bolders,
+tankpark, loods met deuren en naam, kraanloopkat met spreader, locomotief, lichtmasten, bochtschilden, donkerdere bestrating.
+Tekenaanroepen high: 491/121, 206k driehoeken -> 535/151, 255k (budget 650/170/280k): containers zonder onderkant.
+
+## Gedeeld (opvolger)
+- world.gd: World.noDress; dress.gd: alongSides en crates slaan noDress over
+- common.gd: landPlane(..., cell) optioneel onderverdeeld
+- startlijn/vuilstrook: bekeken (circuit), ziet er goed uit, niet veranderd
