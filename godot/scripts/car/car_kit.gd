@@ -1401,8 +1401,7 @@ static func buildCar(type: String, color, lite := false) -> Dictionary:
 	if driver != null: driver.visibility_range_end = 90.0
 	var stock := [mesh(shell, K.G.wingP, paint, true), mesh(shell, K.G.wingT, detailMat, true)].filter(func(o): return o != null)
 	var ex := mesh(shell, K.G.exh, detailMat)
-	shell.set_meta("exh", {"meshes": [ex] if ex != null else []})
-	g.set_meta("exh", shell.get_meta("exh"))
+	g.set_meta("exh", {"meshes": [ex] if ex != null else []})
 	if K.G.stripe != null:
 		var stp := _M(0xf7f7f2)
 		stp.set_meta("stripe", true)
@@ -1416,6 +1415,16 @@ static func buildCar(type: String, color, lite := false) -> Dictionary:
 	return {"g": g, "shell": shell, "wheels": wheels, "len": S.len, "wid": S.wid, "rc": S.get("hitR", Cars.CAR_RC), "off": S.get("off", 0.0), "type": type,
 		"wingY": K.wingY, "wingZ": K.wingZ, "stockWing": stock, "beam": beam, "blob": blob, "kit": K, "paint": paint,
 		"body": body, "detail": det, "glass": glass, "lamp": lamp, "tail": tail, "plate": plate, "driver": driver, "lights": {"brake": false, "rev": false}}
+
+## a parked car for the roadside: nobody in it, no headlight pool, no brake calipers
+static func parkedCar(type: String, color) -> Node3D:
+	var m := buildCar(type, color, true)
+	for k in ["driver", "beam"]:
+		var o = m.get(k, null)
+		if o != null:
+			o.get_parent().remove_child(o)
+			o.free()
+	return m.g
 
 # ---------------------------------------------------------------- looks and tuning
 

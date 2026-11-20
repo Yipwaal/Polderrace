@@ -155,7 +155,7 @@ static func parkedCars(n: int, lat: float, filter = null) -> void:
 		var type: String = World.pick(["hatch", "sedan", "coupe", "rally"])
 		var col := Color(World.pick(cols))
 		var ry := Trk.heading_of(Trk.T[i]) + (0.0 if rnd() < 0.5 else PI)
-		var g: Node3D = car_builder.call(type, col) if car_builder.is_valid() else CarKit.buildCar(type, col).g
+		var g: Node3D = car_builder.call(type, col) if car_builder.is_valid() else CarKit.parkedCar(type, col)
 		g.position = Vector3(x, 0, z)
 		g.rotation.y = ry
 		for mi in g.find_children("*", "GeometryInstance3D", true, false):
