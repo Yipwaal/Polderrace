@@ -3,3 +3,5 @@
 build/
 *.tmp
 tests/.out/
+# per-agent save folder (XDG_DATA_HOME), see PLAN2.md
+.xdg/

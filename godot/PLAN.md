@@ -4,6 +4,9 @@ Yip vroeg op 2 oktober 2026 om de echte pc-versie in Godot, met online spelen (L
 De HTML-versie (`../polderrace-3d.html`) blijft de gepubliceerde browserversie en is het **naslagwerk**: de Godot-versie
 is een getrouwe port ervan. Zelfde banen, auto's, rijgedrag, menu's, carrière, en waar het kan dezelfde getallen.
 
+> **Fase 2 (vanaf 20 november 2026): zie `PLAN2.md`.** De Godot-versie is nu de hoofdversie; de portregels hieronder
+> zijn richtlijnen en de golden-bestanden zijn de goedgekeurde stand van Godot zelf (`run.py --update`).
+
 ## Stand van zaken
 
 | Onderdeel | Stand |

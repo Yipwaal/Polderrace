@@ -106,23 +106,37 @@ static func compare(mine: Dictionary, g: Dictionary) -> String:
 	return ""
 
 func run(host: Node) -> TestReport:
-	var r := TestReport.new("auto's en verkeer gelijk aan de HTML-versie")
-	var gold: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/golden/cars.json"))
+	var r := TestReport.new("auto's en verkeer zoals vastgelegd (golden/cars.json)")
+	var gold: Dictionary = TestReport.load_golden("cars")
+	var upd := TestReport.updating()
 	if World.root == null:
 		World.root = Node3D.new()
 		host.add_child(World.root)
 	var only := OS.get_environment("CARS")
-	for key in gold:
+	# every car model plain and in every variant of VARIANTS, plus the traffic vehicles
+	var keys := []
+	for id in Cars.CARS:
+		keys.append(id + "/base")
+		for v in VARIANTS: keys.append("%s/%s" % [id, v])
+	for t in ["hatch", "van", "truck", "tractor"]: keys.append("traffic/" + t)
+	for key in keys:
 		if only != "" and not key.split("/")[0] in only.split(","): continue
 		var t0 := Time.get_ticks_msec()
 		var m := build(key)
 		var ms := Time.get_ticks_msec() - t0
-		var bad := compare(dump(m), gold[key])
-		r.check(bad == "", key, bad if bad != "" else "%d meshes (%d ms)" % [gold[key].meshes.size(), ms])
+		if upd:
+			gold[key] = dump(m)      # record this model as the approved state
+			r.check(true, key + ": vastgelegd", "%d meshes" % gold[key].meshes.size())
+		elif not gold.has(key):
+			r.check(false, key, "staat niet in golden/cars.json (leg vast met run.py --update cars)")
+		else:
+			var bad := compare(dump(m), gold[key])
+			r.check(bad == "", key, bad if bad != "" else "%d meshes (%d ms)" % [gold[key].meshes.size(), ms])
 		# hold the materials until the nodes are gone (the headless renderer complains about a material freed first)
 		var keep := []
 		for e in dump_nodes(m.g):
 			for s in e.mesh.get_surface_count(): keep.append(e.get_surface_override_material(s))
 		m.g.free()
 		keep.clear()
+	if upd: TestReport.save_golden("cars", gold)
 	return r

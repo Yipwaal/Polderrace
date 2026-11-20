@@ -3,12 +3,15 @@
 Logic tests run headless (no window). Visual tests (screenshots) need a display: they run under xvfb-run with OpenGL
 (software Mesa in the cloud), see tests/shots.py.
 """
-import subprocess, sys, pathlib, shutil
+import subprocess, sys, pathlib, shutil, os
 HERE = pathlib.Path(__file__).resolve().parent
 PROJ = HERE.parent
 GODOT = shutil.which('godot') or shutil.which('godot4') or 'godot'
 DEFAULT = ['track']
-names = sys.argv[1:] or DEFAULT
+names = [a for a in sys.argv[1:] if not a.startswith('--')] or DEFAULT
+# --update: record the current Godot state as the approved one in tests/golden (build, cars, laps); see tests/report.gd
+if '--update' in sys.argv:
+    os.environ['GOLDEN_UPDATE'] = '1'
 # (re)import first: new scripts with class_name are only known after an import, and an unknown class makes the runner hang
 subprocess.run([GODOT, '--headless', '--path', str(PROJ), '--import'], capture_output=True, text=True, timeout=600)
 r = subprocess.run([GODOT, '--headless', '--path', str(PROJ), 'res://tests/runner.tscn', '--', *names], capture_output=True, text=True, timeout=7200)

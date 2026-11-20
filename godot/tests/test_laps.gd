@@ -35,8 +35,9 @@ func step(sec: float, steer := true) -> void:
 	g.keysDown.erase("ArrowUp"); g.keysDown.erase("ArrowLeft"); g.keysDown.erase("ArrowRight")
 
 func run(host: Node) -> TestReport:
-	var r := TestReport.new("rijden zoals de HTML-versie (autopiloot-ronde)")
-	var gold: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/golden/laps.json"))
+	var r := TestReport.new("rijden zoals vastgelegd (autopiloot-ronde, golden/laps.json)")
+	var gold: Dictionary = TestReport.load_golden("laps")
+	var upd := TestReport.updating()
 	var env := Env.new()
 	host.add_child(env)
 	World.root = Node3D.new()
@@ -65,17 +66,23 @@ func run(host: Node) -> TestReport:
 		while t < 300 and not Game.raceDone:
 			step(2)
 			t += 2
+		if upd:
+			# record this lap as the approved handling
+			gold[key] = {"ft": Game.raceFinishTime, "laps": Game.lapTimes.duplicate(), "top": Game.raceTopSpeed, "done": Game.raceDone, "resets": resets}
+			r.check(Game.raceDone, "%s %s: vastgelegd" % [tr, carId], "finish %.3f s, top %.1f km/u, %d keer terug" % [Game.raceFinishTime, Game.raceTopSpeed * 3.6, resets])
+			continue
 		var h: Dictionary = gold[key]
 		# Godot's Vector3 holds 32-bit floats, JS numbers are 64-bit: the positions drift apart by micrometres, which a wall
 		# contact or a hill can grow into a few tenths over a lap (most laps still match to the millisecond). Wind tracks:
 		# the gusts are random in both versions.
 		var tol := 3.0 if TrackDefs.TRACKS[tr].get("wind", false) else (0.15 if tr == "polder" else 0.5)
 		r.check(Game.raceDone, "%s %s: ronde uitgereden" % [tr, carId])
-		r.check(absf(Game.raceFinishTime - h.ft) < tol, "%s %s: finishtijd gelijk" % [tr, carId], "godot %.3f, html %.3f s" % [Game.raceFinishTime, h.ft])
+		r.check(absf(Game.raceFinishTime - h.ft) < tol, "%s %s: finishtijd gelijk" % [tr, carId], "nu %.3f, vastgelegd %.3f s" % [Game.raceFinishTime, h.ft])
 		if not Game.lapTimes.is_empty() and not h.laps.is_empty():
-			r.check(absf(Game.lapTimes[0] - h.laps[0]) < tol, "%s %s: rondetijd gelijk" % [tr, carId], "godot %.3f, html %.3f s" % [Game.lapTimes[0], h.laps[0]])
-		r.check(absf(Game.raceTopSpeed - h.top) < 0.5, "%s %s: topsnelheid gelijk" % [tr, carId], "godot %.1f, html %.1f km/u" % [Game.raceTopSpeed * 3.6, h.top * 3.6])
-		r.check(resets == int(h.resets), "%s %s: zelfde aantal keer terug op de baan" % [tr, carId], "godot %d, html %d" % [resets, h.resets])
+			r.check(absf(Game.lapTimes[0] - h.laps[0]) < tol, "%s %s: rondetijd gelijk" % [tr, carId], "nu %.3f, vastgelegd %.3f s" % [Game.lapTimes[0], h.laps[0]])
+		r.check(absf(Game.raceTopSpeed - h.top) < 0.5, "%s %s: topsnelheid gelijk" % [tr, carId], "nu %.1f, vastgelegd %.1f km/u" % [Game.raceTopSpeed * 3.6, h.top * 3.6])
+		r.check(resets == int(h.resets), "%s %s: zelfde aantal keer terug op de baan" % [tr, carId], "nu %d, vastgelegd %d" % [resets, h.resets])
+	if upd: TestReport.save_golden("laps", gold)
 	Game.set_process(true)
 	Game.set_process_input(true)
 	return r

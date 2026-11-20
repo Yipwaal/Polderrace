@@ -7,6 +7,10 @@ Arcade-racegame, Nederlands thema. Eigenaar: Yip. **Spreek Nederlands met Yip**;
 > De HTML-versie `polderrace-3d.html` (één bestand, Three.js r128) blijft bestaan als gepubliceerde browserversie
 > én als naslagwerk: de Godot-versie is een getrouwe port ervan (zelfde banen, auto's, getallen en algoritmes).
 > Alles hieronder over het HTML-bestand blijft gelden voor dat bestand. Andere engines/frameworks (Unity, React, ...) niet.
+>
+> **Fase 2 (Yip, 20 november 2026): de Godot-versie is de hoofdversie** en wordt beter dan de browserversie
+> (rijgedrag, beeld, automodellen, banen, meer aanpasopties, LAN, bugs). Plan, teamindeling en werkafspraken:
+> `godot/PLAN2.md`. De HTML-versie blijft staan zoals hij is.
 
 ## Werkafspraken (altijd)
 
