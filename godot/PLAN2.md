@@ -90,7 +90,7 @@ met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 | Basis: golden vanuit Godot, plan | klaar |
 | Rijgedrag | loopt (Opus neemt over) |
 | Automodellen | loopt (Opus neemt over) |
-| Aanpassen | loopt, deel 1 (Opus neemt over) |
+| Aanpassen | deel 1 klaar en samengevoegd (27 onderdelen, 203 opties); deel 2 wacht op Automodellen |
 | Banen A | gereedschap op main; banen loopt (Opus neemt over) |
 | Banen B | loopt (Opus neemt over) |
 | Beeld | loopt (Opus neemt over) |
