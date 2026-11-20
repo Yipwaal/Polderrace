@@ -38,8 +38,12 @@ func run(host: Node) -> TestReport:
 		for dir in ["fwd", "rev"]:
 			var t0 := Time.get_ticks_msec()
 			Scan.build(id, dir)
+			# a builder that does not parse leaves an empty world, which would pass every map test: the builder made a road
+			# (World.roadMat) and a reasonable number of objects
+			var builtRoad := not World.roadMats.is_empty()
 			scan = Scan.new()
 			scan.collect(World.root)
+			r.check(builtRoad and scan.items.size() >= 1000, "%s/%s baan gebouwd" % [id, dir], "weg %s, %d objecten" % ["ja" if builtRoad else "NEE", scan.items.size()])
 			var res := check()
 			var ms := Time.get_ticks_msec() - t0
 			for kind in ["zwevend", "begraven"]:

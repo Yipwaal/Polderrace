@@ -227,7 +227,7 @@ static func build() -> void:
 	BKit.chevrons(10.0, 0.016, 9.0, 1.2, false)
 	fans()
 	TrackCommon.signs([["Neeltje Jans", "2"], ["Zierikzee", "12"], ["Middelburg", "24"]], 10.2)
-	TrackCommon.lampRow(8.9, 90, 10, {})
+	TrackCommon.lampRow(9.4, 90, 10, {})   # outside the rail: the post with its arm stays out of the run-off
 
 ## Oosterscheldekering: one continuous barrier on its own gently curved line (a Bezier in world coordinates, so the same in both
 ## driving directions) on the sea side of the dam. Piers stand at one fixed spacing; the road girder, the upper beam and the gates
