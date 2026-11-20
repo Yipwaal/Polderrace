@@ -539,6 +539,14 @@ def scenario_car():
     g.cmd('esc'); time.sleep(0.5)
     r = g.rep()
     check(r.get('ui') and r.get('net') and not r.get('lobbyView') and 'NetUi' in r.get('focus', ''), 'Esc in de autostap: terug in het online-scherm', (r.get('ui'), r.get('focus')))
+    # two players with the same name: every screen calls the one with the later seat "Bram (2)"
+    o.cmd('nick Bram')
+    rh = h.wait(lambda r: sorted(x['name'] for x in r['remotes']) == ['Bram', 'Bram (2)'], 5)
+    names_h = {x['peer']: x['name'] for x in rh.get('remotes', [])}
+    rs = [p.wait(lambda r: all(names_h.get(x['peer'], x['name']) == x['name'] for x in r['remotes']), 5) for p in (g, o)]
+    check(sorted(names_h.values()) == ['Bram', 'Bram (2)'] and all(len(r.get('remotes', [])) == 2 and all(names_h.get(x['peer'], x['name']) == x['name'] for x in r['remotes']) for r in rs),
+          'twee spelers met dezelfde naam: overal dezelfde "Bram" en "Bram (2)"', (names_h, [[(x['peer'], x['name']) for x in r.get('remotes', [])] for r in rs]))
+    o.cmd('nick Lotte')
     # the host starts while Bram is choosing a car: he is in the race with everyone
     g.cmd('press Auto kiezen'); time.sleep(0.3)
     h.cmd('set laps 1'); h.cmd('start')

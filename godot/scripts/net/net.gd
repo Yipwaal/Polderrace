@@ -422,7 +422,7 @@ func netSyncRemotes() -> bool:
 			net.remotes[p.peer] = r
 			news = true
 			if net.host: netStatus("%s doet mee." % str(pr.nick).substr(0, 24))
-		var nm := str(pr.nick).substr(0, 24)
+		var nm := _dispName(p.peer, str(pr.nick).substr(0, 24))
 		var hs := bool(pr.get("host", false))
 		if nm != r.name or hs != r.host:
 			r.name = nm; r.host = hs; news = true
@@ -470,6 +470,19 @@ func netSyncRemotes() -> bool:
 			if Game.state != "menu": Hud.showToast(t)
 	if net.host and news: _sendSeats()
 	return news
+
+## the name of a player as every PC shows it: two players with the same name are "Bram" and "Bram (2)" (by seat,
+## so it is the same on every screen)
+func _dispName(id: String, nick: String) -> String:
+	var key := nick.strip_edges().to_lower()
+	var n := 1
+	for p in net.game.peers():
+		if p.peer == id or not (p.presence is Dictionary): continue
+		if str(p.presence.get("nick", "")).substr(0, 24).strip_edges().to_lower() == key and _seatNo(p.peer) < _seatNo(id): n += 1
+	return nick if n == 1 else "%s (%d)" % [nick, n]
+
+static func _seatNo(id: String) -> int:
+	return 0 if id == "h" else (int(id.substr(1)) if id.begins_with("g") else 999)
 
 ## guest: what the host says about the game (settings, countdown, results, standings, connection quality, seats)
 func _hostState(pr: Dictionary) -> bool:
@@ -1160,7 +1173,7 @@ func _judge(now: int) -> void:
 	var humans := 0
 	if Game.state != "menu":
 		var fin: bool = Game.raceDone and not Game.playerOut
-		rows.append({"p": room.me, "n": str(G.prefs.nick), "c": G.settings.car, "f": fin, "t": Game.raceFinishTime if fin else 0.0,
+		rows.append({"p": room.me, "n": _dispName(room.me, str(G.prefs.nick)), "c": G.settings.car, "f": fin, "t": Game.raceFinishTime if fin else 0.0,
 			"g": Game.progressOf(Game.player.lap, Game.player.s, fin, Game.raceFinishTime), "b": false})
 		humans += 1
 		if fin: net.firstFin = now if int(net.firstFin) == 0 else net.firstFin

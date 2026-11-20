@@ -109,32 +109,43 @@ Mogelijke volgende stappen (nog niet gedaan): menu's meeschalen op hoge-DPI-sche
   (rechts): `tests/.out/menus/compare_<BxH>/<scherm>.png`. Beide met dezelfde save (`tools/menus_state.json`);
   `--html` maakt de HTML-kant opnieuw (`tools/menus_html.py`, met de echte lettertypen).
 
-## Online (G6) — ontwerp
+## Online (G6) — ontwerp (fase 2: LAN-avond met 8 spelers, protocol 4)
 
-- **LAN-lobby zonder codes** (`net/lan.gd`): een speler met het online-scherm open vraagt elke seconde "wie host?"
-  (UDP `POLDERRACE?1` naar poort 47811: 255.255.255.255, 127.0.0.1 en per netwerkkaart het broadcastadres voor /24, /23,
-  /22, /16 en bij 10.x /8, want Windows stuurt 255.255.255.255 maar uit één kaart en Godot kent de netmask niet); elke
-  host antwoordt rechtstreeks met `{pr, v, id, name, track, n, max, open, race}`. Alleen de host luistert, dus alleen
-  de host heeft de firewall nodig. Een game die 3,5 s niet antwoordt, verdwijnt uit de lijst.
-- Spel zelf: Godot **ENet** (`net/net_room.gd`, poort 47810, één reserveplek zodat de 9e speler "vol" hoort),
-  host = server, sterverbinding met presence-patches zoals de HTML-room. Zelfde rolverdeling als de HTML: de host
-  bepaalt start (`race` met `order`), bots (`b`) en volgorde; spelers sturen hun positie (`st`) en botsingen met bots
-  (`k`); een gast mag alleen nick/car/color/st/k zetten. `st`/`b`/`k` gaan onbetrouwbaar-op-volgorde (kanaal 1).
-- Afwijkingen van de HTML (bugs die daar ook zitten): `st` en `k` dragen het race-id (late pakketjes van de vorige race
-  tellen niet), `st[10]` = tijd sinds de start (de startlampen volgen de klok van de host, zelfde wachttijd voor groen
-  uit het race-id), bots bij gasten rijden door tussen de posities van de host (kleine verschillen uitgesmeerd),
-  *Nieuwe race* start ook bij wie nog rijdt of de replay bekijkt, een speler die naar het menu gaat of niets meer
-  stuurt verdwijnt van de baan, games die racen of vol zijn staan in de lijst (laatkomers wachten op de volgende race),
-  het protocol heeft een versie (`NetRoom.PROTO`).
-- ENet-time-out 12-20 s (limiet 8): ruim genoeg voor een trage pc die een baan laadt; een gesloten venster zegt meteen
-  gedag (`NOTIFICATION_WM_CLOSE_REQUEST`), een gecrasht spel verdwijnt na ±15 s (van de baan na 1,5 s).
-- Ook: meedoen via IP-adres (internet, met port forwarding of UPnP via `UPNP`-klasse, in een thread).
-- Tests: `tests/test_net.py` (2 processen, snel) en `tests/test_net_more.py` (±3 min): host + 3 spelers met alles
-  rond weggaan/haperen/nieuwe race/laatkomer/replay; 9 spelers (vol), Esc, verkeerd IP; auto kiezen (in een venster,
-  headless crasht die menustap); LAN met losse pc's in netwerk-namespaces met een slechte verbinding (`net_lossy.py`).
-  Spelers zijn `tests/net_ctl.gd` (commando's als aan het toetsenbord), gestart door `tests/net_players.py`; als root
-  op Linux draait elk testscript in een eigen netwerk, zodat andere spellen op deze pc niet meedoen.
-  Schermafdrukken van het online-scherm: `tools/shot_net.gd` (host en speler elk in een venster).
+- **Games vinden** (`net/lan.gd`): elke seconde "wie host?" (UDP `POLDERRACE?1`, poort 47811) naar 255.255.255.255,
+  127.0.0.1, per netwerkkaart het broadcastadres van /24, /23, /22, /16 (10.x ook /8) en rechtstreeks naar onthouden
+  IP-adressen; vindt dat na een paar seconden niets, dan vraagt hij alle adressen van de eigen /24 één voor één (sweep).
+  De host antwoordt `{pr, v, id, name, track, n, max, open, race}` en roept zelf elke 2 s een baken (poort 47812): wie
+  het baken hoort maar geen antwoord krijgt, ziet de game met "firewall van de host dicht". De host telt wie zijn game
+  ziet (`searching()`), test zichzelf (eigen vraag komt terug) en kan op Windows de firewall openzetten (netsh via
+  PowerShell met UAC; niet op Windows getest). Na 10 s zonder games: hulptekst met concrete stappen.
+- **Verbinding** (`net/net_room.gd`): ENet (poort 47810, range coder), host = server, ster. Bij binnenkomst `hi` met
+  token → vaste stoel (uid = hash van het token): wie wegvalt houdt 45 s zijn stoel, id en punten; de gast verbindt
+  15 s lang zelf opnieuw. Kick (ban op uid), open/dicht, vol (9e speler hoort "vol"), andere versie ("andere versie").
+  Alles van de lijn gaat door `clean()` (types, lengtes, getallen eindig, looks ≤ 1000 tekens), kapotte JSON wordt stil
+  weggegooid (`parse_json`), per gast een rate limit (token bucket). Positiepakketjes van iedereen per frame gebundeld
+  (`{t:"f"}`); bytes/s gemeten (`up_bps`/`down_bps`).
+- **Presence** (wat elke speler deelt): `nick, car, color, look (G.lookOf: lak, afwerking, strepen, velgen, …),
+  rdy, vote, e (chat), st (positie), k (tik tegen bot)`; de host daarnaast `cfg` (instellingen live in de lobby),
+  `cd` (aftellen), `race` (met `order` = startvolgorde), `b` (bots), `res` (officiële uitslag), `pts` (stand van de
+  avond, per uid), `q` (ping/verlies per speler), `seats` (uid + IP per stoel, voor een hostwissel).
+- **Race** (`net/net.gd`): aftellen 3 s met baan voorladen, start op de klok van de host (`st[10]`); auto's van anderen
+  met tijdstempels en dead reckoning (op 150 ms ± 30 ms en 5% verlies: 95% binnen 0,7 m van de echte plek); de host
+  beslist uitslag en punten (afstand gecontroleerd: een finish die niet kan, telt niet), meekijken na de finish of als
+  laatkomer, naamlabels boven auto's (instelbaar), pauze online bevriest niets. Startvolgorde: leider achteraan /
+  vooraan / willekeurig / vast; volgende baan: host / om de beurt / willekeurig / stemmen.
+- **Hostwissel**: stopt of crasht de host, dan kiezen de anderen zonder overleg dezelfde nieuwe host (wie in de race zit
+  eerst, dan op stoel); die opent de game met alles wat hij weet (stand, instellingen, race), de rest verbindt met zijn
+  IP-adres (uit `seats`) en houdt zijn stoel. Een eenzame host blijft 2 min bij de oude adressen vragen of de game daar
+  nog is (zijn eigen netwerk viel weg) en gaat dan zelf terug.
+- **Dubbele namen**: elke pc toont de tweede "Bram" als "Bram (2)" (op stoelvolgorde, dus overal gelijk).
+- **Bandbreedte** (8 spelers + 5 bots, gemeten): host ±60 kB/s omhoog, speler ±1,4 kB/s omhoog en ±9 kB/s omlaag.
+- **Tests**: `tests/test_net.py` (2 processen, ±20 s, in CI) en `tests/test_net_more.py` (±6 min, in CI zonder
+  scenario 4): 1 een avond (lobby, klaar, chat, aftellen, drie races, meekijken, crash en terugkomen, overname midden
+  in de race), 2 vol met 9 spelers (kick, gesloten, vijandige pakketjes, race met 8, bandbreedte, overname in de lobby),
+  3 auto en uiterlijk in de lobby (venster, xvfb), dubbele namen, 4 LAN met losse pc's (alleen Linux als root:
+  netwerk-namespaces; /16, VirtualBox-kaart, broadcast dicht, firewall dicht, slechte verbinding via `net_lossy.py`,
+  wifi 5 s en 12 s weg, host crasht). Spelers zijn `tests/net_ctl.gd` (commando's als aan het toetsenbord), gestart
+  door `tests/net_players.py`. Schermafdrukken van alle online-schermen: `python godot/tools/shot_net.py`.
 
 ## Export (G8)
 

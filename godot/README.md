@@ -39,21 +39,38 @@ De toetsen zijn in te stellen bij Instellingen.
 
 ## Online spelen (LAN-party of thuis)
 
-- **Host:** Online spelen → *Nieuwe game maken*. Kies baan, ronden en bots; wacht tot iedereen in de lijst staat en
-  klik *Start race*.
-- **Meedoen:** Online spelen → de game van de host staat vanzelf in de lijst *Games op dit netwerk* → *Meedoen*.
-  Geen codes nodig. Iedereen moet op hetzelfde netwerk zitten (zelfde wifi of switch).
-- Werkt het vinden niet (sommige routers of gastnetwerken blokkeren dat), dan kan meedoen ook via het IP-adres van de
-  host: dat staat in het scherm van de host ("Jouw IP-adres").
-- **Via internet:** de host klikt *Via internet bereikbaar maken* (zet poort 47810 open via UPnP), of zet zelf
-  UDP-poort **47810** open in de router. De anderen doen mee via het internet-IP-adres van de host.
-- Tot 8 spelers per game, plus bots. De host bepaalt de race; iedereen ziet elkaars auto's en dezelfde bots.
-- Je auto kies je in de game met *Auto kiezen*. Kom je binnen terwijl er een race bezig is, dan doe je mee vanaf de
-  volgende race. *Nieuwe race* (host, op de uitslag) start de volgende race voor iedereen, ook voor wie nog rijdt.
-- Alleen de host hoeft het spel door de firewall te laten (zie hierboven). Ziet niemand de game van de host:
-  check de firewall van de host, of doe mee via het IP-adres dat bij de host staat (het echte netwerk staat vooraan;
-  adressen met VirtualBox, Hyper-V of VPN erachter zijn het meestal niet).
-- Eén host per pc (de poort is dan bezet); meedoen kan wel met meerdere spellen op één pc.
+**Host (één pc):** Online spelen → *Nieuwe game maken*. Je ziet de lobby: links de race (baan, richting, ronden, bots,
+niveau, tijd, weer, startvolgorde, volgende baan), rechts de spelers met auto, ping en *klaar*, en de chat.
+Alles wat je instelt zien de anderen meteen. Het spel onthoudt je instellingen voor de volgende keer.
+- *Start race* telt 3 seconden af bij iedereen (nog een keer klikken = annuleren). Is iemand nog niet klaar, dan staat er
+  *Start toch (… niet klaar)*: klikken mag, hij rijdt gewoon mee.
+- *Eruit* (twee keer klikken) zet een speler uit de game; *Nieuwe spelers: gesloten* laat niemand meer binnen.
+- Na de race: uitslag met punten (10-8-6-5-4-3-2-1) en de *Stand van de avond*. *Nieuwe race* start de volgende,
+  op de baan die bij *Volgende baan* hoort (zelf kiezen, om de beurt, willekeurig of stemmen).
+- Stopt de host (of valt zijn pc uit), dan neemt een andere speler de game vanzelf over: de race en de stand gaan door.
+
+**Meedoen:** Online spelen → de game van de host staat vanzelf in de lijst *Games op dit netwerk* → *Meedoen*. Geen codes.
+Kies in de lobby je auto en kleur (pijltjes of *Auto kiezen*), en klik *Ik ben klaar*. Je auto ziet er bij de anderen uit
+zoals in je garage (lak, strepen, velgen, nummer, …).
+- Kom je binnen terwijl er een race bezig is: *Meekijken*, en je doet mee vanaf de volgende race.
+- Ben je klaar met de race, dan kijk je mee met de anderen (pijltjes: wie je volgt).
+- Even geen wifi? Het spel verbindt zelf opnieuw, met je eigen plek en punten. Spel gecrasht? Start het opnieuw en klik
+  weer *Meedoen*: je punten staan er nog.
+- Twee spelers met dezelfde naam mag; de lijst laat zien wie wie is.
+
+**Niemand ziet de game?** Na 10 seconden zonder games zegt het scherm wat je kunt nalopen. Kort:
+1. Zit iedereen op hetzelfde netwerk (zelfde wifi of switch)? Gastnetwerken laten pc's elkaar vaak niet zien.
+2. De host klikt *Windows-firewall openzetten* (of bij de eerste keer: **Particuliere** én **Openbare netwerken**
+   aanvinken). Bij de host staat of spelers zijn game zien.
+3. Lukt het nog niet: *Rechtstreeks via het IP-adres van de host* (het IP-adres staat bij de host). Het spel onthoudt
+   het adres, de volgende keer is het één klik.
+- Adressen met VirtualBox, Hyper-V of VPN erachter zijn meestal niet het goede; het echte netwerk staat vooraan.
+
+**Via internet:** de host klikt *Via internet bereikbaar maken* (zet poort 47810 open via UPnP; bij afsluiten gaat hij
+weer dicht) of zet zelf UDP-poort **47810** open in de router. De anderen doen mee via het internet-IP-adres van de host.
+
+Tot 8 spelers per game, plus bots. Eén host per pc (de poort is dan bezet); meedoen kan wel met meerdere spellen op één pc.
+Iedereen moet dezelfde versie hebben: anders zegt de lijst "andere versie".
 
 Poorten: 47810/UDP (het spel), 47811/UDP (games vinden op het netwerk).
 
@@ -61,4 +78,4 @@ Poorten: 47810/UDP (het spel), 47811/UDP (games vinden op het netwerk).
 
 Zie [PLAN.md](PLAN.md): opzet, portregels (de Godot-versie is een getrouwe port van `../polderrace-3d.html`) en tests.
 Tests: `python godot/tests/run.py track build laps cars flow audio menus rules memory perf play` en `python godot/tests/test_net.py`
-(meer online-scenario's, tot 9 spelers: `python godot/tests/test_net_more.py`).
+(meer online-scenario's, tot 9 spelers: `python godot/tests/test_net_more.py`, ±6 min).
