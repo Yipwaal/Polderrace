@@ -66,8 +66,9 @@ Tijdelijk bestand van de Beeld-agent (fase 2). De hoofdagent mag het na het same
 - [x] perf_render na (`tests/.out/beeld/perf_now.json`): gemiddelde tekenaanroepen per beeld, som over 10 banen,
       voor > na: hoog 7796 > 8230 (+6%), middel 7814 > 7503 (-4%), laag 6559 > 5964 (-9%), nacht 7712 > 8426 (+9%),
       regen 8096 > 8313, split 11176 > 12068 (+8%). Videogeheugen 107 > 124 MB (texturen 74 > 86 MB: mipmaps, ruis, lucht).
-- [ ] runner perf memory met renderer
-- [ ] alle tests na de laatste merge (track build laps cars flow audio menus rules memory perf, play, test_net), eindverslag
+- [x] runner perf memory met renderer (xvfb): snelheid 49/49, geheugen 16/16
+- [x] merge main 8775ad0; headless track build laps cars flow audio menus rules memory perf allemaal groen,
+      play 319/319, test_net 13/13
 - Niet gedaan (bewust): WorldEnvironment-glow (schermpassen; gloed-sprites doen het werk), druppels op de camera,
   echte spiegeling op nat wegdek, podium-spots op onbelichte materialen (useLights bestaat als optie)
 - Buiten eigen bestanden gewijzigd: project.godot (shader_globals), game.gd (applyPrefs), tests/test_memory.gd (deeltjespool)

@@ -1243,8 +1243,8 @@ func setPaused(p: bool) -> void:
 ## JS applyPrefs: picture quality and sound on/off. The settings menu calls this after changing a preference.
 ##   laag:   no shadows (a soft blob under each car), 75% 3D resolution, no anti-aliasing, a simpler sky, no smoke,
 ##           no screen effects; the mirror looks 600 m back
-##   middel: shadows (2048, soft edge, 150 m), MSAA 2x, all effects
-##   hoog:   shadows (4096, softer, 220 m, blended splits), MSAA 4x, all effects
+##   middel: shadows (2048, soft edge, 150 m), MSAA 2x, smoke/dust/spray, no full-screen passes (vignette, speed blur)
+##   hoog:   shadows (4096, softer, 220 m, blended splits), MSAA 4x, everything incl. vignette/colour cast and speed blur
 ## Split screen and the mirror: MSAA 2x at most (they are small), none on laag. See Env.set_quality, Fx.set_quality.
 func applyPrefs() -> void:
 	var q: String = G.prefs.get("quality", "high")
