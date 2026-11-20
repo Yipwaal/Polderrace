@@ -708,7 +708,7 @@ func groundAt(a: float, i: int) -> Array:
 	var V = VERGE.get(id)
 	var rum: float = COBBLES.get(id, 0.0) if a < Trk.ROAD_HALF else 0.0
 	if V == null: return [0.0, 1.0, 0.0, 0.0, rum]
-	var t := clamp_((a - (Trk.ROAD_HALF + V[0] - 0.3)) / 0.6, 0, 1)
+	var t := clamp_((a - (Trk.ROAD_HALF + V[0])) / 0.8, 0, 1)
 	if id == "veluwe": t *= clamp_(maxf(7.4 - a, a - 9.6) / 0.3, 0, 1)      # the cycle path beside the road is paved
 	if id == "circuit":
 		if a > Trk.ROAD_HALF and a < Trk.ROAD_HALF + 1.3 and kerbAt(i): rum = 0.7
@@ -752,8 +752,9 @@ func driveStep(dt: float, inp: Dictionary) -> void:
 		rate = 11.0 if (absf(st) < absf(pl.steer) or st * pl.steer < 0) else lerpf(8.5, 5.5, minf(1, sAbs))
 	pl.steer += (st - pl.steer) * minf(1, dt * rate)
 	# ---- the ground: verge, grass, gravel, kerbs (left and right wheels apart), crests and dips
-	var gL := groundAt(absf(pl.lat - 0.8), pl.idx)
-	var gR := groundAt(absf(pl.lat + 0.8), pl.idx)
+	var ti := pl.idx % Trk.NS
+	var gL := groundAt(absf(pl.lat - 0.8), ti)
+	var gR := groundAt(absf(pl.lat + 0.8), ti)
 	var off: float = (gL[0] + gR[0]) * 0.5
 	# loose ground has less grip; at walking pace that does not matter (you can always steer out of the gravel)
 	var surf: float = 1 - (gL[0] * (1 - gL[1]) + gR[0] * (1 - gR[1])) * 0.5 * clamp_((av - 6) / 10, 0, 1)
@@ -761,7 +762,7 @@ func driveStep(dt: float, inp: Dictionary) -> void:
 	var dragR: float = gR[0] * gR[2] * clamp_((av - gR[3]) / 5.0, 0, 1)
 	pl.offroad = off
 	pl.rumble += (maxf(gL[4], gR[4]) * clamp_(av / 12, 0, 1) - pl.rumble) * minf(1, dt * 10)
-	pl.load += (roadLoad(pl.idx, av) - pl.load) * minf(1, dt * 8)
+	pl.load += (roadLoad(ti, av) - pl.load) * minf(1, dt * 8)
 	var gf := gripFactor()
 	# ---- engine, brakes, drag
 	var VM := MAXV
@@ -1317,7 +1318,7 @@ func syncCar(dt: float) -> void:
 	var live := state == "racing" or state == "finished" or state == "over"
 	# the tyres' slip already turns the car into the corner; the look gets a little more of it
 	drift += (clamp_(-pl.beta * 0.2, -0.08, 0.08) * (1.0 if live else 0.0) - drift) * minf(1, dt * 6)
-	var i := pl.idx
+	var i := pl.idx % Trk.NS      # (a track with fewer samples may just have been loaded)
 	var slope := 0.0
 	if absf(pl.lat) < Trk.SHOULDER:
 		slope = (Trk.HT[(i + 1) % Trk.NS] - Trk.HT[i]) / Trk.SPC * (sin(pl.heading) * Trk.T[i].x + cos(pl.heading) * Trk.T[i].z)
@@ -1444,6 +1445,7 @@ func resetPlayer(i: int, lat: float) -> void:
 	player.pos = Vector3(Trk.P[i].x + Trk.R[i].x * lat, 0, Trk.P[i].z + Trk.R[i].z * lat)
 	player.heading = Trk.heading_of(Trk.T[i])
 	player.settle()
+	drift = 0
 	locatePlayer()
 
 func startRace() -> void:

@@ -18,6 +18,16 @@ func run(host: Node) -> TestReport:
 				print("D %s %s k=%s lap=%.2f walls=%d off=%.2f top=%.0f beta=%.0f" % [tr, car, k, d.lap, d.walls, d.off, d.top, d.beta])
 		H.done()
 		return r
+	if what == "spin":
+		H.start("haven", car); H.free_plane(); H.put(40, 0, 0, 30)
+		Game.player.spin = 3.0
+		var h0: float = Game.player.heading
+		for k in 300:
+			H.tick(0, 0, 0)
+			var p := Game.player
+			if k % 10 == 0: print("D t=%.2f turned=%.0f spin=%.2f yr=%.2f u=%.1f slide=%.1f beta=%.0f v=%.1f" % [k / 120.0, rad_to_deg(H.angDiff(p.heading, h0)), p.spin, p.yr, p.speed, p.slide.length(), rad_to_deg(H.beta()), H.v()])
+		H.done()
+		return r
 	if what == "trace":
 		var k := float(OS.get_environment("KS"))
 		H.start(OS.get_environment("TRACKS"), car); Game.raceLaps = 99; H.countdown()
