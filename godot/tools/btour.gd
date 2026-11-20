@@ -5,7 +5,7 @@ extends Node3D
 
 func _ready() -> void:
 	get_tree().create_timer(900, true, false, true).timeout.connect(func(): print("ERROR tour timeout"); get_tree().quit(1))
-	var a := {"track": "veluwe", "dir": "fwd", "time": "day", "weather": "dry", "n": "36", "mode": "chase", "out": "/tmp", "from": "0", "to": "1", "views": "", "fov": "64", "tag": "", "pts": "", "info": ""}
+	var a := {"track": "veluwe", "dir": "fwd", "time": "day", "weather": "dry", "n": "36", "mode": "chase", "out": "/tmp", "from": "0", "to": "1", "views": "", "fov": "64", "tag": "", "pts": "", "info": "", "around": ""}
 	for s in OS.get_cmdline_user_args():
 		var kv := s.split("=", true, 1)
 		if kv.size() == 2: a[kv[0]] = kv[1]
@@ -24,9 +24,16 @@ func _ready() -> void:
 	await Canvas2D.flush(self)
 	var views := []
 	if a.info != "":
-		print("INFO NS ", Trk.NS, " cps ", Trk.cps, " taken ", World.pavTaken)
+		print("INFO NS ", Trk.NS, " cps ", Trk.cps, " taken ", World.pavTaken.slice(0, 6))
 		for b in BKit.bends(0.016): print("INFO bend ", b)
-	if a.pts != "":
+	if a.around != "":
+		# x,z,r,h[;...]: four views of the spot (x, z) from r metres away, h above the ground there
+		for ps in a.around.split(";"):
+			var q := Array(ps.split(",")).map(func(x): return float(x))
+			for k in 4:
+				var ex: float = q[0] + cos(k * PI / 2 + 0.6) * q[2]; var ez: float = q[1] + sin(k * PI / 2 + 0.6) * q[2]
+				views.append([Vector3(ex, Dress.groundY(ex, ez) + q[3], ez), Vector3(q[0], Dress.groundY(q[0], q[1]) + 4.0, q[1]), "a%d" % views.size()])
+	elif a.pts != "":
 		# i:lat:h:li:llat:lh  (camera at sample i, lateral lat, h above the road there; looking at sample li, lateral llat, lh above)
 		for ps in a.pts.split(";"):
 			var q := Array(ps.split(":")).map(func(x): return float(x))

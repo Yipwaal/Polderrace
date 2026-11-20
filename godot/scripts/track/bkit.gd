@@ -222,6 +222,28 @@ static func deerGeo(stag: bool) -> Geo:
 			parts.append([Geo.box(0.05, 0.28, 0.05).rotate_x(0.7).translate(s * 0.3, 2.3, 0.92), 0xd8ccb0])
 	return merge(parts)
 
+## a cow: black-and-white (the instance colour tints the white patches: white or red-brown cattle)
+static func cowGeo() -> Geo:
+	var parts := [
+		[Geo.box(0.7, 0.8, 1.7).translate(0, 1.0, 0), 0xf4f1ea],
+		[Geo.box(0.72, 0.5, 0.6).translate(0, 1.16, -0.35), 0x24211e],
+		[Geo.box(0.72, 0.45, 0.4).translate(0, 1.2, 0.62), 0x24211e],
+		[Geo.box(0.36, 0.4, 0.6).translate(0, 1.2, 1.1), 0x24211e],
+		[Geo.box(0.3, 0.2, 0.2).translate(0, 1.1, 1.42), 0xe8b8a8],
+		[Geo.box(0.3, 0.16, 0.3).translate(0, 0.58, -0.3), 0xe8b8a8]]
+	for lx in [-0.24, 0.24]:
+		for lz in [-0.62, 0.62]:
+			parts.append([Geo.box(0.16, 0.66, 0.16).translate(lx, 0.33, lz), 0xe9e4da])
+	return merge(parts)
+
+## a house for instancing: unit box (textured walls) and a unit gable roof; see houseXf / roofXf
+static func houseXf(x: float, ground: float, z: float, ry: float, w: float, h: float, d: float, sink := 1.5) -> Transform3D:
+	# the walls go `sink` m into the ground, so the house also stands on a slope
+	return Transform3D(Basis(Vector3.UP, ry).scaled_local(Vector3(w, h + sink, d)), Vector3(x, ground + (h - sink) / 2.0, z))
+
+static func roofXf(x: float, ground: float, z: float, ry: float, w: float, h: float, d: float, rh: float, over := 0.5) -> Transform3D:
+	return Transform3D(Basis(Vector3.UP, ry).scaled_local(Vector3(w + over * 2, rh, d + over * 2)), Vector3(x, ground + h - 0.03, z))
+
 # ---------------------------------------------------------------- along the road
 
 static var _chev := {}
@@ -285,6 +307,7 @@ static func chevrons(lat: float, curv := 0.016, every := 9.0, h := 1.25, onGroun
 			var hd: float = Trk.heading_of(Trk.T[i]) + PI + b.dir * 0.35
 			per[b.dir].append(World.mtx(xz[0], y + h + 0.45, xz[1], hd))
 			posts.append(World.mtx(xz[0], y, xz[1], hd))
+			World.pavTaken.append([xz[0], xz[1], 1.3])   # the roadside dressing keeps clear of the board
 	for d in [1, -1]:
 		if per[d].is_empty(): continue
 		var m := Mats.M(0xffffff, {"map": chevronTex(d), "emissive": 0x000000, "emissiveMap": chevronTex(d)})
@@ -338,12 +361,13 @@ static func decal(i0: int, n: int, latA: float, latB: float, mat: Material, yOff
 	World.add(m)
 	return m
 
-## white text painted on the road (fans' paint on a climb): see-through texture with the text
+## white text painted on the road (fans' paint on a climb): see-through texture with the text, upright for the driver
+## on a decal() (the top of the texture lies ahead)
 static func paintTex(text: String, color := "#f4f4ee") -> ImageTexture:
 	return Canvas2D.tex(256, 128, func(g, w, h):
 		g.clearRect(0, 0, w, h)
-		g.fillStyle = color; g.font = "800 92px Barlow Condensed"; g.textAlign = "center"; g.textBaseline = "middle"
-		g.save(); g.translate(w / 2.0, h / 2.0); g.rotate(PI / 2); g.fillText(text, 0, 0, h - 10); g.restore())
+		g.fillStyle = color; g.font = "800 104px Barlow Condensed"; g.textAlign = "center"; g.textBaseline = "middle"
+		g.fillText(text, w / 2.0, h / 2.0 + 4, w - 12))
 
 ## a mottled detail texture for grass, sand or stone (grey around white, so vertex or material colours keep their hue):
 ## soft round blotches, wrapped round the edges so the tile repeats without seams

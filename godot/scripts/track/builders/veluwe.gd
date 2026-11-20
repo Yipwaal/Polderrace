@@ -261,7 +261,8 @@ static func mushrooms() -> void:
 		var i := int(round(NS * (0.05 + k * 0.11))) % NS
 		var s := 1 if k % 2 else -1
 		var xz := Trk.onTrack(i, s * 12.2)
-		pm.append(World.mtx(xz[0], HT[i] + 0.2, xz[1], 0, 1)); dm.append(World.mtx(xz[0], HT[i] + 0.85, xz[1], 0, 1))
+		var gy := BKit.gy(xz[0], xz[1])
+		pm.append(World.mtx(xz[0], gy + 0.45, xz[1], 0, 1)); dm.append(World.mtx(xz[0], gy + 0.9, xz[1], 0, 1))
 	World.inst(Geo.cylinder(0.28, 0.3, 1, 10), M(0xf2f0ea), pm, null, true)
 	World.inst(Geo.sphere(0.55, 12, 6, 0, PI * 2, 0, PI / 2), M(0xc8302a), dm, null, true)
 
@@ -301,17 +302,20 @@ static func startLamps() -> void:
 	var pm := M(0x5a5f63)
 	var hm := M(0x333a40, {"emissive": 0x222222})
 	World.lampMats.append(hm)
-	var lp := []; var lh := []
+	var lp := []; var lh := []; var la := []
 	var d := -60
 	while d <= 60:
 		var i := (jround((Trk.S_START + d) / Trk.SPC) % NS + NS) % NS
 		var xz := Trk.onTrack(i, -9.2)
 		var hxz := Trk.onTrack(i, -7.6)
-		lp.append(World.mtx(xz[0], HT[i] + 4, xz[1])); lh.append(World.mtx(hxz[0], HT[i] + 8, hxz[1], Trk.heading_of(T[i])))
+		lp.append(World.mtx(xz[0], HT[i] + 3.85, xz[1])); lh.append(World.mtx(hxz[0], HT[i] + 8, hxz[1], Trk.heading_of(T[i])))
+		var axz := Trk.onTrack(i, -8.5)
+		la.append(World.mtx(axz[0], HT[i] + 7.95, axz[1], Trk.heading_of(T[i])))   # the arm from the post to the lamp head
 		var pxz := Trk.onTrack(i, -3)
 		World.trackLights.append([pxz[0], HT[i], pxz[1], 10])
 		d += 30
-	World.inst(Geo.cylinder(0.1, 0.14, 8, 6), pm, lp, null, true)
+	World.inst(Geo.cylinder(0.1, 0.14, 8.3, 6), pm, lp, null, true)
+	World.inst(Geo.box(1.6, 0.12, 0.12), pm, la, null, false)
 	World.inst(Geo.box(0.5, 0.25, 1.6), hm, lh, null, false)
 
 ## the flattest of a few spots beside the road: [x, z, highest ground, sample index, side]
