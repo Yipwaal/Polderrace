@@ -113,9 +113,13 @@ varying vec3 v_dir;
 void vertex() {
 	v_dir = VERTEX;
 	// a sky box: round every camera (main view, mirror, split screen) and behind everything, whatever its far plane
-	// (the depth buffer is reversed: 0 = far)
+	// (measured: the Compatibility renderer reverses depth inside OpenGL clip space, so the far plane is z = -w; the others use z = 0)
 	vec4 p = PROJECTION_MATRIX * vec4(mat3(VIEW_MATRIX) * VERTEX, 1.0);
+#if CURRENT_RENDERER == RENDERER_COMPATIBILITY
+	POSITION = vec4(p.xy, -p.w * 0.99999, p.w);
+#else
 	POSITION = vec4(p.xy, p.w * 0.00001, p.w);
+#endif
 }
 
 void fragment() {
