@@ -260,6 +260,16 @@ func run(host: Node) -> TestReport:
 		var pm := CarPaint.paint(Color("#1d4f9e"), f)
 		if pm.shader == null or pm.finish != f or not CarPaint.FINISH_NAMES.has(f): fins.append(f)
 	r.check(fins.is_empty(), "elke lakafwerking bouwt", str(CarPaint.FINISHES.keys()) if fins.is_empty() else "mislukt: " + str(fins))
+	# the body API for garage parts (CarKit.anchors): every model answers, and the anchor points lie on its skin
+	var anc := []
+	for id in Cars.CARS:
+		var A := CarKit.anchors(id)
+		var zm: float = (A.wheels[0].z + A.wheels[2].z) / 2
+		var ok: bool = A.on_side.call(zm, (A.sill[0] + A.sill[1]) / 2) != null and A.on_top.call(0.4, A.wheels[0].z) != null \
+			and A.on_front.call(0.0, A.bot.call(A.zF - 0.3) + 0.1) != null and A.on_rear.call(0.0, A.bot.call(A.zR + 0.3) + 0.1) != null \
+			and A.zF - A.zR > 3.0 and absf(A.wheels[0].x) < A.W
+		if not ok: anc.append(id)
+	r.check(anc.is_empty(), "carrosserie-API (CarKit.anchors) voor elk model", "%d modellen" % Cars.CARS.size() if anc.is_empty() else "klopt niet: " + str(anc))
 	# every car model plain and in every variant of VARIANTS, plus the traffic vehicles
 	var keys := []
 	for id in Cars.CARS:

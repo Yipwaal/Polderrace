@@ -737,6 +737,7 @@ static func bar(A: CarAcc, a: Vector3, b: Vector3, w: float, h: float) -> void:
 
 static func _dressStd(K: CarBody, D: Dictionary, o: Dictionary) -> void:
 	var S := K.S
+	K.dress = o
 	for l in o.get("hl", []):
 		_lamp(K, D.lamp, l, true, "h_rect")
 	for l in o.get("tl", []):
@@ -1425,6 +1426,53 @@ static func carKit(type: String) -> CarBody:
 	K._memo.clear()
 	KITS[type] = K
 	return K
+
+## Where body-kit parts go on a model: a stable query API for the garage parts (Aanpassen). Car space: +z forward, +y up,
+## +x the car's LEFT (driver side); metres; the road is y = 0. Everything comes from the built kit, so it follows the model.
+##   len, wid: the hitbox (rounded rectangle, corner radius rc, centred at z = off); W: half width of the body
+##   zF, zR: the nose and the tail (the furthest skin); nose(x, y) / tail(x, y): z of the skin there (null = no skin)
+##   wheels: [{x, z, r, w}] front left, front right, rear left, rear right; arch: arch radius (wheel arch = circle round
+##     (z, r) of that radius, opened by the flare)
+##   top(z, x): height of the bonnet/boot skin; shoulderX(z): the widest a part lying on the deck may be
+##   cab: {z0, z1, ws (windscreen base z), rw (rear window z)} or null (open car); roof(z, x): the cabin roof (-1 = off the
+##     cabin); cabX(z, y): the side glass
+##   sideX(z, y): the flank (side skirts, fender vents); bot(z): the underside (lowest skin) at z
+##   sill: [y0, y1] the sill band (side skirts sit on it), bumperR: [y0, y1] the rear trim band, plateF / plateR: plate centre
+##     heights (null = none), mirror: [z, y] of the door mirrors, wing: {z, roof} where the stock spoiler sits, tuneFit:
+##     Cars.TUNE_FIT entry (GT wing / ducktail)
+##   seat: the driver ({x, z, y = head centre, ...}; empty when there is no driver)
+##   on_front(x, y), on_rear(x, y), on_side(z, y), on_top(x, z), on_cab(x, z): [point, outward normal] or null. A part
+##     on the skin: CarAcc.boxOn(w, h, d, p, n, out) or CarKit.patch(A, K.on_*, u0, u1, v0, v1, nu, nv, out, mirror)
+##     (a panel that follows the skin; out >= 0.02 against flicker). Keep parts inside len x wid (the hitbox) and above
+##     y = 0.06; test_cars.gd checks the stock and tuned models.
+static func anchors(type: String) -> Dictionary:
+	var K := carKit(type)
+	var S := K.S
+	var o := K.dress
+	var C = K.C
+	var wheels := []
+	for wz in [S.wz[0], S.wz[1]]:
+		for sx in [1.0, -1.0]:
+			wheels.append({"x": sx * S.wx, "z": wz, "r": S.r, "w": S.w})
+	var sill = o.get("sill", null)
+	if sill == null:
+		var b := K.bot((S.wz[0] + S.wz[1]) / 2)
+		sill = [b + 0.04, b + 0.11]
+	var rt: Array = o.get("rtrim", [])
+	return {
+		"len": S.len, "wid": S.wid, "rc": S.get("hitR", Cars.CAR_RC), "off": S.get("off", 0.0), "W": K.W, "zF": K.zF, "zR": K.zR,
+		"nose": func(x: float, y: float): return K.endZ(x, y, true),
+		"tail": func(x: float, y: float): return K.endZ(x, y, false),
+		"wheels": wheels, "arch": K.ra,
+		"top": K.topY, "shoulderX": K.shoulderX, "sideX": K.sideX, "bot": K.bot,
+		"cab": {"z0": C.z0, "z1": C.z1, "ws": C.get("ws", C.z0), "rw": C.get("rw", C.z1)} if C != null else null,
+		"roof": K.cabY, "cabX": K.cabX,
+		"sill": sill, "bumperR": rt[0].y if not rt.is_empty() else null,
+		"plateF": o.get("plateF", null), "plateR": o.get("plateR", null),
+		"mirror": [o.mz, o.my] if o.has("mz") else null,
+		"wing": S.wing, "tuneFit": Cars.TUNE_FIT.get(type, {}), "seat": K.seat,
+		"on_front": K.on_front, "on_rear": K.on_rear, "on_side": K.on_side, "on_top": K.on_top, "on_cab": K.on_cab,
+	}
 
 ## the soft contact shadow under a car
 static func addBlob(g: Node3D, length: float, wid: float, off := 0.0) -> MeshInstance3D:

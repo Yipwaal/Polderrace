@@ -32,6 +32,7 @@ var roof_fn: Callable = Callable()
 var C = null     ## S.cab (Dictionary) or null
 
 # set while dressing / styling
+var dress: Dictionary = {}   ## the model's dress parameters (CarKit._dressStd: sill, rtrim, plateF/R, mz/my, ...)
 var topRects: Array = []
 var sideRects: Array = []
 var numBlock: Array = []
