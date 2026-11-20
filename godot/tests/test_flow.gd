@@ -121,6 +121,10 @@ func run(host: Node) -> TestReport:
 	Game.toMenu(-1)
 	Game.updateCamera(1.0 / 60)
 	r.check(fxRace > 0.3 and Game.speedFx == 0, "stoppen tijdens de race: geen snelheidseffect in het menu", "race %.2f, menu %.2f" % [fxRace, Game.speedFx])
+	# a gust that was blowing when the race ended: the rain does not keep streaming sideways in the menu / next race
+	env.wind_x = 20.0
+	Game.updateWind(0.1)
+	r.check(env.wind_x == 0.0, "na de race: geen zijwind meer in de regen", str(env.wind_x))
 	Game.set_process(true)
 	Game.set_process_input(true)
 	return r

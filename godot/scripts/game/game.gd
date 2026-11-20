@@ -1328,7 +1328,10 @@ func autopilot(dt: float, tv: float) -> void:
 
 func updateWind(dt: float) -> void:
 	if Trk.TRK.is_empty() or not Trk.TRK.get("wind", false) or state != "racing":
-		windX = 0; gustPhase = 0; return
+		windX = 0; gustPhase = 0
+		# (the rain stops blowing sideways too: quit during a gust and it kept streaming across on every next track)
+		if Env.me != null: Env.me.wind_x = 0.0
+		return
 	gustT -= dt
 	if gustT < 1.1 and not gustWarn and gustPhase <= 0:
 		gustWarn = true; gustDir = -1.0 if randf() < .5 else 1.0
