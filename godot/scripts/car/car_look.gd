@@ -241,6 +241,7 @@ static func post(m: Dictionary) -> void:
 		_decals(m, L, K)
 	_glow(m, L)
 	_flushSoon()
+	m["lookDone"] = true
 
 # ---- paint, finish, roof
 static func _paint(m: Dictionary, L: Dictionary, K, all: Array) -> void:
@@ -280,8 +281,8 @@ static func finish(p: LMat, f: String) -> void:
 			p.specular = Color(1, 1, 1); p.shininess = 120.0
 
 # ---- shared materials swapped for a look's own: calipers, tyres, glass, lamps, plate
-const TINTS := {"clear": [0x44566a, 0xb8c4d0, 80.0], "black": [0x07080a, 0x40464c, 60.0], "blue": [0x0f2f66, 0x8fb4ff, 80.0], "bronze": [0x3c2410, 0xd8a868, 80.0],
-	"green": [0x0f3320, 0x8fd8a8, 80.0], "mirror": [0x8e9aa6, 0xffffff, 110.0]}
+const TINTS := {"clear": [0x44566a, 0xb8c4d0, 80.0], "black": [0x07080a, 0x40464c, 60.0], "blue": [0x0f2f66, 0x8fb4ff, 80.0], "bronze": [0x33200f, 0xa87a44, 80.0],
+	"green": [0x0f3320, 0x8fd8a8, 80.0], "mirror": [0x5b6876, 0xffffff, 110.0]}
 ## lamp glass colour and what it does to the light of the lamps (CarKit.lampMat's emission, which follows the time of day)
 const LAMPS := {"yellow": [0xffe04a, Vector3(1.0, 0.86, 0.3)], "smoke": [0x55524c, Vector3(0.42, 0.42, 0.42)], "green": [0xc8ffd0, Vector3(0.5, 1.0, 0.55)],
 	"purple": [0xe6d0ff, Vector3(0.78, 0.5, 1.05)], "ice": [0xd8eeff, Vector3(0.72, 0.9, 1.15)]}
@@ -650,7 +651,7 @@ static func _glow(m: Dictionary, L: Dictionary) -> void:
 		_glowGeo.rotate_x(-PI / 2)
 	var o := CarKit.mesh(m.g, _glowGeo, mat)
 	o.scale = Vector3(float(m.wid) + 1.5, 1, float(m.len) + 1.3)
-	o.position = Vector3(0, 0.1, float(m.get("off", 0.0)))
+	o.position = Vector3(0, 0.035, float(m.get("off", 0.0)))
 	o.set_meta("glow", true)
 
 ## the light changed (CarKit.applyEnv, the garage, the podium): tinted lamps follow the lamp glass, the neon its level
