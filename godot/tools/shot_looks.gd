@@ -32,6 +32,14 @@ const LOOKS := {
 const BUSY := {"stripe": "flames", "sc": "yellow", "sc2": "red", "num": 7, "d1": "polder", "d2": "tulp", "ban": "POLDERRACE", "roof": "black", "tw": "letter", "rim": "gold",
 	"plate": "YIP-01", "glow": "blue"}
 
+## body kits (CarParts): two full kits, every car from four sides (kits: kit_<id>_<view>.png, sheets sheet_kits_<n>.png)
+const KIT_A := {"wing": "rally", "splitter": "race", "canard": "on", "skirt": "black", "arch": "black", "diffuser": "on", "flap": "red", "scoop": "scoop",
+	"roofx": "bar", "tow": "on", "exhaust": "big", "wsize": "l", "track": "l", "ride": "high"}
+const KIT_B := {"wing": "swan", "splitter": "street", "skirt": "paint", "arch": "paint", "scoop": "vents", "roofx": "rack", "wsize": "m", "track": "m", "ride": "low",
+	"stripe": "twin", "sc": "white", "rim": "black"}
+const KIT_C := {"wing": "lip", "roofx": "scoop", "flap": "black", "exhaust": "big"}
+var kitCars: Array = []
+
 var out := "/tmp"
 var only: Array = []
 var car := "gt"
@@ -47,6 +55,7 @@ func _ready() -> void:
 			"only": only = Array(kv[1].split(","))
 			"car": car = kv[1]
 			"credits": credits = int(kv[1])
+			"cars": kitCars = Array(kv[1].split(","))
 	DirAccess.make_dir_recursive_absolute(out)
 	var owned := {}
 	for id in Cars.CARS: owned[id] = true
@@ -94,6 +103,14 @@ func _ready() -> void:
 			GarageRoom.aim("side")
 			await shot("car_" + id + "_side", 34, true)
 		_sheets("cars")
+	if only.has("kits"):
+		Menu.home.visible = false
+		for id in (kitCars if not kitCars.is_empty() else Cars.CARS.keys()):
+			for kv in [["a", KIT_A, ["q", "rearlow"]], ["b", KIT_B, ["nose", "side"]], ["c", KIT_C, ["rear"]]]:
+				for view in kv[2]:
+					await _wear(id, kv[1], view)
+					await shot("kit_%s_%s_%s" % [id, kv[0], view], 34, true)
+		_sheets("kits")
 	get_tree().quit()
 
 func _race() -> void:

@@ -17,7 +17,7 @@ class_name CarLook
 ## look from an old save or from another player online can never break a car.
 
 const MIX_PRICE := 600      ## the colour mixer: free colours ("#rrggbb") everywhere a colour is chosen
-const GROUPS := [["lak", "Lak"], ["stripe", "Striping"], ["wheel", "Wielen"], ["glass", "Ruiten & licht"], ["num", "Nummer"], ["decal", "Stickers"], ["parts", "Onderdelen"]]
+const GROUPS := [["lak", "Lak"], ["stripe", "Striping"], ["wheel", "Wielen"], ["glass", "Ruiten & licht"], ["num", "Nummer"], ["decal", "Stickers"], ["body", "Bodykit"], ["parts", "Onderdelen"]]
 
 const PAINTS := [["#f36f21", "Oranje", 0], ["#d62a2a", "Rood", 0], ["#f2c200", "Geel", 0], ["#1d4f9e", "Blauw", 0], ["#2f8f5b", "Groen", 0], ["#f2f2ee", "Wit", 0], ["#1b1b1b", "Zwart", 0],
 	["#e8451e", "Vuurrood", 150], ["#8c1c24", "Bordeaux", 150], ["#ff4f8b", "Tulpenroze", 150], ["#f5a3b8", "Zuurstok", 150], ["#7a2fbf", "Paars", 150], ["#3a2466", "Aubergine", 150],
@@ -59,6 +59,13 @@ const ITEMS := [
 			["green", "Groen", 50, {"hex": "#3fae5a"}], ["white", "Wit", 50, {"hex": "#f2f2ee"}], ["black", "Zwart", 50, {"hex": "#1b1b1b"}], ["silver", "Zilver", 50, {"hex": "#a1a4a8"}]]},
 	{"k": "tw", "g": "wheel", "name": "Banden", "type": "choice", "def": "std", "view": "wheel",
 		"opts": [["std", "Zwart", 0], ["white", "Witte wand", 300], ["red", "Rode lijn", 250], ["letter", "Witte letters", 350], ["yellow", "Gele letters", 350]]},
+	# (body kit, wheel size, track and ride height: CarParts; only the looks change, not the hitbox or the driving)
+	{"k": "wsize", "g": "wheel", "name": "Velgmaat", "sub": "Grotere velg in een lagere band", "type": "choice", "def": "std", "view": "wheel",
+		"opts": [["std", "Standaard", 0], ["m", "Groot", 400], ["l", "Extra groot", 700]]},
+	{"k": "track", "g": "wheel", "name": "Spoorbreedte", "sub": "Wielen verder naar buiten", "type": "choice", "def": "std", "view": "rearlow",
+		"opts": [["std", "Standaard", 0], ["m", "Breder", 300], ["l", "Extra breed", 500]]},
+	{"k": "ride", "g": "wheel", "name": "Rijhoogte", "type": "choice", "def": "std", "view": "side",
+		"opts": [["std", "Standaard", 0], ["low", "Verlaagd", 500], ["high", "Rally-hoog", 400]]},
 	{"k": "tint", "g": "glass", "name": "Ruiten", "type": "choice", "def": "std", "view": "q",
 		"opts": [["std", "Standaard", 0], ["clear", "Helder", 200], ["black", "Zwart", 300], ["blue", "Blauw", 300], ["bronze", "Brons", 300], ["green", "Groen", 300], ["mirror", "Spiegel", 700]]},
 	{"k": "lamp", "g": "glass", "name": "Koplampen", "type": "choice", "def": "std", "view": "front",
@@ -80,9 +87,28 @@ const ITEMS := [
 	{"k": "d2", "g": "decal", "name": "Sticker achter op de deur", "type": "choice", "def": "", "view": "side", "opts": STICKERS},
 	{"k": "ban", "g": "decal", "name": "Voorruitband", "sub": "Tekst boven aan de voorruit", "type": "text", "def": "", "kit": 300, "max": 14, "chars": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-!&.' ", "fit": "cab", "view": "front"},
 	{"k": "banCol", "g": "decal", "name": "Kleur van de band", "type": "color", "def": "black", "mix": true, "fit": "cab", "view": "front", "opts": BASIC},
-	{"k": "wing", "g": "parts", "name": "Spoiler", "type": "choice", "def": "std", "view": "rear", "opts": [["std", "Af fabriek", 0], ["duck", "Ducktail", 0], ["gt", "GT-vleugel", 0]]},
+	{"k": "wing", "g": "body", "name": "Spoiler", "type": "choice", "def": "std", "view": "rear",
+		"opts": [["std", "Af fabriek", 0], ["lip", "Lip", 300], ["duck", "Ducktail", 0], ["gt", "GT-vleugel", 0], ["rally", "Rallyvleugel", 900], ["swan", "Zwanenhals", 1400]]},
+	{"k": "splitter", "g": "body", "name": "Voorspoiler", "type": "choice", "def": "none", "view": "nose",
+		"opts": [["none", "Geen", 0], ["street", "Lip", 450], ["race", "Race met schotjes", 750]]},
+	{"k": "canard", "g": "body", "name": "Canards", "sub": "Vinnetjes op de voorbumper", "type": "choice", "def": "none", "view": "nose",
+		"opts": [["none", "Geen", 0], ["on", "Canards", 350]]},
+	{"k": "skirt", "g": "body", "name": "Sideskirts", "type": "choice", "def": "none", "view": "side",
+		"opts": [["none", "Geen", 0], ["black", "Zwart", 500], ["paint", "In lakkleur", 650]]},
+	{"k": "arch", "g": "body", "name": "Brede wielkasten", "type": "choice", "def": "none", "view": "q",
+		"opts": [["none", "Geen", 0], ["black", "Zwart kunststof", 1200], ["paint", "In lakkleur", 1500]]},
+	{"k": "diffuser", "g": "body", "name": "Diffuser", "sub": "Voor auto's zonder diffuser af fabriek", "type": "choice", "def": "none", "fit": "nodiff", "view": "rearlow",
+		"opts": [["none", "Geen", 0], ["on", "Diffuser", 600]]},
+	{"k": "flap", "g": "body", "name": "Spatlappen", "sub": "Alleen klasse B en A", "type": "choice", "def": "none", "fit": "BA", "view": "rearlow",
+		"opts": [["none", "Geen", 0], ["black", "Zwart", 200], ["red", "Rood met wit", 250]]},
+	{"k": "scoop", "g": "parts", "name": "Motorkap", "type": "choice", "def": "none", "view": "top",
+		"opts": [["none", "Glad", 0], ["scoop", "Luchthapper", 400], ["vents", "Kieuwen", 350]]},
+	{"k": "roofx", "g": "parts", "name": "Op het dak", "sub": "Klasse B en A met een dak", "type": "choice", "def": "none", "fit": "cabBA", "view": "top",
+		"opts": [["none", "Niets", 0], ["rack", "Dakrek", 400], ["bar", "Lichtbalk", 650], ["scoop", "Dakhapper", 300]]},
+	{"k": "tow", "g": "parts", "name": "Sleepogen", "sub": "Rode lussen voor en achter", "type": "choice", "def": "none", "view": "nose",
+		"opts": [["none", "Geen", 0], ["on", "Sleepogen", 80]]},
 	{"k": "exhaust", "g": "parts", "name": "Uitlaat", "sub": "Alleen klasse B en A", "type": "choice", "def": "std", "fit": "BA", "view": "rear",
-		"opts": [["std", "Af fabriek", 0], ["sport", "Sport", 0], ["dual", "Dubbel", 0], ["center", "Centraal", 0]]},
+		"opts": [["std", "Af fabriek", 0], ["sport", "Sport", 0], ["dual", "Dubbel", 0], ["center", "Centraal", 0], ["big", "Kanon", 500]]},
 ]
 
 ## the stripe colours of saves and online players from before the catalogue: stripe "white" = design twin in white
@@ -123,6 +149,8 @@ static func fits(car: String, k: String) -> bool:
 	if f == "" or car == "": return true
 	if f == "cab": return Cars.CAR_SPECS.has(car) and Cars.CAR_SPECS[car].has("cab")
 	if f == "BA": return Cars.CARS.has(car) and Cars.CARS[car].cls != "S"
+	if f == "cabBA": return fits(car, "roof") and Cars.CARS.has(car) and Cars.CARS[car].cls != "S"
+	if f == "nodiff": return Cars.CAR_SPECS.has(car) and not CarKit.carKit(car).diff
 	return true
 
 static func isHex(v) -> bool:
@@ -227,6 +255,10 @@ static func pre(m: Dictionary, u: Dictionary) -> Dictionary:
 	s.merge(L, true)
 	s.rim = L.rim if STD_RIMS.has(L.rim) else "silver"
 	s.stripe = "std" if L.stripe == "std" else ("white" if L.stripe == "twin" else "none")
+	# body-kit spoilers and exhausts are CarParts' (the standard styling knows only its own)
+	if L.wing in CarParts.WINGS: s.wing = "std"
+	if L.exhaust in CarParts.EXHAUSTS: s.exhaust = "std"
+	CarParts.pre(m, L)
 	return s
 
 ## after CarKit's standard styling: everything else of the look
@@ -243,6 +275,7 @@ static func post(m: Dictionary) -> void:
 		_numbers(m, L, K)
 		_stripes(m, L, K, all)
 		_decals(m, L, K)
+	CarParts.post(m, L)
 	_glow(m, L)
 	_flushSoon()
 	m["lookDone"] = true

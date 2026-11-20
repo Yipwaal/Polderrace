@@ -163,19 +163,20 @@ static func setTyreWall(m: Dictionary, mat) -> void:
 			wh.erase("wall")
 			continue
 		if o == null:
-			o = mesh(wh.spin, tyreWallGeo(wh.r, wh.w, wh.style), mat)
+			o = mesh(wh.spin, tyreWallGeo(wh.r, wh.w, wh.style, wh.get("big", 0.0), wh.spin.scale.x < 0), mat)
 			o.visibility_range_end = 45.0
 			wh["wall"] = o
 		else:
 			o.set_surface_override_material(0, mat)
 
-static func tyreWallGeo(r: float, w: float, style: String) -> Geo:
-	var key := "wall/%.3f/%.3f/%s" % [r, w, style]
+## big: a larger rim (CarLook's wheel size, see wheelGeos); flip: u runs the other way round (the mirrored wheels of one side)
+static func tyreWallGeo(r: float, w: float, style: String, big := 0.0, flip := false) -> Geo:
+	var key := "wall/%.3f/%.3f/%s/%.2f/%s" % [r, w, style, big, flip]
 	if WGEO.has(key): return WGEO[key]
 	var hw := w / 2.0
-	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7))
+	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7 + big))
 	# the outer sidewall of wheelGeos' tyre as (radius, x), from the tread shoulder to the bead
-	var prof := [Vector2(r - 0.008, hw - 0.04), Vector2(r - 0.03, hw - 0.012), Vector2(r - 0.075, hw), Vector2(rb + 0.004, hw - 0.017)]
+	var prof := [Vector2(r - 0.008, hw - 0.04), Vector2(r - 0.03, hw - 0.012), Vector2(maxf(r - 0.075, rb + 0.012), hw), Vector2(rb + 0.004, hw - 0.017)]
 	var A := CarAcc.new()
 	var n := 36
 	# (accumulator uv run bottom-up like three.js; the mesh flips them to the canvas' top-down)
@@ -190,6 +191,7 @@ static func tyreWallGeo(r: float, w: float, style: String) -> Geo:
 			var A0: Vector3 = q.call(p0, a0); var B0: Vector3 = q.call(p0, a1); var A1: Vector3 = q.call(p1, a0); var B1: Vector3 = q.call(p1, a1)
 			var u0 := float(i) / n
 			var u1 := float(i + 1) / n
+			if flip: u0 = 1.0 - u0; u1 = 1.0 - u1
 			var v0: float = vOf.call(p0.x)
 			var v1: float = vOf.call(p1.x)
 			var nn := Vector3(1, 0, 0)
@@ -203,7 +205,7 @@ static func tyreWallGeo(r: float, w: float, style: String) -> Geo:
 static func setCalipers(m: Dictionary, color) -> void:
 	for wh in m.wheels:
 		var c = wh.get("cal", null)
-		if c != null: set_geo(c, _calGeo(wheelGeos(wh.r, wh.w, wh.style).rb, _col(color)))
+		if c != null: set_geo(c, _calGeo(wheelGeos(wh.r, wh.w, wh.style, null, 0.72, wh.get("big", 0.0)).rb, _col(color)))
 
 ## show or hide the driver (the garage shows an empty car)
 static func setDriver(m: Dictionary, on: bool) -> void:
@@ -325,14 +327,15 @@ static func uvCell(A: CarAcc, n0: int, name: String, flat := false) -> void:
 # one mesh per wheel (detail material): tyre (lathe with rounded shoulders), rim face recessed inside the sidewall, barrel,
 # brake disc; the caliper sits on the pivot so it does not roll
 
-static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine := 0.72) -> Dictionary:
+## big: a larger rim in the same tyre (lower profile): the rim radius is r * (0.7 + big) (CarLook's wheel size, 0 .. 0.12)
+static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine := 0.72, big := 0.0) -> Dictionary:
 	var rc: Color = sc(RIM_SILVER, shine) if rimCol == null else _col(rimCol)
 	rc.a = shine
-	var key := "%.3f/%.3f/%s/%s/%.2f" % [r, w, style, rc.to_html(false), shine]
+	var key := "%.3f/%.3f/%s/%s/%.2f/%.2f" % [r, w, style, rc.to_html(false), shine, big]
 	if WGEO.has(key):
 		return WGEO[key]
 	var hw := w / 2.0
-	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7))
+	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7 + big))
 	var ro := r - (0.04 if style == "tractor" else 0.0)   # lugs stand on a tractor tyre
 	var steel := style == "steel"   # vans and lorries (many wheels, seen from a distance): a lighter tyre, a closed disc
 	var tyre: Geo
@@ -340,9 +343,10 @@ static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine :=
 		tyre = Geo.lathe([Vector2(rb, -hw + 0.018), Vector2(ro - 0.06, -hw), Vector2(ro - 0.012, -hw + 0.03), Vector2(ro, -hw + 0.08),
 			Vector2(ro, hw - 0.08), Vector2(ro - 0.012, hw - 0.03), Vector2(ro - 0.06, hw), Vector2(rb, hw - 0.018)], 16)   # (a multiple of 4: a corner on the road)
 	else:
-		tyre = Geo.lathe([Vector2(rb, -hw + 0.018), Vector2(ro - 0.075, -hw), Vector2(ro - 0.03, -hw + 0.012),
+		var sw := maxf(ro - 0.075, rb + 0.012)   # (a big rim leaves a lower sidewall)
+		tyre = Geo.lathe([Vector2(rb, -hw + 0.018), Vector2(sw, -hw), Vector2(ro - 0.03, -hw + 0.012),
 			Vector2(ro - 0.008, -hw + 0.04), Vector2(ro, -hw + 0.075), Vector2(ro, hw - 0.075), Vector2(ro - 0.008, hw - 0.04), Vector2(ro - 0.03, hw - 0.012),
-			Vector2(ro - 0.075, hw), Vector2(rb, hw - 0.018)], 20)
+			Vector2(sw, hw), Vector2(rb, hw - 0.018)], 20)
 	tyre.rotate_z(-PI / 2)
 	var A := CarAcc.new()
 	A.color(sc(0x161617, 0.07)).geo(tyre)
@@ -450,12 +454,13 @@ static func addWheel(parent: Node3D, x: float, y: float, z: float, r: float, w: 
 		pivot.add_child(c)
 	return {"pivot": pivot, "spin": spin, "r": r, "w": w, "style": style, "mesh": wm, "cal": cmesh}
 
-## rim style and colour of a car's wheels (col: Color, hex int, or a material whose colour is taken); shine 0..1
+## rim style and colour of a car's wheels (col: Color, hex int, or a material whose colour is taken); shine 0..1. The rim
+## size is the wheel's "big" (set by CarLook before styling)
 static func setRims(m: Dictionary, style: String, col = null, shine := 0.72) -> void:
 	if col is LMat: col = col.albedo_color
 	for wh in m.wheels:
 		if wh.style == "steel" or wh.style == "tractor": continue
-		var G := wheelGeos(wh.r, wh.w, style, col, shine)
+		var G := wheelGeos(wh.r, wh.w, style, col, shine, wh.get("big", 0.0))
 		wh.style = style
 		set_geo(wh.mesh, G.all)
 
