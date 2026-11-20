@@ -636,10 +636,21 @@ static func _lampFR(K: CarBody, A: CarAcc, f: Callable, x0: float, x1: float, y0
 		patch(A, f, a, b, y0, y1, maxi(2 if n > 1 else 6, ceili(absf(b - a) / 0.08)), 2, out, both)
 		uvCell(A, n0, cell)
 
-## a lamp lying on the bonnet/deck (z0 = the edge that is the bottom of the picture)
+## a lamp lying on the bonnet/deck (z0 = the edge that is the bottom of the picture): projected from above, a little from
+## outside and from the front, so it follows the wing down to the shoulder and the nose
 static func lampT(K: CarBody, A: CarAcc, x0: float, x1: float, z0: float, z1: float, cell: String, out := 0.022) -> void:
+	K.topRects.append([minf(x0, x1), maxf(x0, x1), minf(z0, z1), maxf(z0, z1)])
+	if minf(x0, x1) > 0: K.topRects.append([-maxf(x0, x1), -minf(x0, x1), minf(z0, z1), maxf(z0, z1)])
+	var d := Vector3(-0.3, -1.0, -0.3).normalized()
+	var o := Vector3(0, K.topY((z0 + z1) / 2, (x0 + x1) / 2), 0) - d * 1.0
+	var nu := maxi(4, ceili(absf(x1 - x0) / 0.07))
+	var nv := maxi(3, ceili(absf(z1 - z0) / 0.07))
+	var f := K.proj(o, d, Vector3(1, 0, 0), Vector3(0, 0, 1), x0, x1, z0, z1, nu, nv)
 	var n0 := A.P.size()
-	hTp(K, A, x0, x1, z0, z1, out, 5, 5)
+	if f.call(x0, z0) == null:
+		hTp(K, A, x0, x1, z0, z1, out, 5, 5)
+	else:
+		patch(A, f, x0, x1, z0, z1, nu, nv, out, minf(x0, x1) > 0)
 	uvCell(A, n0, cell)
 
 ## a lamp projected onto the skin (CarBody.proj): x0..x1, y0..y1 is where the rays cross the plane of the nose (front) or
@@ -731,6 +742,11 @@ static func _dressStd(K: CarBody, D: Dictionary, o: Dictionary) -> void:
 			hSd(K, D.paint, z - 0.075, z + 0.075, o.hy - 0.008, o.hy + 0.026, 0.024, 2, 1)
 	if o.has("sill"):
 		hSd(K, D.trim, S.wz[1] + K.ra + 0.04, S.wz[0] - K.ra - 0.04, o.sill[0], o.sill[1], 0.02, 8, 1)
+	# third brake light at the top of the rear window
+	if K.C != null and K.has_hole and K.C.rw > K.C.z1 + 0.2 and o.get("chmsl", true):
+		var n0: int = D.tail.P.size()
+		patch(D.tail, K.on_cab, -0.2, 0.2, K.C.rw - 0.062, K.C.rw - 0.03, 4, 1, 0.012)
+		uvCell(D.tail, n0, "chmsl")
 	# wipers at the foot of the windscreen
 	if K.C != null and K.has_hole and o.get("wipers", true):
 		var zb := K.hz0 + 0.02
@@ -1062,7 +1078,7 @@ static func _dress_coupe(K: CarBody, D: Dictionary) -> void:
 	_dressExh(K, D, o)
 
 static func _dress_roadster(K: CarBody, D: Dictionary) -> void:
-	var o := {"hl": [{"x": [0.46, 0.8], "z": [1.9, 1.64], "kind": "h_quad"}], "grille": [{"x": [-0.36, 0.36], "y": [0.4, 0.56]}], "plateF": 0.47,
+	var o := {"hl": [{"x": [0.46, 0.8], "z": [1.9, 1.64], "kind": "h_round"}], "grille": [{"x": [-0.36, 0.36], "y": [0.4, 0.56]}], "plateF": 0.47,
 		"tl": [{"x": [0.46, 0.86], "y": [0.7, 0.84], "kind": "t_round"}], "rtrim": [{"x": [-0.8, 0.8], "y": [0.32, 0.42]}], "plateR": 0.57, "mz": 0.3, "my": 0.95, "handles": [-0.4], "hy": 0.78, "sill": [0.3, 0.37], "exh": [-0.5, 0.5]}
 	_dressStd(K, D, o)
 	# open cockpit (CarBody.interior): fairings behind the seats, windscreen in a frame
@@ -1212,11 +1228,12 @@ static func _dress_retro(K: CarBody, D: Dictionary) -> void:
 	# frog-eye lamps on top of the wings, engine-lid louvres, chrome bumper strips, a small ducktail
 	for sx in [1.0, -1.0]:
 		var n0: int = D.lamp.P.size()
-		discPatch(D.lamp, func(x: float, z: float): return K.on_top(sx * 0.6 - x, z), 1.72, 0.12, 0.022, 3, 20)
-		uvCell(D.lamp, n0, "h_round")
+		discPatch(D.chrome, func(x: float, z: float): return K.on_top(sx * 0.6 - x, z), 1.72, 0.135, 0.02, 3, 20)
+		discPatch(D.lamp, func(x: float, z: float): return K.on_top(sx * 0.6 - x, z), 1.72, 0.112, 0.032, 3, 20)
+		uvCell(D.lamp, n0, "h_fog")
 	for k in 5:
 		hTp(K, D.trim, -0.36, 0.36, -1.66 + k * 0.1, -1.62 + k * 0.1, 0.02, 3, 1)
-	hF(K, D.chrome, -0.86, 0.86, 0.42, 0.47, 0.02, 8, 1); hR(K, D.chrome, -0.86, 0.86, 0.4, 0.45, 0.02, 8, 1)
+	hF(K, D.chrome, -0.7, 0.7, 0.42, 0.47, 0.02, 8, 1); hR(K, D.chrome, -0.72, 0.72, 0.4, 0.45, 0.02, 8, 1)
 	lipSpoiler(K, D, -1.88, 1.2)
 	_dressExh(K, D, o)
 
@@ -1536,7 +1553,7 @@ static func _dress_van(K: CarBody, D: Dictionary) -> void:
 	dressStd(K, D, {"hl": [{"x": [0.52, 0.92], "y": [0.86, 1.04], "kind": "h_van", "flat": true}], "grille": [{"x": [-0.42, 0.42], "y": [0.9, 1.02], "kind": "g_slats"}, {"x": [-0.7, 0.7], "y": [0.56, 0.74], "kind": "g_slats", "tile": 0.35}],
 		"plateF": 0.8, "tl": [{"x": [0.74, 0.96], "y": [0.72, 1.14], "kind": "t_van", "flat": true}], "rtrim": [{"x": [-0.95, 0.95], "y": [0.44, 0.58]}], "plateR": 0.82,
 		"mz": 1.72, "my": 1.5, "handles": [0.5, -0.9], "hy": 1.08, "exh": [-0.6]})
-	D.deco.color(0x2f6db3); hSd(K, D.deco, -2.3, 1.9, 0.9, 1.0, 0.02, 12, 1)
+	D.deco.color(0x30343a); hSd(K, D.deco, -2.3, 1.9, 0.9, 1.0, 0.02, 12, 1)
 	# rear doors: a seam down the middle and two handles
 	var y0 := 0.66
 	var s = K.on_rear(0, 1.0)

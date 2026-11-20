@@ -601,9 +601,9 @@ func interior(A: CarAcc, Dv: CarAcc) -> void:
 	var cSeat2 := sc(0x2a2c31, 0.15)
 	for sx in [sx0, -sx0]:
 		A.color(cSeat2).box(0.46, 0.12, 0.48, sx, yc - 0.06, zH + 0.17)
-		var bh := maxf(0.2, yH - 0.1 - yc)
+		var bh := maxf(0.2, yH - 0.2 - yc)
 		A.color(cSeat).box(bwid, bh, 0.1, sx, yc + bh / 2 - 0.02, zH - 0.11 - bh * 0.09, -0.2)
-		A.color(cSeat2).box(minf(0.25, bwid - 0.08), 0.17, 0.085, sx, yH - 0.01, zH - 0.19, -0.1)
+		A.color(cSeat2).box(minf(0.23, bwid - 0.08), 0.2, 0.075, sx, yH - 0.06, zH - 0.2, -0.1)
 	if rear != null:
 		var rz: float = rear
 		var bw := maxf(0.6, hole(maxf(rz, hz1 + 0.05)) * 2 - 0.1)

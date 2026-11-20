@@ -21,7 +21,7 @@ enum Mode { PAINT, DETAIL, GLASS }
 ##   f0: reflection head-on; reflection: strength of the sky/road reflection; roughness: 0 sharp horizon .. 1 blurred;
 ##   tint: how much the reflection takes the paint's colour (chrome, metallic)
 const FINISHES := {
-	"gloss": {"f0": 0.13, "refl": 0.85, "rough": 0.03, "coat": 1.0, "coat_shin": 420.0, "base": 0.94, "flake": 0.0, "pearl": 0.0, "spec": 0x4a4a4a, "shin": 40.0, "tint": 0.0},
+	"gloss": {"f0": 0.13, "refl": 0.85, "rough": 0.03, "coat": 1.0, "coat_shin": 420.0, "base": 0.94, "flake": 0.0, "pearl": 0.0, "spec": 0x4a4a4a, "shin": 40.0, "tint": 0.35},
 	"metallic": {"f0": 0.16, "refl": 0.8, "rough": 0.08, "coat": 1.0, "coat_shin": 380.0, "base": 0.8, "flake": 1.0, "pearl": 0.0, "spec": 0xa8a8a8, "shin": 12.0, "tint": 0.5},
 	"matte": {"f0": 0.03, "refl": 0.1, "rough": 1.0, "coat": 0.0, "coat_shin": 40.0, "base": 0.9, "flake": 0.0, "pearl": 0.0, "spec": 0x303030, "shin": 8.0, "tint": 0.0},
 	"satin": {"f0": 0.12, "refl": 0.5, "rough": 0.5, "coat": 0.25, "coat_shin": 50.0, "base": 0.93, "flake": 0.0, "pearl": 0.0, "spec": 0x585858, "shin": 18.0, "tint": 0.15},
