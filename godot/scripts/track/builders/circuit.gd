@@ -207,17 +207,17 @@ static func build() -> void:
 					folk.append([xz[0] + T[bi].x * (rnd() - 0.5), Trk.hAt(bi, 25.0), xz[1] + T[bi].z * (rnd() - 0.5), Trk.heading_of(T[bi]) + PI / 2])
 		bi += 2
 	TrackCommon.people(folk)
-	World.inst(Geo.cone(2.2, 8, 7), M(0x35512f), pines2, null, true)
+	World.inst(Geo.cone(2.2, 8, 7), M(0x35512f, {"sway": 0.15}), pines2, null, true)
 	# 16 x 7 segments: the 20 x 10 of the JS cost 40 % more triangles for the same low dunes (perf budget)
 	World.inst(Geo.sphere(1, 16, 7, 0, PI * 2, 0, PI / 2), M(0xd9c99c), dunes, null, false)
 	# bend boards on top of the tyre wall, big enough to read from the track
 	TrackCommon.chevrons(20.75, 1.6, 0.02, 12.0, 1.9)
-	World.inst(Geo.cone(0.5, 1, 5), M(0xffffff), tufts, tuftC, false)
+	World.inst(Geo.cone(0.5, 1, 5), M(0xffffff, {"sway": 0.2}), tufts, tuftC, false)
 	var pines := []
 	for _k in 120:
 		var s = Trk.randPos(World.rnd, 40)
 		if s != null: pines.append(World.mtx(s[0], 4, s[1], rnd() * 6, 1 + rnd() * 0.4))
-	World.inst(Geo.cone(2.2, 8, 7), M(0x35512f), pines, null, true)
+	World.inst(Geo.cone(2.2, 8, 7), M(0x35512f, {"sway": 0.15}), pines, null, true)
 
 ## JS detailCircuit: a sponsor bridge over the track 280 m after the start, and orange marshal booths
 static func details() -> void:

@@ -142,7 +142,7 @@ static func landmarks(tulipTex: Array) -> void:
 		var side := -1.0 if rnd() < 0.5 else 1.0
 		var rh := 1.1 + rnd() * 0.9
 		reed.append(World.mtx(rx, rh / 2, cz + side * (9.7 + rnd() * 1.6), rnd() * 6, 0.12, rh, 0.12))
-	World.inst(Geo.cone(1, 1, 4), M(0x8a9a4a), reed, null, false)
+	World.inst(Geo.cone(1, 1, 4), M(0x8a9a4a, {"sway": 0.3}), reed, null, false)
 	# ---- tulip fields in strips of colour left of the start straight
 	for k in 5:
 		var m := O3.mesh(Geo.plane(44, 30), M(0xffffff, {"map": tulipTex[k], "repeat": Vector2(4.4, 30 / 1.6), "receiveShadow": true}))
@@ -273,9 +273,9 @@ static func build() -> void:
 		for _j in 5:
 			poplar.call(x + (rnd() - .5) * 40, z + (rnd() - .5) * 40)
 	World.inst(Geo.cylinder(0.22, 0.34, 4, 6), M(0x4a3a2a), popTrunk, null, true)
-	World.inst(Geo.sphere(1, 9, 8), M(0xffffff), popCrown, popCol, true)
+	World.inst(Geo.sphere(1, 9, 8), M(0xffffff, {"sway": 0.15, "swayBase": -1.0, "swaySpan": 2.0}), popCrown, popCol, true)
 	World.inst(Geo.cylinder(0.55, 0.8, 2.6, 7), M(0x5b4a36), wilTrunk, null, true)
-	World.inst(Geo.icosahedron(1, 1), M(0xffffff), wilCrown, wilCol, true)
+	World.inst(Geo.icosahedron(1, 1), M(0xffffff, {"sway": 0.15, "swayBase": -1.0, "swaySpan": 2.0}), wilCrown, wilCol, true)
 
 	var postB := []; var postT := []
 	var dd := 0.0
