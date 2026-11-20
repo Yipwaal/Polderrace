@@ -74,6 +74,21 @@ func _ready() -> void:
 	print("EXP no sun shadows: draws ", draws(), " floor px ", px(640, 600), " box px ", px(600, 345))
 	env.set_shadows(true)
 	await wait(4)
+	# 1b. frame time (software rendering: about proportional to the fragment work): 300 big boxes filling the screen,
+	# unshaded (LMat without receiveShadow) against shaded (useLights), under the shadowed sun
+	var big := []
+	var um := Mats.M(0x4080c0)
+	var lm := Mats.M(0x4080c0, {"useLights": true})
+	for i in 300:
+		big.append(O3.mesh(Geo.box(6, 6, 0.2), um, -12 + (i % 20) * 1.3, 3, 4 - (i / 20) * 0.3, self, false))
+	for label in ["unshaded", "shaded", "unshaded", "shaded"]:
+		for b in big: b.material_override = um if label == "unshaded" else lm
+		await wait(3)
+		var t0 := Time.get_ticks_usec()
+		await wait(12)
+		print("EXP frame time 300 big boxes ", label, ": ", (Time.get_ticks_usec() - t0) / 12000.0, " ms")
+	for b in big: b.queue_free()
+	await wait(3)
 	# 2. glow
 	var e := env.environment
 	e.glow_enabled = true

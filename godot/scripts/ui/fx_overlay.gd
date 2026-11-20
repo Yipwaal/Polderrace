@@ -1,8 +1,12 @@
 extends CanvasLayer
 ## Screen effects of the race (JS: radial blur post pass, speed lines overlay, rear-view mirror frame), between the 3D
-## picture and the HUD. One instance in the game scene (main.gd).
+## picture and the HUD. One instance in the game scene (main.gd). Plus a vignette with a slight colour cast per time of
+## day (one multiplied quad, no screen copy). Quality "laag": none of the full-screen effects.
 
 var blur: ColorRect
+var grade: ColorRect
+var _grade_key := ""
+var _blur_q := ""
 var lines: SpeedLines
 var mirror_frame: Panel
 var mirror_img: TextureRect
@@ -17,12 +21,26 @@ void fragment() {
 	vec2 dir = uv - center;
 	float s = strength * smoothstep(0.28, 0.85, length(dir));
 	vec4 c = vec4(0.0);
-	for (int i = 0; i < 10; i++) {
-		c += texture(screen_tex, uv - dir * s * float(i) / 9.0);
+	for (int i = 0; i < TAPS; i++) {
+		c += texture(screen_tex, uv - dir * s * float(i) / float(TAPS - 1));
 	}
-	COLOR = c / 10.0;
+	COLOR = c / float(TAPS);
 }
 """
+
+## darker towards the corners, times a colour cast: multiplied over the 3D picture
+const GRADE_SHADER := """
+shader_type canvas_item;
+render_mode blend_mul;
+uniform vec3 tint = vec3(1.0);
+uniform float vig = 0.22;
+void fragment() {
+	vec2 d = UV - 0.5;
+	float v = 1.0 - vig * smoothstep(0.18, 0.62, dot(d, d));
+	COLOR = vec4(tint * v, 1.0);
+}
+"""
+const GRADE := {"day": [Vector3(1.0, 0.995, 0.975), 0.2], "dusk": [Vector3(1.0, 0.965, 0.93), 0.26], "night": [Vector3(0.93, 0.96, 1.0), 0.3]}
 
 ## rounded corners of the mirror (JS mirrorMask), the picture flipped left-right like a mirror
 const MIRROR_SHADER := """
@@ -41,12 +59,20 @@ void fragment() {
 
 func _ready() -> void:
 	layer = 5
+	grade = ColorRect.new()
+	grade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var gm := ShaderMaterial.new()
+	gm.shader = Shader.new()
+	gm.shader.code = GRADE_SHADER
+	grade.material = gm
+	grade.visible = false
+	add_child(grade)
 	blur = ColorRect.new()
 	blur.set_anchors_preset(Control.PRESET_FULL_RECT)
 	blur.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sm := ShaderMaterial.new()
 	sm.shader = Shader.new()
-	sm.shader.code = BLUR_SHADER
 	blur.material = sm
 	blur.visible = false
 	add_child(blur)
@@ -76,10 +102,26 @@ func tick(dt: float) -> void:
 	var g := Game
 	var fxOn: bool = g.fxOn()
 	# radial blur by speed (JS: fxOn && quality != low ? speedFx * 0.055)
-	var b: float = g.speedFx * 0.055 if fxOn and G.prefs.get("quality", "high") != "low" and not g.split else 0.0
+	var q: String = G.prefs.get("quality", "high")
+	var b: float = g.speedFx * 0.055 if fxOn and q != "low" and not g.split else 0.0
 	blur.visible = b > 0.002
 	if blur.visible:
+		if q != _blur_q:
+			# fewer samples on "middel"
+			_blur_q = q
+			blur.material.shader.code = BLUR_SHADER.replace("TAPS", "10" if q == "high" else "6")
 		blur.material.set_shader_parameter("strength", b)
+	# vignette and colour cast: in the race and the menus over the track, not in the garage or on the podium
+	var staged: bool = World.root != null and not World.root.visible
+	grade.visible = q != "low" and Env.me != null and not staged
+	if grade.visible:
+		var key: String = Env.me.time + Env.me.weather
+		if key != _grade_key:
+			_grade_key = key
+			var gr: Array = GRADE.get(Env.me.time, GRADE.day)
+			var dull := Env.me.weather != "dry"
+			grade.material.set_shader_parameter("tint", (gr[0] as Vector3).lerp(Vector3(0.97, 0.98, 1.0), 0.6) if dull else gr[0])
+			grade.material.set_shader_parameter("vig", gr[1])
 	lines.step(0.0 if g.paused else dt, g.speedFx if fxOn and not g.split else 0.0)
 	# mirror
 	var on: bool = Fx.me != null and Fx.me.mirrorOn()
