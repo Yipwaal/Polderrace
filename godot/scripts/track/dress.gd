@@ -24,7 +24,8 @@ static func alongSides(every: float, latFn: Callable, fn: Callable) -> void:
 			var lat = latFn.call(i, s)
 			if lat != null:
 				var xz := Trk.onTrack(i, s * lat)
-				if not (Trk.distToTrack(xz[0], xz[1]) < (12.0 if Trk.TRK.get("terrain", false) else Trk.ROAD_HALF + 1)) and not _kept(xz[0], xz[1]):
+				# (World.pavTaken: spots a builder keeps for a building or a stand; World.noDress: areas without dressing)
+				if not (Trk.distToTrack(xz[0], xz[1]) < (12.0 if Trk.TRK.get("terrain", false) else Trk.ROAD_HALF + 1)) and not World.pavBusy(xz[0], xz[1], 1.5) and not _kept(xz[0], xz[1]):
 					fn.call(xz[0], xz[1], i, s)
 		d += every * (0.7 + rnd() * 0.6)
 
@@ -327,15 +328,16 @@ static func dressTrack(id: String) -> void:
 		"afsluitdijk": reeds(8, 4, 10); bushes(40, 6, 16, 0x5f7f3a)
 		"haven": crates(40)
 		"veluwe":
-			bushes(7, 3, 14, 0x3f6a2a); flowers(14, 2, 10, ["#e8e4dc", "#c8302a"])
+			bushes(7, 3.4, 14, 0x3f6a2a); flowers(14, 2, 10, ["#e8e4dc", "#c8302a"])
 			var lg := []
-			alongSides(38, func(_i, _s): return 12 + rnd() * 10, func(x, z, _i, _s):
+			# logs lie 16.5 to 25 m out: they are up to 7 m long and turned any way, and the car gets to 11.2 m
+			alongSides(38, func(_i, _s): return 16.5 + rnd() * 8.5, func(x, z, _i, _s):
 				lg.append(World.mtx(x, groundY(x, z) + 0.3, z, rnd() * 6, 0.6, 0.6, 4 + rnd() * 3)))
 			World.inst(Geo.box(1, 1, 1), M(0x5a3f2a), lg, null, true)
 		"grachten": planters(16, 6.5); benches(40, 6.6)
-		"limburg": fences(6, 4); bushes(5, 2.5, 4.5, 0x3f6a2a); flowers(6, 1, 6)
+		"limburg": fences(6, 4); bushes(5, 4.4, 6.6, 0x3f6a2a); flowers(6, 1, 6)   # bushes are up to 2 m wide: clear of the rail at 10.8
 		"rotterdam": _dressRotterdam()
-		"zeeland": beachHuts(); flagPoles(120, 6); reeds(10, 6, 14)
+		"zeeland": flagPoles(120, 6); reeds(16, 6, 14)   # the beach huts are built by BuildZeeland.beach()
 
 static func _dressRotterdam() -> void:
 	var tr := []; var tk := []
