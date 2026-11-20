@@ -117,7 +117,7 @@ func _lobby_info() -> Dictionary:
 	var S := G.settings
 	var n: int = 1 + (net.remotes.size() if net != null else 0)
 	return {"pr": 1, "v": NetRoom.PROTO, "id": _game_id, "name": gameName(str(G.prefs.nick)), "track": trackName(S.track, S.dir), "laps": int(S.laps),
-		"n": n, "max": NetRoom.MAX_GUESTS + 1, "open": net != null and net.open and n <= NetRoom.MAX_GUESTS, "race": net != null and net.inRace, "port": NetRoom.PORT}
+		"n": n, "max": NetRoom.MAX_GUESTS + 1, "open": net != null and net.open and n <= NetRoom.MAX_GUESTS, "race": net != null and (net.inRace or net.ref), "port": NetRoom.PORT}
 
 func netCreate() -> void:
 	if net != null: return
@@ -183,7 +183,8 @@ func netEnter(room: NetRoom, host: bool) -> void:
 		"cfg": {}, "cd": null, "cdN": 0, "cdAt": 0, "cdSeen": -1, "pts": {}, "res": null, "resSent": "", "resAt": 0, "q": {}, "seats": {}, "open": true,
 		"rdy": host, "vote": "", "eSeq": 0, "race": null, "raced": false, "firstFin": 0, "final": false, "forced": false, "warned": 0,
 		"spec": null, "watch": false, "wspd": {}, "mig": null, "prevS": null, "chat": [], "joinedOnce": host, "nt": "", "cands": [],
-		"clock": 0.0, "lookAt": 0, "seatsSent": "", "reconn": false, "preloaded": false, "noRoad": 0, "probe": null, "lostIps": [], "clockAt": Time.get_ticks_msec()}
+		"clock": 0.0, "lookAt": 0, "seatsSent": "", "reconn": false, "preloaded": false, "noRoad": 0, "probe": null, "lostIps": [], "clockAt": Time.get_ticks_msec(),
+		"ref": false, "raceL": 0.0, "raceS0": 0.0, "raceLaps": 1, "meRow": null, "botRows": []}
 	# the host's races use this player's settings for a while: they come back when he leaves the game
 	# (the host keeps what he picked in the online screen; only the mode and the grid place are the game's)
 	net.prevS = G.settings.duplicate(true) if not host else {"mode": G.settings.mode, "grid": G.settings.grid}
@@ -717,6 +718,8 @@ func _applyNext() -> void:
 ## the host starts a race for everyone in the game (JS netHostStart): first a short countdown everyone sees
 func netHostStart() -> void:
 	if net == null or not net.host or int(net.cdAt) > 0: return
+	# the last race is not over for everyone yet: it ends now, with the places as they are (else it never counted)
+	if (net.inRace or net.ref) and net.raced and not net.final: _judge(Time.get_ticks_msec(), true)
 	_applyNext()
 	var S := G.settings
 	net.cdN = int(net.cdN) + 1
@@ -861,6 +864,12 @@ func netBegin(race: Dictionary) -> void:
 		Game.overReady = true
 	Game.startRace()
 	if net.host: S.bots = race.bots.size()      # (the host's own setting: 0 bots stays 0)
+	# the race's own track: the host goes on judging it from the lobby, where he may load another track (see netAfterRace)
+	net.ref = false
+	net.raceL = Trk.TRACK_LEN
+	net.raceS0 = Trk.S_START
+	net.raceLaps = Game.raceLaps
+	net.botAt = Time.get_ticks_msec()     # (the host's bots count as live until his snapshots stop, see hostBots)
 	# the same wait for green on every PC (the lights follow the time since the start, see netTick)
 	Game.goDelay = 0.4 + float(int(race.id) % 800) / 1000.0
 	_sendCar()
@@ -883,6 +892,23 @@ func netKick(i: int, x: float, z: float, s: float) -> void:
 ## guests: the host's latest bot positions are recent (in between, Game lets the bots roll on)
 func botsFresh() -> bool:
 	return net != null and Time.get_ticks_msec() - int(net.botAt) < 300
+
+## guests: the host drives the bots. When his positions stop coming (he went back to the lobby, or he fell away and a
+## new host is being found) each game drives them itself, instead of leaving them standing on the road.
+func hostBots() -> bool:
+	return net != null and not net.host and Time.get_ticks_msec() - int(net.botAt) < 2000
+
+## how far a car is in this race (Game.progressOf on the race's own track: the host may have loaded another one)
+func _prog(lap: int, s: float, finished: bool, ft: float) -> float:
+	var L: float = net.raceL if float(net.raceL) > 0 else Trk.TRACK_LEN
+	if finished: return (int(net.raceLaps) + 2) * L + 100000 - ft * 10
+	var rel := fposmod(s - float(net.raceS0), L)
+	if lap <= 0: return -fmod(L - rel, L)
+	return (lap - 1) * L + rel
+
+func _wrapL(d: float) -> float:
+	var L: float = net.raceL if float(net.raceL) > 0 else Trk.TRACK_LEN
+	return d - L if d > L / 2.0 else (d + L if d < -L / 2.0 else d)
 
 ## a remote car on the road: in this race, not gone back to the menu, and heard from lately (not closed or hanging)
 func _onRoad(r: Dictionary, now: int) -> bool:
@@ -916,7 +942,7 @@ func netTick(dt: float) -> void:
 	var rid := int(net.raceId)
 	var live: bool = net.inRace or net.watch
 	# the race clock for the results: real time since green (as fast as the game runs), whatever the frame rate
-	if net.inRace and Game.state != "countdown" and Game.state != "menu":
+	if (net.inRace and Game.state != "countdown" and Game.state != "menu") or net.ref:
 		net.clock += minf(2.0, (now - int(net.clockAt)) / 1000.0) * Engine.time_scale
 	net.clockAt = now
 	for p in room.peers():
@@ -963,14 +989,14 @@ func netTick(dt: float) -> void:
 					if r.velOk: r.vel = mv
 				r.prev = r.st; r.st = st; r.t = now; r.lap = int(st[6])
 				# can it be true? the distance it covered at a speed a car can have (the host's results go by this)
-				if Trk.NS > 1:
+				if float(net.raceL) > 0:
 					if float(r.vs) < 0: r.vdist = 0.0
 					else:
 						var cap := 130.0 * (now - int(r.vt)) / 1000.0 * Engine.time_scale + 6.0
-						r.vdist += clampf(Trk.wrapD(float(st[5]) - float(r.vs)), -cap, cap)
+						r.vdist += clampf(_wrapL(float(st[5]) - float(r.vs)), -cap, cap)
 					r.vs = float(st[5]); r.vt = now
 				if st[7] and not r.done:
-					if r.vdist >= Game.raceLaps * Trk.TRACK_LEN - 60.0:
+					if r.vdist >= int(net.raceLaps) * float(net.raceL) - 60.0:
 						r.done = true
 						var ft := float(st[8])
 						# its own time, when that can be right by the clock here (else the moment it came in)
@@ -1038,7 +1064,10 @@ func netTick(dt: float) -> void:
 	if net.host and net.probe != null: _probeTick(now)
 	if net == null: return
 	if net.watch: _watchTick(dt, now)
-	if net == null or not (net.inRace or net.watch):
+	if net == null: return
+	# host back in the lobby while the others still race: he is still the referee of their race
+	if net.host and net.ref and not net.inRace: _judge(now)
+	if not (net.inRace or net.watch):
 		return
 	if not net.host and botsFresh() and not net.watch:
 		# the rest of the difference with the host's bot positions: a part every frame (gone in about 0.1 s)
@@ -1131,8 +1160,8 @@ func mapDots() -> Array:
 	return out
 
 func netRemoteProg(r: Dictionary) -> float:
-	if r.done: return (Game.raceLaps + 2) * Trk.TRACK_LEN + 100000 - r.ft * 10
-	return Game.progressOf(r.lap, r.st[5], false, 0) if r.st != null else -1e9
+	if r.done: return _prog(0, 0.0, true, r.ft)
+	return _prog(r.lap, r.st[5], false, 0) if r.st != null else -1e9
 
 ## bump into the other players' cars (each player handles his own side of a hit)
 func netCollide() -> void:
@@ -1171,23 +1200,58 @@ func netAfterRace() -> void:
 	for r in net.remotes.values():
 		if r.car != null: r.car.g.visible = false
 		r.shown = false
-	# (the host's race is over: who comes in now does not wait for it)
-	net.game.presence({"st": null, "b": null, "race": null} if net.host else {"st": null, "b": null})
+	if net.host and net.raced and not net.final and not net.ref and _othersRacing():
+		# the host goes back to the lobby while the others still race: he stays the referee of their race (results,
+		# points); his own finish keeps its place, and the bots stay where they were in his results (from now on each
+		# player's game drives them, see hostBots)
+		net.ref = true
+		net.meRow = null
+		if Game.raceDone and not Game.playerOut:
+			net.meRow = {"p": net.game.me, "n": _dispName(net.game.me, str(G.prefs.nick)), "c": G.settings.car, "f": true, "t": Game.raceFinishTime,
+				"g": _prog(0, 0.0, true, Game.raceFinishTime), "b": false}
+		net.botRows = []
+		for bot in Game.bots:
+			net.botRows.append({"p": "", "n": bot.name, "c": bot.type, "f": bot.finished, "t": bot.finishTime if bot.finished else 0.0,
+				"g": -1e9 if bot.out else _prog(bot.lap, bot.s, bot.finished, bot.finishTime), "b": true})
+		net.game.presence({"st": null, "b": null})
+	else:
+		# (the host's race is over: who comes in now does not wait for it)
+		net.game.presence({"st": null, "b": null, "race": null} if net.host else {"st": null, "b": null})
+	changed.emit()
+
+## host: another player is still on the road in this race
+func _othersRacing() -> bool:
+	for id in net.order:
+		var r = net.remotes.get(id)
+		if r != null and r.st != null and not r.done and not r.out and not r.off: return true
+	return false
+
+## host, refereeing from the lobby: the race is over (final, or nobody left in it)
+func _refEnd() -> void:
+	net.ref = false
+	net.meRow = null
+	net.botRows = []
+	net.game.presence({"race": null})
 	changed.emit()
 
 # ------------------------------------------------------------------ the results: the host decides
 ## host: the official order of this race. A player counts as finished when the host saw him cover the distance; the
 ## race is final when every player is in or gone, or FINISH_WAIT after the first one; then come the points.
-func _judge(now: int) -> void:
-	if net.final or now - int(net.resAt) < 250: return
+## force: final now (the host starts the next race before everyone is in: who is still driving gets the place he has)
+func _judge(now: int, force := false) -> void:
+	if net.final or (now - int(net.resAt) < 250 and not force): return
 	var room: NetRoom = net.game
 	var rows := []
 	var open := 0
 	var humans := 0
-	if Game.state != "menu":
+	if not net.inRace and net.ref and net.meRow != null:
+		rows.append(net.meRow)
+		humans += 1
+		net.firstFin = now if int(net.firstFin) == 0 else net.firstFin
+	if net.inRace and Game.state != "menu":
 		var fin: bool = Game.raceDone and not Game.playerOut
 		rows.append({"p": room.me, "n": _dispName(room.me, str(G.prefs.nick)), "c": G.settings.car, "f": fin, "t": Game.raceFinishTime if fin else 0.0,
-			"g": Game.progressOf(Game.player.lap, Game.player.s, fin, Game.raceFinishTime), "b": false})
+			"g": _prog(Game.player.lap, Game.player.s, fin, Game.raceFinishTime), "b": false})
 		humans += 1
 		if fin: net.firstFin = now if int(net.firstFin) == 0 else net.firstFin
 		else: open += 1
@@ -1198,14 +1262,20 @@ func _judge(now: int) -> void:
 		humans += 1
 		if r.done: net.firstFin = now if int(net.firstFin) == 0 else net.firstFin
 		elif not r.out: open += 1
-	for bot in Game.bots:
-		rows.append({"p": "", "n": bot.name, "c": bot.type, "f": bot.finished, "t": bot.finishTime if bot.finished else 0.0,
-			"g": -1e9 if bot.out else Game.progressOf(bot.lap, bot.s, bot.finished, bot.finishTime), "b": true})
+	if net.inRace:
+		for bot in Game.bots:
+			rows.append({"p": "", "n": bot.name, "c": bot.type, "f": bot.finished, "t": bot.finishTime if bot.finished else 0.0,
+				"g": -1e9 if bot.out else _prog(bot.lap, bot.s, bot.finished, bot.finishTime), "b": true})
+	elif net.ref:
+		if humans == 0:
+			_refEnd()      # everyone went: no results, no points
+			return
+		rows.append_array(net.botRows)
 	rows.sort_custom(func(a, b): return a.g > b.g)
 	var left := -1.0
 	if int(net.firstFin) > 0: left = maxf(0.0, FINISH_WAIT - (now - int(net.firstFin)) / 1000.0)
-	var final: bool = humans > 0 and (open == 0 or (int(net.firstFin) > 0 and left <= 0.0))
-	if Game.state == "countdown": final = false
+	var final: bool = humans > 0 and (open == 0 or (int(net.firstFin) > 0 and left <= 0.0) or force)
+	if Game.state == "countdown" and net.inRace and not force: final = false
 	var out := []
 	var place := 0
 	for x in rows:
@@ -1235,6 +1305,7 @@ func _judge(now: int) -> void:
 		_savePts()
 		_planNext()
 		room.presence({"res": res, "pts": net.pts, "cfg": _myCfg()})
+		if net.ref: _refEnd()
 	else:
 		room.presence({"res": res})
 	changed.emit()
@@ -1438,8 +1509,12 @@ func watchStart() -> void:
 	if Env.me != null: Env.me.apply(race.time, race.weather)
 	if net == null: return
 	Game.clearTraffic()
-	Game.setupBots(0, race.bots)
+	# (the host watching the race he left: his bots are driven by each player's own game now, he has no positions of them)
+	Game.setupBots(0, [] if net.host else race.bots)
 	Game.raceLaps = clampi(int(race.laps), 1, 9)
+	net.raceL = Trk.TRACK_LEN
+	net.raceS0 = Trk.S_START
+	net.raceLaps = Game.raceLaps
 	net.watch = true
 	net.wspd = {}
 	net.botErr = {}

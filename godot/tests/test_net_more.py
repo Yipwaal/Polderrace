@@ -11,7 +11,9 @@
      broadcast geblokkeerd (gevonden via de sweep), firewall van een host dicht (de lijst zegt het), een speler via een
      slechte verbinding (net_lossy.py: 5% verlies, 150 ms heen en terug, door elkaar): hoe vloeiend en hoe waar zijn auto
      bij de host rijdt, 5 s en 12 s geen verbinding (blijft / komt vanzelf terug), host crasht (overname op een andere pc).
-usage: python godot/tests/test_net_more.py [1] [2] [3] [4]   (about 7 minutes: 1 ±2, 2 ±1-3, 3 ±0,5, 4 ±4; 4 only as root on Linux)"""
+  5. de host stapt uit de race (Naar lobby) terwijl de anderen nog rijden: de bots rijden door, de race krijgt toch een
+     uitslag en punten; de host start een nieuwe race voor iedereen binnen is: de lopende race telt mee.
+usage: python godot/tests/test_net_more.py [1] [2] [3] [4] [5]   (about 8 minutes: 1 ±2, 2 ±1-3, 3 ±0,5, 4 ±4, 5 ±1; 4 only as root on Linux)"""
 import sys, os, time, math, itertools, shutil, subprocess, pathlib, json, socket, random, statistics
 import net_players
 net_players.isolate()
@@ -755,13 +757,62 @@ def scenario_lan():
         if px is not None: px.kill()
         lan.close()
 
-which = sys.argv[1:] or ['1', '2', '3', '4']
+# ---------------------------------------------------------------------------------------------------------------- 5
+def scenario_host_out():
+    print('== online: de host stapt uit de race terwijl de anderen nog rijden')
+    TS = 4
+    h = Player('host', nick='Yip', car='gt', ts=TS)
+    g1 = Player('g1', nick='Bram', car='hatch', ts=TS)
+    g2 = Player('g2', nick='Lotte', car='evo', ts=TS)
+    P = [h, g1, g2]
+    check(all(p.ready() for p in P), 'drie spellen gestart')
+    h.cmd('open'); h.cmd('press Nieuwe game maken')
+    h.cmd('set laps 1'); h.cmd('set bots 2')
+    for g in (g1, g2): g.cmd('open')
+    for g in (g1, g2): g.cmd('join 0')
+    h.wait(lambda r: len(r['remotes']) == 2, 15)
+    # race 1: the host stops at once (pause, Naar lobby); the others race on
+    h.cmd('start')
+    rs = [p.wait(lambda r: r['state'] == 'racing', 25) for p in P]
+    check(all(r.get('state') == 'racing' for r in rs), 'iedereen in de race', [r.get('state') for r in rs])
+    time.sleep(1.5)
+    check(h.cmd('quitrace'), 'de host stopt met de race (pauze, Naar lobby)')
+    time.sleep(3)
+    b0 = g1.rep().get('bot_s', []); time.sleep(1.0); b1 = g1.rep().get('bot_s', [])
+    check(len(b0) == 2 and all(abs(a - b) > 5 for a, b in zip(b0, b1)), 'de bots blijven rijden bij de anderen (ze staan niet stil op de weg)', (b0, b1))
+    rs = [p.wait(lambda r: r['state'] == 'over' and final(r), 90) for p in (g1, g2)]
+    check(all(final(r) for r in rs), 'de race krijgt een officiele uitslag, ook al staat de host in de lobby', [(r.get('state'), r.get('res')) for r in rs])
+    time.sleep(1)
+    ps = [pts_of(p.rep()) for p in P]
+    check(ps[0] == ps[1] == ps[2] and sorted(x[1] for x in ps[0]) == [8, 10], 'en punten voor wie de race uitreed, bij iedereen gelijk', ps)
+    r = h.rep()
+    check(r.get('state') == 'menu' and not h.errors(), 'de host stond al die tijd in de lobby', r.get('state'))
+    # race 2: Lotte stands still; Yip and Bram finish, and Yip starts the next race before she is in
+    for p in (g1, g2): p.cmd('press Lobby')
+    h.cmd('start')
+    rs = [p.wait(lambda r: r['state'] == 'racing', 25) for p in P]
+    g2.cmd('drive off')
+    rid = rs[0].get('raceId')
+    r = h.wait(lambda r: r['state'] == 'over' and r.get('again'), 90)
+    g1.wait(lambda r: r['state'] in ('finished', 'over'), 60)
+    check(h.cmd('again'), 'de host klikt Nieuwe race terwijl Lotte nog rijdt')
+    rs = [p.wait(lambda r: r.get('countdown', 0) > 0 or r['state'] == 'countdown', 6) for p in P]
+    ps = [pts_of(p.rep()) for p in P]
+    check(ps[0] == ps[1] == ps[2] and all(x[2] == 2 for x in ps[0] if x[0] in ('Bram', 'Lotte')),
+          'de race die nog liep telt mee in de stand (wie nog reed, krijgt de plek die hij had)', ps)
+    rs = [p.wait(lambda r: r['state'] in ('countdown', 'racing') and r.get('raceId') != rid, 25) for p in P]
+    check(all(r.get('state') in ('countdown', 'racing') for r in rs) and len({r.get('raceId') for r in rs}) == 1, 'en de volgende race start bij iedereen', [r.get('state') for r in rs])
+    no_errors(P)
+    kill_all()
+
+which = sys.argv[1:] or ['1', '2', '3', '4', '5']
 t0 = time.time()
 try:
     if '1' in which: scenario_evening()
     if '2' in which: scenario_full()
     if '3' in which: scenario_car()
     if '4' in which: scenario_lan()
+    if '5' in which: scenario_host_out()
 finally:
     kill_all()
 print(f'-- online (meer spelers): {"alles geslaagd" if not bad else str(len(bad)) + " mislukt: " + ", ".join(bad)}  ({round(time.time() - t0)} s)')
