@@ -1,8 +1,13 @@
 extends CanvasLayer
 ## Screen effects of the race (JS: radial blur post pass, speed lines overlay, rear-view mirror frame), between the 3D
-## picture and the HUD. One instance in the game scene (main.gd).
+## picture and the HUD. One instance in the game scene (main.gd). Plus a vignette with a slight colour cast per time of
+## day (one alpha-blended quad, no screen copy). Both full-screen effects only on "hoog": at 1440p on integrated graphics a
+## screen copy (blur) or an extra full-screen layer (vignette) costs real fill rate, so "middel" and "laag" keep only the
+## speed lines (thin lines, next to nothing).
 
 var blur: ColorRect
+var grade: ColorRect
+var _grade_key := ""
 var lines: SpeedLines
 var mirror_frame: Panel
 var mirror_img: TextureRect
@@ -17,12 +22,27 @@ void fragment() {
 	vec2 dir = uv - center;
 	float s = strength * smoothstep(0.28, 0.85, length(dir));
 	vec4 c = vec4(0.0);
-	for (int i = 0; i < 10; i++) {
-		c += texture(screen_tex, uv - dir * s * float(i) / 9.0);
+	for (int i = 0; i < TAPS; i++) {
+		c += texture(screen_tex, uv - dir * s * float(i) / float(TAPS - 1));
 	}
-	COLOR = c / 10.0;
+	COLOR = c / float(TAPS);
 }
 """
+
+## darker towards the corners plus a thin wash of colour over the 3D picture (plain alpha blending: a multiplied quad
+## came out white on the Compatibility renderer)
+const GRADE_SHADER := """
+shader_type canvas_item;
+uniform vec4 tint = vec4(1.0, 0.9, 0.8, 0.0);    // wash colour, a = how much
+uniform float vig = 0.22;
+void fragment() {
+	vec2 d = UV - 0.5;
+	float v = vig * smoothstep(0.18, 0.62, dot(d, d));
+	float a = 1.0 - (1.0 - tint.a) * (1.0 - v);
+	COLOR = vec4(tint.rgb * (tint.a * (1.0 - v) / max(a, 0.0001)), a);
+}
+"""
+const GRADE := {"day": [Color(1.0, 0.93, 0.7, 0.03), 0.2], "dusk": [Color(1.0, 0.55, 0.25, 0.05), 0.26], "night": [Color(0.15, 0.25, 0.6, 0.06), 0.3]}
 
 ## rounded corners of the mirror (JS mirrorMask), the picture flipped left-right like a mirror
 const MIRROR_SHADER := """
@@ -45,11 +65,23 @@ func _ready() -> void:
 	blur.set_anchors_preset(Control.PRESET_FULL_RECT)
 	blur.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sm := ShaderMaterial.new()
-	sm.shader = Shader.new()
-	sm.shader.code = BLUR_SHADER
+	# 8 samples, and only on "hoog" (made up front: swapping the code of a shader in use left the blur white)
+	var bsh := Shader.new()
+	bsh.code = BLUR_SHADER.replace("TAPS", "8")
+	sm.shader = bsh
 	blur.material = sm
 	blur.visible = false
 	add_child(blur)
+	# (after the blur, so the blur does not smear the vignette)
+	grade = ColorRect.new()
+	grade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var gm := ShaderMaterial.new()
+	gm.shader = Shader.new()
+	gm.shader.code = GRADE_SHADER
+	grade.material = gm
+	grade.visible = false
+	add_child(grade)
 	lines = SpeedLines.new()
 	lines.set_anchors_preset(Control.PRESET_FULL_RECT)
 	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -75,11 +107,26 @@ func _ready() -> void:
 func tick(dt: float) -> void:
 	var g := Game
 	var fxOn: bool = g.fxOn()
-	# radial blur by speed (JS: fxOn && quality != low ? speedFx * 0.055)
-	var b: float = g.speedFx * 0.055 if fxOn and G.prefs.get("quality", "high") != "low" and not g.split else 0.0
+	# radial blur by speed (JS: fxOn && quality != low ? speedFx * 0.055; here "hoog" only, see the top)
+	var q: String = G.prefs.get("quality", "high")
+	var high := q != "low" and q != "mid"
+	var b: float = g.speedFx * 0.055 if fxOn and high and not g.split else 0.0
 	blur.visible = b > 0.002
 	if blur.visible:
 		blur.material.set_shader_parameter("strength", b)
+	# vignette and colour cast: in the race and the menus over the track, not in the garage or on the podium
+	var staged: bool = World.root != null and not World.root.visible
+	grade.visible = high and Env.me != null and not staged
+	if grade.visible:
+		var key: String = Env.me.time + Env.me.weather
+		if key != _grade_key:
+			_grade_key = key
+			var gr: Array = GRADE.get(Env.me.time, GRADE.day)
+			var dull := Env.me.weather != "dry"
+			var tc: Color = gr[0]
+			if dull: tc = Color(0.55, 0.6, 0.68, tc.a * 0.8)
+			grade.material.set_shader_parameter("tint", tc)
+			grade.material.set_shader_parameter("vig", gr[1])
 	lines.step(0.0 if g.paused else dt, g.speedFx if fxOn and not g.split else 0.0)
 	# mirror
 	var on: bool = Fx.me != null and Fx.me.mirrorOn()

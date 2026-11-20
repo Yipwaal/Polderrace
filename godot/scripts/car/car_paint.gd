@@ -138,12 +138,13 @@ func _push() -> void:
 
 ## LMat's shader code with the car code added: null when an anchor is missing (then the material stays plain LMat)
 static func _patch(code: String, m: int):
-	var A_SPEC := "vec3 phong_spec(vec3 n, vec3 l, vec3 v) {"
+	var A_SPEC := "vec3 phong_spec(vec3 n, vec3 l, vec3 v, vec3 sc, float sh) {"
 	var A_VERT := "void vertex() {"
 	var A_FRAG := "\tfloat f = 0.0;"
-	var A_OUT := "\tEMISSION = emit(mix(lit, pr_fog.rgb, f));"
+	var A_GLOSS := "\tfloat hl = 0.0;"
+	var A_OUT := "\tvec3 lit = c.rgb * dif * keep + gloss;\n"
 	var A_ALPHA := "\tALPHA = c.a;"
-	for a in [A_SPEC, A_VERT, A_FRAG, A_OUT]:
+	for a in [A_SPEC, A_VERT, A_FRAG, A_GLOSS, A_OUT]:
 		if code.count(a) != 1:
 			if hooked: push_warning("CarPaint: anker niet gevonden in LMat-shader: " + a)
 			hooked = false
@@ -152,10 +153,12 @@ static func _patch(code: String, m: int):
 		hooked = false
 		return null
 	var defs := ["#define CP_PAINT", "#define CP_DETAIL", "#define CP_GLASS"]
-	code = code.replace(A_SPEC, "vec3 phong_spec0(vec3 n, vec3 l, vec3 v) {")
+	code = code.replace(A_SPEC, "vec3 phong_spec0(vec3 n, vec3 l, vec3 v, vec3 sc, float sh) {")
 	code = code.replace(A_VERT, defs[m] + "\n" + CP_FUNCS + A_VERT + "\n\tcp_pos = VERTEX;\n\tcp_nrm = NORMAL;\n\tcp_col = COLOR;")
 	code = code.replace(A_FRAG, CP_SURFACE + A_FRAG)
-	code = code.replace(A_OUT, CP_REFLECT + A_OUT)
+	# LMat's own sky mirror (PHONG) makes way for the car's reflection below
+	code = code.replace(A_GLOSS, "\tgloss = vec3(0.0);\n" + A_GLOSS)
+	code = code.replace(A_OUT, A_OUT + CP_REFLECT)
 	if m == Mode.GLASS:
 		code = code.replace(A_ALPHA, "\tALPHA = mix(c.a, 1.0, clamp(cp_fres * 1.6, 0.0, 1.0));")
 	var sh := Shader.new()
@@ -187,7 +190,7 @@ vec3 cp_env(vec3 r, float rough) {
 	float up = r.y;
 	float ls = dot(pr_hemi_sky.rgb, vec3(0.3, 0.5, 0.2));
 	float lg = dot(pr_hemi_ground.rgb, vec3(0.3, 0.5, 0.2));
-	vec3 sky = pr_hemi_sky.rgb * vec3(0.72, 0.86, 1.1);
+	vec3 sky = mix(pr_sky.rgb, pr_hemi_sky.rgb * vec3(0.72, 0.86, 1.1), 0.25);   // the sky overhead (Env: pr_sky)
 	vec3 hor = mix(pr_fog.rgb, vec3(ls), 0.35) * 1.08;
 	vec3 land = mix(pr_hemi_ground.rgb, vec3(lg), 0.6) * 0.42;
 	vec3 road = vec3(ls * 0.26 + lg * 0.1);
@@ -202,8 +205,8 @@ vec3 cp_env(vec3 r, float rough) {
 }
 
 // LMat's Blinn-Phong lobe (the paint itself) plus the clear coat: a tight glint of the sun
-vec3 phong_spec(vec3 n, vec3 l, vec3 v) {
-	vec3 s = phong_spec0(n, l, v);
+vec3 phong_spec(vec3 n, vec3 l, vec3 v, vec3 sc, float sh0) {
+	vec3 s = phong_spec0(n, l, v, sc, sh0);
 	vec3 h = normalize(l + v);
 	float dnh = max(dot(n, h), 0.0);
 	float sh = cp_b.y;

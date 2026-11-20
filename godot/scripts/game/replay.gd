@@ -169,6 +169,11 @@ func replayOpen() -> void:
 		if not c.has("peer"): continue
 		var r = Net.net.remotes.get(c.peer) if Net.net != null else null
 		meshes.append(r.car if r != null else null)    # a player who left the game has no car any more: skipped
+	# the replay shows the cars level (no body lean is recorded): wheels back where they belong under the body
+	for m in meshes:
+		if m == null: continue
+		Game.tiltRig(m, 0, 0, 0)
+		for w in m.wheels: w.pivot.rotation.y = 0.0
 	# the podium makes way for the replay and comes back after it (JS: podiumArgs kept in rp.podium)
 	var pa = Podium.podiumArgs
 	Podium.leavePodium()

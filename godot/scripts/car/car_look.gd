@@ -333,6 +333,7 @@ static func _swap(m: Dictionary, L: Dictionary, all: Array) -> void:
 			# the lamp atlas (CarLamps) in a tinted glass: the same textures, its colour multiplied in
 			var lm: LMat = CarKit.lampMat.clone()
 			lm.albedo_color = MathX.col(LAMPS[L.lamp][0])
+			lm.set_meta("lamp", true)   # Fx still finds the head lamps for their glow
 			_lampMats[L.lamp] = lm
 			_syncLamps()
 		lamp = _lampMats[L.lamp]

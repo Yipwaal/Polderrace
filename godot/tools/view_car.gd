@@ -37,6 +37,7 @@ const SETS := {
 	"center": {"up": {"exhaust": "center", "stripe": "yellow", "num": 3}, "views": ["r34", "rear", "high"]},
 	"look": {"up": {"tw": "letter", "cal": "blue", "rim": "#aa5500", "tint": "bronze", "lamp": "yellow", "roof": "white", "stripe": "flames", "d1": "polder",
 		"ban": "POLDERRACE", "plate": "YIP-01", "num": 7}, "views": ["f34", "side", "wheel", "front", "high"]},
+	"mirror": {"views": ["mirror", "mirrorf"]},
 	"colors": {"colors": true, "views": ["f34"]},
 	"finishes": {"finishes": true, "views": ["f34", "r34"]},
 }
@@ -129,6 +130,12 @@ func _view(name: String, m: Dictionary) -> Array:
 		"nose": return [Vector3(1.25, 0.95, zf + 1.5), Vector3(0.35, 0.55, zf - 0.1), 36]
 		"tail", "brake", "rev": return [Vector3(-1.25, 1.0, zr - 1.5), Vector3(-0.35, 0.6, zr + 0.1), 36]
 		"cabin": return [Vector3(2.0, 1.75, 1.3), Vector3(0, 0.95, -0.35), 36]
+		"mirror", "mirrorf":   # close to the left door mirror, from behind / in front
+			var K = m.get("kit", null)
+			var mz: float = K.dress.get("mz", 0.5) if K != null else 0.5
+			var my: float = K.dress.get("my", 1.0) if K != null else 1.0
+			var sg := -1.0 if name == "mirror" else 1.0
+			return [Vector3(W / 2 + 0.55, my + 0.3, mz + sg * 1.4), Vector3(W / 2 - 0.05, my, mz), 30]
 	var v: Array = VIEWS[name]
 	var ez: float = v[2] * k
 	if name in ["f34", "front", "lowf"]: ez += L / 2 - 2.3 * k + off

@@ -55,3 +55,14 @@ var mistT = null
 var slowT := 0.0
 var slideT := 0.0
 var noAvoid := false
+var wideT := 0.0             ## a small mistake: running wide for a moment (wideDir: which way, wideAmp: how far)
+var wideDir := 0.0
+var wideAmp := 0.0
+var defT := 0.0              ## covering the line against a faster car behind (defLat: where), defCool: until the next time
+var defLat := 0.0
+var defCool := 0.0
+
+# the body's lean (visual)
+var roll := 0.0
+var pitch := 0.0
+var prevV := 0.0
