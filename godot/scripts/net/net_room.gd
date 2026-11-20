@@ -707,11 +707,13 @@ static func clean(patch: Dictionary, guest: bool) -> Dictionary:
 static func clean_look(v: Dictionary) -> Dictionary:
 	var out := {}
 	var n := 0
-	for k in v:
-		if not (k is String) or k.length() > 20: continue
-		var x = v[k]
+	for key in v:
+		# (a key set as d.paint = … is a StringName: the same as text here)
+		if not (key is String or key is StringName) or str(key).length() > 20: continue
+		var k := str(key)
+		var x = v[key]
 		if _num(x) or x is bool: out[k] = x
-		elif x is String and x.length() <= 40: out[k] = _text(x, 40)
+		elif (x is String or x is StringName) and str(x).length() <= 40: out[k] = _text(str(x), 40)
 		else: continue
 		n += 1
 		if n >= 40: break

@@ -44,7 +44,13 @@ def speeds(track):
 def no_errors(ps):
     for p in ps:
         e = p.errors()
-        check(not e, f'{p.name}: geen scriptfouten', e[:3])
+        ctx = ''
+        if e:
+            # what the game said just before the first one (where it came from)
+            with p.cv:
+                i = p.out.index(e[0])
+                ctx = ' | '.join(l for l in p.out[max(0, i - 12):i + 3] if not l.startswith('NET '))
+        check(not e, f'{p.name}: geen scriptfouten', (e[:3], ctx) if e else '')
 
 def pts_of(r):
     return sorted((x['name'], x['pts'], x['races']) for x in r.get('pts', []))
@@ -237,7 +243,7 @@ def scenario_evening():
     check(len({int(r.get('raceId', 0)) for r in rs}) == 1, 'zelfde race-id')
     order = rs[0].get('order', [])
     ids = {'Yip': 'h', 'Bram': 'g1', 'Lotte': 'g2', 'Mira B': 'g3'}
-    check(len(order) == 4 and order[-1] == ids[leader] and order[0] == 'g3', 'startvolgorde naar de stand: de leider achteraan, wie nog geen punten heeft vooraan', (leader, order))
+    check(len(order) == 4 and order[-1] == ids[leader] and order[0] == 'g3', 'startvolgorde naar de stand: de leider achteraan, wie nog geen punten heeft vooraan', (leader, order, h.cmd('ex [get_node("/root/Net").onl().get("grid"), get_node("/root/Net").net.pts, get_node("/root/Net").net.seats]')))
     check(not any(x['done'] for r in rs for x in r.get('remotes', [])), 'niemand staat al gefinisht aan de start (geen oude pakketjes)',
           [[(x['name'], x['done']) for x in r.get('remotes', [])] for r in rs])
     rs = [p.wait(lambda r: r['go_at'] > 0 and r['state'] == 'racing', 20) for p in P]
@@ -330,7 +336,7 @@ def scenario_evening():
     time.sleep(1.2)
     rs = [p.rep() for p in (g1, g3, g4)]
     res = [names(r, n) for r, n in zip(rs, ('Bram', 'Mira B', 'Teun'))]
-    check(res[0] and res[0] == res[1] == res[2] and 'Yip' not in res[0] and len(res[0]) == 5, 'de race wordt uitgereden; uitslag overal gelijk', res)
+    check(res[0] and res[0] == res[1] == res[2] and 'Yip' not in res[0] and len(res[0]) == 5, 'de race wordt uitgereden; uitslag overal gelijk', (res, rs[0].get('res'), [(x['peer'], x['name'], x['off'], x['has_st'], x['done']) for x in rs[0].get('remotes', [])], rs[1].get('me')))
     ps = [pts_of(r) for r in rs]
     tot3 = sum(x[1] for x in ps[0])
     check(ps[0] == ps[1] == ps[2] and len(ps[0]) == 5 and tot3 == tot1 + 24 and any(x[0] == 'Yip' for x in ps[0]),

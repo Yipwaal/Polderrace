@@ -1546,7 +1546,11 @@ func _migDial() -> void:
 	add_child(room)
 	net.game = room
 	_wire(room)
-	room.presence(_myPresence(false).merged({"rdy": net.rdy, "vote": net.vote}, true))
+	# who I am, but not "no car on the track": the race goes on (the new host knows my car from before and would take
+	# a st = null for leaving the race)
+	var me := _myPresence(false).merged({"rdy": net.rdy, "vote": net.vote}, true)
+	for k in ["st", "b", "k", "race", "e"]: me.erase(k)
+	room.presence(me)
 	if room.start_guest(str(c.ip), onl().tok, str(m.me)) != OK:
 		_migNext.call_deferred()
 		return
