@@ -7,6 +7,7 @@ var blur: ColorRect
 var grade: ColorRect
 var _grade_key := ""
 var _blur_q := ""
+var _blur_sh := {}
 var lines: SpeedLines
 var mirror_frame: Panel
 var mirror_img: TextureRect
@@ -28,19 +29,20 @@ void fragment() {
 }
 """
 
-## darker towards the corners, times a colour cast: multiplied over the 3D picture
+## darker towards the corners plus a thin wash of colour over the 3D picture (plain alpha blending: a multiplied quad
+## came out white on the Compatibility renderer)
 const GRADE_SHADER := """
 shader_type canvas_item;
-render_mode blend_mul;
-uniform vec3 tint = vec3(1.0);
+uniform vec4 tint = vec4(1.0, 0.9, 0.8, 0.0);    // wash colour, a = how much
 uniform float vig = 0.22;
 void fragment() {
 	vec2 d = UV - 0.5;
-	float v = 1.0 - vig * smoothstep(0.18, 0.62, dot(d, d));
-	COLOR = vec4(tint * v, 1.0);
+	float v = vig * smoothstep(0.18, 0.62, dot(d, d));
+	float a = 1.0 - (1.0 - tint.a) * (1.0 - v);
+	COLOR = vec4(tint.rgb * (tint.a * (1.0 - v) / max(a, 0.0001)), a);
 }
 """
-const GRADE := {"day": [Vector3(1.0, 0.995, 0.975), 0.2], "dusk": [Vector3(1.0, 0.965, 0.93), 0.26], "night": [Vector3(0.93, 0.96, 1.0), 0.3]}
+const GRADE := {"day": [Color(1.0, 0.93, 0.7, 0.03), 0.2], "dusk": [Color(1.0, 0.55, 0.25, 0.05), 0.26], "night": [Color(0.15, 0.25, 0.6, 0.06), 0.3]}
 
 ## rounded corners of the mirror (JS mirrorMask), the picture flipped left-right like a mirror
 const MIRROR_SHADER := """
@@ -59,6 +61,20 @@ void fragment() {
 
 func _ready() -> void:
 	layer = 5
+	blur = ColorRect.new()
+	blur.set_anchors_preset(Control.PRESET_FULL_RECT)
+	blur.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sm := ShaderMaterial.new()
+	# two versions, made up front (swapping the code of a shader in use left the blur white): 10 samples on "hoog", 6 on "middel"
+	for k in ["high", "mid"]:
+		var sh := Shader.new()
+		sh.code = BLUR_SHADER.replace("TAPS", "10" if k == "high" else "6")
+		_blur_sh[k] = sh
+	sm.shader = _blur_sh.high
+	blur.material = sm
+	blur.visible = false
+	add_child(blur)
+	# (after the blur, so the blur does not smear the vignette)
 	grade = ColorRect.new()
 	grade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -68,14 +84,6 @@ func _ready() -> void:
 	grade.material = gm
 	grade.visible = false
 	add_child(grade)
-	blur = ColorRect.new()
-	blur.set_anchors_preset(Control.PRESET_FULL_RECT)
-	blur.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sm := ShaderMaterial.new()
-	sm.shader = Shader.new()
-	blur.material = sm
-	blur.visible = false
-	add_child(blur)
 	lines = SpeedLines.new()
 	lines.set_anchors_preset(Control.PRESET_FULL_RECT)
 	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -107,9 +115,8 @@ func tick(dt: float) -> void:
 	blur.visible = b > 0.002
 	if blur.visible:
 		if q != _blur_q:
-			# fewer samples on "middel"
 			_blur_q = q
-			blur.material.shader.code = BLUR_SHADER.replace("TAPS", "10" if q == "high" else "6")
+			blur.material.shader = _blur_sh.get(q, _blur_sh.high)
 		blur.material.set_shader_parameter("strength", b)
 	# vignette and colour cast: in the race and the menus over the track, not in the garage or on the podium
 	var staged: bool = World.root != null and not World.root.visible
@@ -120,7 +127,9 @@ func tick(dt: float) -> void:
 			_grade_key = key
 			var gr: Array = GRADE.get(Env.me.time, GRADE.day)
 			var dull := Env.me.weather != "dry"
-			grade.material.set_shader_parameter("tint", (gr[0] as Vector3).lerp(Vector3(0.97, 0.98, 1.0), 0.6) if dull else gr[0])
+			var tc: Color = gr[0]
+			if dull: tc = Color(0.55, 0.6, 0.68, tc.a * 0.8)
+			grade.material.set_shader_parameter("tint", tc)
 			grade.material.set_shader_parameter("vig", gr[1])
 	lines.step(0.0 if g.paused else dt, g.speedFx if fxOn and not g.split else 0.0)
 	# mirror
