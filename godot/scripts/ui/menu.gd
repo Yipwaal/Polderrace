@@ -919,7 +919,12 @@ func menuCamera(dt: float) -> bool:
 
 func _wideOff() -> float:
 	var w := get_viewport().get_visible_rect().size.x
-	return -minf(w * 0.2, 260) if w > 760 else 0.0
+	if w <= 760: return 0.0
+	var off := -minf(w * 0.2, 260)
+	# the garage: the car in the middle of the room beside the panel (a narrow window leaves it little room)
+	if GarageRoom.inGarage and homeBoard != null and homeBoard.is_visible_in_tree():
+		off = minf(off, w / 2 - (homeBoard.get_global_rect().end.x + w) / 2)
+	return off
 
 ## three.js camera.setViewOffset(): the picture shifted sideways (the car beside the panel, not behind it). Godot has no
 ## view offset on a perspective camera, so the same frustum is set as an off-centre frustum.
