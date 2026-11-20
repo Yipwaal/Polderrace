@@ -31,7 +31,8 @@ signal reconnecting                ## guest: the connection dropped, trying agai
 const PORT := 47810
 const MAX_GUESTS := 7
 ## the version of what goes over the wire: games of another version do not mix (the guest gets a clear message)
-const PROTO := 3
+const PROTO := 4
+const LOOK_MAX := 1000            ## the most characters of JSON a car's look may take (G.lookOf is < 600)
 ## what a guest may set in its own presence (JS P2P_GUEST_KEYS): everything else is the host's alone
 const GUEST_KEYS := ["nick", "car", "color", "look", "rdy", "vote", "e", "st", "k"]
 const FAST_KEYS := ["st", "b", "k", "q"]
@@ -714,7 +715,7 @@ static func clean_look(v: Dictionary) -> Dictionary:
 		else: continue
 		n += 1
 		if n >= 40: break
-	if JSON.stringify(out).length() > 2000: return {}
+	if JSON.stringify(out).length() > LOOK_MAX: return {}
 	return out
 
 static func _num(v) -> bool:

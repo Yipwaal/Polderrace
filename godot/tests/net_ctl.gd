@@ -428,7 +428,7 @@ func report() -> Dictionary:
 		var rem := []
 		for rm in Net.net.remotes.values():
 			rem.append({"peer": rm.peer, "name": rm.name, "car": rm.carId, "color": rm.color, "host": rm.host, "has_st": rm.st != null, "rdy": rm.rdy, "off": rm.off, "uid": rm.uid,
-				"look": rm.lookD, "q": Net.quality(rm.peer), "tag": rm.tag != null and rm.tag.visible and rm.tag.text == rm.name, "vote": rm.vote, "vdist": snappedf(rm.vdist, 0.1),
+				"look": rm.lookD, "carlook": rm.car.get("look", {}) if rm.car != null else {}, "q": Net.quality(rm.peer), "tag": rm.tag != null and rm.tag.visible and rm.tag.text == rm.name, "vote": rm.vote, "vdist": snappedf(rm.vdist, 0.1),
 				"meshes": rm.car.g.find_children("*", "MeshInstance3D", true, false).size() if rm.car != null else 0,
 				"visible": rm.car != null and rm.car.g.visible, "s": rm.st[5] if rm.st != null else -1, "lap": rm.lap, "done": rm.done, "ft": rm.ft,
 				"x": rm.car.g.position.x if rm.car != null else 0.0, "z": rm.car.g.position.z if rm.car != null else 0.0})

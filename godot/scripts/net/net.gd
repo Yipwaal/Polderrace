@@ -297,7 +297,8 @@ func _fitWorld() -> void:
 	if Env.me != null: Env.me.apply(S.time, S.weather)
 
 # ------------------------------------------------------------------ the car and its looks
-## how my car looks, to send to the others: the garage's looks without the performance upgrades
+## how my car looks, to send to the others: G.lookOf (the paid-for looks of the garage, with the paint; never the
+## performance upgrades and never what is only being tried on in the garage)
 func myLook() -> Dictionary:
 	var car: String = G.settings.car
 	var d: Dictionary
@@ -306,24 +307,30 @@ func myLook() -> Dictionary:
 		d = v.duplicate() if v is Dictionary else {}
 	else:
 		d = G.carUp(car).duplicate()
-	for u in G.UPG: d.erase(u.k)
-	d.erase("body")
-	return NetRoom.clean_look(d)
+		for u in G.UPG: d.erase(u.k)
+		d.erase("body")
+	d = NetRoom.clean_look(d)
+	if JSON.stringify(d).length() > NetRoom.LOOK_MAX: d = {"paint": G.settings.color}
+	return d
 
-## a look that came off the wire, safe to hand to CarKit.styleCar: fields of the factory look keep their type
-static func safeLook(v) -> Dictionary:
-	var out := {}
-	if not (v is Dictionary): return out
-	var def := Cars.default_up()
-	for k in v:
-		var x = v[k]
-		if def.has(k):
-			var num: bool = def[k] is int or def[k] is float
-			if num != (x is int or x is float): continue
-		out[k] = x
-	for u in G.UPG: out.erase(u.k)
-	out.erase("body")
-	return out
+## a look that came off the wire, safe to hand to CarKit.styleCar on a car of type `car`: only catalogue keys, each
+## with a valid value (CarLook.clean), never upgrades
+static func safeLook(v, car := "") -> Dictionary:
+	if not (v is Dictionary): return {}
+	return CarLook.compact(CarLook.clean(v, car))
+
+## the paint of a remote car: from its look, else its colour field
+static func _paintOf(r: Dictionary) -> Color:
+	var p = r.lookD.get("paint") if r.lookD is Dictionary else null
+	if p is String and CarLook.isHex(p): return Color(p)
+	return Color(str(r.color)) if Color.html_is_valid(str(r.color)) else Color.WHITE
+
+## the car of another player by name (for the podium): {carId, color, look}, or null
+func remoteCar(name: String):
+	if net == null: return null
+	for r in net.remotes.values():
+		if r.name == name: return {"carId": r.carId, "color": "#" + _paintOf(r).to_html(false), "look": safeLook(r.lookD, r.carId)}
+	return null
 
 func _carKey() -> String:
 	return str(G.settings.car) + str(G.settings.color) + JSON.stringify(myLook())
@@ -367,8 +374,8 @@ func cycleColor(d: int) -> void:
 
 func _buildRemoteCar(r: Dictionary) -> void:
 	if r.car != null: r.car.g.queue_free()
-	r.car = CarKit.buildCar(r.carId, Color(str(r.color)) if Color.html_is_valid(str(r.color)) else Color.WHITE)
-	CarKit.styleCar(r.car, safeLook(r.lookD))
+	r.car = CarKit.buildCar(r.carId, _paintOf(r))
+	CarKit.styleCar(r.car, safeLook(r.lookD, r.carId))
 	r.car.g.visible = false
 	r.shown = false
 	get_tree().current_scene.add_child(r.car.g)

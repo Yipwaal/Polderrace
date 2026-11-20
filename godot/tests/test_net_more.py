@@ -59,7 +59,7 @@ def wait_all(ps, cond, timeout=20):
 def scenario_evening():
     print('== online: een avond (host + 3 spelers + laatkomer, drie races, crash en overname)')
     TS = 4
-    h = Player('host', nick='Yip', car='gt', ts=TS, look={"rim": "gold", "stripe": "white", "num": 7, "wing": "gt", "rimStyle": "spoke", "exhaust": "dual", "eng": 3})
+    h = Player('host', nick='Yip', car='gt', ts=TS, look={"rim": "gold", "stripe": "center", "sc": "#ff8800", "finish": "metallic", "num": 7, "wing": "gt", "rimStyle": "spoke", "exhaust": "dual", "eng": 3})
     g1 = Player('g1', nick='Bram', car='hatch', ts=TS)
     g2 = Player('g2', nick='Lotte', car='evo', ts=TS)
     g3 = Player('g3', nick='Mira', car='super', ts=TS)
@@ -90,8 +90,11 @@ def scenario_evening():
     check(ui[0] == 'Dorp (omgekeerd)' and '1 ronde' in ui[1] and '2 bots' in ui[1] and 'avond, regen' in ui[1] and 'om de beurt' in ui[1],
           'spelers zien de instellingen van de host (baan, richting, ronden, bots, tijd, weer)', ui)
     lk = remote(r, 'Yip')['look']
-    check(lk.get('rim') == 'gold' and lk.get('stripe') == 'white' and int(lk.get('num', 0)) == 7 and lk.get('wing') == 'gt' and 'eng' not in lk,
-          'de auto van de host ziet er bij de anderen uit als bij hemzelf (velgen, strepen, nummer, vleugel; geen tuning mee)', lk)
+    cl = remote(r, 'Yip')['carlook']
+    check(lk.get('rim') == 'gold' and lk.get('stripe') == 'center' and lk.get('sc') == '#ff8800' and lk.get('finish') == 'metallic' and int(lk.get('num', 0)) == 7
+          and lk.get('wing') == 'gt' and lk.get('paint') == remote(r, 'Yip')['color'] and 'eng' not in lk and len(json.dumps(lk)) < 600
+          and cl.get('finish') == 'metallic' and cl.get('stripe') == 'center' and cl.get('rimStyle') == 'spoke',
+          'de auto van de host ziet er bij de anderen uit als bij hemzelf (lak, afwerking, velgen, strepen, nummer, vleugel; geen tuning mee)', (lk, cl))
     h.cmd('set laps 2')
     r = g2.wait(lambda r: r.get('cfg', {}).get('laps') == 2, 4)
     check(r.get('cfg', {}).get('laps') == 2 and '2 ronden' in r.get('race_ui', ['', ''])[1], 'een wijziging van de host staat meteen bij de spelers', r.get('race_ui'))
@@ -500,14 +503,14 @@ def scenario_car():
         print('-- auto kiezen overgeslagen (geen xvfb-run)'); return
     print('== online: auto kiezen in de lobby (speler in een venster)')
     h = Player('host', nick='Yip', car='gt')
-    g = Player('g1', nick='Bram', car='hatch', window=True, look={"rim": "black", "num": 23, "stripe": "yellow"})
+    g = Player('g1', nick='Bram', car='hatch', window=True, look={"rim": "black", "num": 23, "stripe": "center", "sc": "yellow"})
     o = Player('g2', nick='Lotte', car='evo')
     check(all(p.ready(120) for p in (h, g, o)), 'drie spellen gestart')
     h.cmd('open'); h.cmd('press Nieuwe game maken')
     for p in (g, o): p.cmd('open'); p.cmd('join 0')
     r = h.wait(lambda r: len(r['remotes']) == 2, 15)
     lk = remote(r, 'Bram')['look']
-    check(lk.get('rim') == 'black' and int(lk.get('num', 0)) == 23 and lk.get('stripe') == 'yellow', 'de host ziet de velgen, het nummer en de strepen van Bram', lk)
+    check(lk.get('rim') == 'black' and int(lk.get('num', 0)) == 23 and lk.get('stripe') == 'center' and lk.get('sc') == 'yellow', 'de host ziet de velgen, het nummer en de strepen van Bram', lk)
     g.cmd('ready')
     check(g.cmd('car gt #2f8f5b', timeout=30), 'Bram kiest een andere auto (Auto kiezen, Klaar)')
     r = g.rep()
