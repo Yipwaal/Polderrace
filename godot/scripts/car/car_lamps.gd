@@ -162,7 +162,7 @@ static func _draw(c, layer: int) -> void:
 			_ell(c, layer, q[0], 32, q[1], q[1], "#55585e", "")
 			_ell(c, layer, q[0], 32, q[1] * 0.86, q[1] * 0.86, RED, rg)
 			_ell(c, layer, q[0], 32, q[1] * 0.42, q[1] * 0.42, "#7a1010", "")
-		_ell(c, layer, 94, 32, 10, 10, "#dfe3e6", "", "#ffffff"))
+		_ell(c, layer, 94, 32, 9, 9, "#c9a7a4", "", "#ffffff"))
 	cellf.call("t_slats", func():
 		_rect(c, layer, 0, 0, CW, CH, "#c2c7cc", "")
 		for k in 3:

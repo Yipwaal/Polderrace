@@ -257,9 +257,10 @@ static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine :=
 		return WGEO[key]
 	var hw := w / 2.0
 	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7))
-	var tyre := Geo.lathe([Vector2(rb, -hw + 0.018), Vector2(rb + 0.012, -hw + 0.004), Vector2(r - 0.075, -hw), Vector2(r - 0.03, -hw + 0.012),
-		Vector2(r - 0.008, -hw + 0.04), Vector2(r, -hw + 0.075), Vector2(r, hw - 0.075), Vector2(r - 0.008, hw - 0.04), Vector2(r - 0.03, hw - 0.012),
-		Vector2(r - 0.075, hw), Vector2(rb + 0.012, hw - 0.004), Vector2(rb, hw - 0.018)], 26)
+	var ro := r - (0.04 if style == "tractor" else 0.0)   # lugs stand on a tractor tyre
+	var tyre := Geo.lathe([Vector2(rb, -hw + 0.018), Vector2(rb + 0.012, -hw + 0.004), Vector2(ro - 0.075, -hw), Vector2(ro - 0.03, -hw + 0.012),
+		Vector2(ro - 0.008, -hw + 0.04), Vector2(ro, -hw + 0.075), Vector2(ro, hw - 0.075), Vector2(ro - 0.008, hw - 0.04), Vector2(ro - 0.03, hw - 0.012),
+		Vector2(ro - 0.075, hw), Vector2(rb + 0.012, hw - 0.004), Vector2(rb, hw - 0.018)], 26)
 	tyre.rotate_z(-PI / 2)
 	var A := CarAcc.new()
 	A.color(sc(0x161617, 0.07)).geo(tyre)
@@ -283,7 +284,8 @@ static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine :=
 		var nl := 22 if r > 0.7 else 16
 		for k in nl:
 			for sd in [1.0, -1.0]:
-				var lg := Geo.box(hw * 0.98, 0.05 + r * 0.03, 0.05 + r * 0.045); lg.rotate_y(sd * 0.5); lg.translate(sd * hw * 0.48, r, 0)
+				var lh := 0.07
+				var lg := Geo.box(hw * 0.98, lh, 0.05 + r * 0.045); lg.rotate_y(sd * 0.5); lg.translate(sd * hw * 0.48, r - lh / 2 - 0.002, 0)
 				lg.rotate_x((k + (0.5 if sd > 0 else 0.0)) / nl * TAU); A.geo(lg)
 	if style != "steel" and style != "tractor":
 		A.color(sc(0x8f9297, 0.62)); disc.call(rb * 0.8, 0.024, face - 0.085, 24)
@@ -1178,7 +1180,7 @@ static func _dress_longtail(K: CarBody, D: Dictionary) -> void:
 
 static func _dress_proto(K: CarBody, D: Dictionary) -> void:
 	var o := {"hl": [{"x": [0.6, 0.8], "z": [2.14, 1.92], "kind": "h_led"}], "grille": [{"x": [-0.3, 0.3], "y": [0.2, 0.32]}],
-		"tl": [{"x": [0.55, 0.95], "y": [0.54, 0.62], "kind": "t_bar", "flat": true}], "rtrim": [{"x": [-0.95, 0.95], "y": [0.2, 0.42]}], "mz": 0.9, "my": 0.66, "exh": [-0.4, 0.4], "exR": 0.05, "wipers": false}
+		"tl": [{"x": [0.55, 0.95], "y": [0.5, 0.58], "kind": "t_bar"}], "rtrim": [{"x": [-0.95, 0.95], "y": [0.2, 0.42]}], "mz": 0.9, "my": 0.66, "exh": [-0.4, 0.4], "exR": 0.05, "wipers": false}
 	_dressStd(K, D, o)
 	# shark fin, big wing on end plates, splitter, side stripe
 	finPlate(D.paint, [[-0.55, 0.8], [-0.75, 0.93], [-2.05, 0.93], [-2.2, 0.6], [-0.55, 0.55]], 0, 0.03)
@@ -1195,7 +1197,7 @@ static func _dress_proto(K: CarBody, D: Dictionary) -> void:
 # class B: a boxy city car with round lamps, a 60s rear-engined coupe with frog-eye lamps on the wings
 static func _dress_mini(K: CarBody, D: Dictionary) -> void:
 	var o := {"grille": [{"x": [-0.36, 0.36], "y": [0.64, 0.74], "kind": "g_slats"}, {"x": [-0.6, 0.6], "y": [0.34, 0.48]}], "plateF": 0.55,
-		"tl": [{"x": [0.62, 0.86], "y": [0.64, 0.9], "kind": "t_van", "flat": true}], "rtrim": [{"x": [-0.82, 0.82], "y": [0.3, 0.4]}], "plateR": 0.55, "mz": 0.62, "my": 0.98, "handles": [-0.25], "hy": 0.86, "sill": [0.3, 0.37], "exh": [0.42]}
+		"tl": [{"x": [0.62, 0.86], "y": [0.62, 0.86], "kind": "t_van"}], "rtrim": [{"x": [-0.82, 0.82], "y": [0.3, 0.4]}], "plateR": 0.55, "mz": 0.62, "my": 0.98, "handles": [-0.25], "hy": 0.86, "sill": [0.3, 0.37], "exh": [0.42]}
 	_dressStd(K, D, o)
 	# round headlamps with a chrome ring, amber indicators, a roof lip
 	_roundLamps(K, D, 0.6, 0.7, 0.115, "h_round", 0.0)
