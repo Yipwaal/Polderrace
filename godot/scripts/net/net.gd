@@ -1008,8 +1008,9 @@ func netTick(dt: float) -> void:
 				if r.host and st.size() > 10:
 					# how long ago the host started this race (a start message that had to be sent again came late)
 					net.hostGo = float(st[10]) * 1000.0 - now
-		elif st == null and r.st != null and live and not r.out:
+		elif st == null and r.st != null and not r.out:
 			# back to the menu during the race: the car goes; who finished keeps his place in the results
+			# (also seen by who is not in the race himself: a host change picks the racers first, see _migStart)
 			r.out = true
 			if not r.done: r.st = null
 		var b = pr.get("b")
@@ -1578,11 +1579,12 @@ func _migStart(reason: String) -> bool:
 	var cands := []
 	var ids: Array = net.remotes.keys().filter(func(k): return not net.remotes[k].host and not net.remotes[k].off)
 	ids.append(me)
+	# (what every PC knows alike: who sends positions of the current race. Not whether this PC itself is in the race: a
+	# player in the lobby would put the racers last and pick another host than the racers do)
 	var racing := func(id) -> bool:
-		if not net.inRace: return false
-		if id == me: return Game.state != "menu"
+		if id == me: return net.inRace and Game.state != "menu"
 		var r: Dictionary = net.remotes[id]
-		return r.st != null and not r.out
+		return r.st != null and not r.out and int(r.st[9]) == int(net.raceId)
 	ids.sort_custom(func(a, b):
 		var ra: bool = racing.call(a); var rb: bool = racing.call(b)
 		if ra != rb: return ra
@@ -1625,9 +1627,8 @@ func _migNext() -> void:
 		return
 	var c: Dictionary = m.cands[int(m.i)]
 	if c.id == m.me:
-		if old != null and is_instance_valid(old):
-			old.leave()
-			get_tree().create_timer(0.6, true, false, true).timeout.connect(old.queue_free)
+		# (the old room stays net.game until the new one is open: the screens still look at it in between)
+		if old != null and is_instance_valid(old): old.leave()
 		m.hostAt = Time.get_ticks_msec()
 		m.tries = 0
 		_migHost()
@@ -1670,12 +1671,14 @@ func _migHost() -> void:
 		room.queue_free()
 		m.tries = int(m.tries) + 1
 		if int(m.tries) > 16:
-			net.mig = null
-			_leaveToList("De host is weggevallen. Overnemen lukte niet: poort %d is bezet op deze pc." % NetRoom.PORT, "De host is weggevallen.")
+			# the port stays busy: another game on this PC hosts already (maybe the new host): try the next one in line
+			_migNext()
 			return
 		get_tree().create_timer(0.3, true, false, true).timeout.connect(_migHost)
 		return
 	room.adopt(m.seats, m.known)
+	var prev: NetRoom = net.game
+	if prev != null and is_instance_valid(prev) and prev != room: get_tree().create_timer(0.6, true, false, true).timeout.connect(prev.queue_free)
 	net.game = room
 	net.host = true
 	net.rdy = true
