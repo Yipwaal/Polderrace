@@ -134,6 +134,7 @@ func netCreate() -> void:
 		return
 	var listed := lan.serve(_lobby_info)
 	netEnter(room, true)
+	firewall_check()
 	# an evening goes on: the standings of a game this player was in less than three hours ago
 	var o := onl()
 	if o.get("pts") is Dictionary and not o.pts.is_empty() and Time.get_unix_time_from_system() - float(o.get("ptsAt", 0)) < 3 * 3600:

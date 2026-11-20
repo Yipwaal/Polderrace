@@ -1059,6 +1059,7 @@ func lookHeld() -> bool:
 func updateCamera(dt: float) -> void:
 	# before the menu views, as in the JS: in the menus there is no speed blur (also after quitting a race at speed)
 	speedFx = clamp_((maxf(0, player.speed) - 20) / 50, 0, 1) if (state == "racing" or state == "finished") else 0.0
+	if Net.specCam(dt): return       # online: watching another player's car
 	if Menu.menuCamera(dt): return   # menus: podium, home fly-over, orbit round the car, garage (Menu.menuCamera)
 	var c := camParams()
 	var back := PI if player.speed < -1 else 0.0
@@ -1232,6 +1233,10 @@ func toMenu(step := -1) -> void:
 ## after a career race or cup: back to the career screen; otherwise to the menu
 func toCareerOr(step := -1) -> void:
 	Menu.toCareerOr(step)
+
+## the pause screen stops the world, except online: there the race goes on for everyone (the host drives the bots)
+func frozen() -> bool:
+	return paused and not netInRace()
 
 func setPaused(p: bool) -> void:
 	if p and not (state == "racing" or state == "countdown" or state == "finished"): return
@@ -1521,6 +1526,8 @@ func padFor(pi: int) -> Dictionary:
 	return {"steer": 0.0, "gas": 0.0, "brake": 0.0, "hand": false, "look": false}
 
 func input() -> Dictionary:
+	# online the race goes on behind the pause screen (see frozen): the car rolls out, hands off
+	if paused: return {"steer": 0.0, "analog": false, "gas": 0.0, "brake": 0.0, "hand": false}
 	var pi := activeP
 	var K := func(a: String) -> bool: return actHeld(pi, a) or (pi == 1 and Hud.touchHeld(a))
 	var pd := padFor(pi)
@@ -1731,13 +1738,14 @@ func _process(delta: float) -> void:
 		Sfx.updateAudio()
 		Hud.tick()
 		return
-	if not paused:
+	var still := frozen()
+	if not still:
 		var n := mini(12, maxi(1, int(ceil(dt / 0.0085))))
 		for _k in n: update(dt / n)
-	if car != null: syncCar(0.0 if paused else dt)
-	if split and p2 != null: asP2(func(): syncCar(0.0 if paused else dt))
+	if car != null: syncCar(0.0 if still else dt)
+	if split and p2 != null: asP2(func(): syncCar(0.0 if still else dt))
 	Rep.ghostUpdate()
-	updateCamera(0.0 if paused else dt)
+	updateCamera(0.0 if still else dt)
 	if Fx.me != null: Fx.me.updateMirror()
 	if fx_overlay != null: fx_overlay.tick(dt)
 	if SplitView.me != null: SplitView.me.tick(dt)

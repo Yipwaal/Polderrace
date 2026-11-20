@@ -36,6 +36,10 @@ func _ready() -> void:
 		say("guest_seen", Net.net.remotes.size())
 		await get_tree().create_timer(0.5).timeout
 		Net.netHostStart()
+		# (a short countdown everyone sees, then the race)
+		t0 = Time.get_ticks_msec()
+		while not Net.inRace() and Time.get_ticks_msec() - t0 < 30000:
+			await get_tree().process_frame
 	else:
 		Net.browse()
 		var t0 := Time.get_ticks_msec()
