@@ -365,6 +365,7 @@ func updateBots(dt: float) -> void:
 			b.speed = 0; b.cur = 0; b.vx = 0; b.vz = 0; b.lp = 0; b.yawK = 0; b.spin = 0; b.yawOff = 0; b.spun = false; b.pushDv = 0
 			b.roll = 0; b.pitch = 0; b.prevV = 0; b.wideT = 0; b.defT = 0
 			tiltRig(b.m, 0, 0, 0)
+			for k in 2: b.m.wheels[k].pivot.rotation.y = 0.0
 			poseOnTrack(b.m.g, b.s, b.lat)
 			continue
 		if netInRace() and not netIsHost():
@@ -564,6 +565,9 @@ func leanBot(b: Mover, i: int, dt: float) -> void:
 	g.rotation.x += b.pitch
 	g.rotation.z = -b.roll
 	tiltRig(b.m, b.pitch, b.roll, 0.0)
+	# the front wheels point into the bend (and where the car is steering to across the road)
+	var sv := clamp_(right * Trk.CURV[i] * handling(b.type).L * 1.3 + b.latV * 0.04, -0.45, 0.45)
+	for q in 2: b.m.wheels[q].pivot.rotation.y = -sv
 
 func playerPosition() -> int:
 	if mode == "elim" and playerOut: return elimPos
@@ -1278,7 +1282,10 @@ func edges(prevIdx: int, fx: float, fz: float, dt: float) -> bool:
 		vx = tx * vt + nx * vn
 		vz = tz * vt + nz * vn
 		# the nose is turned along the wall: at once by the hit, then gently while the car leans on it
+		var h0 := player.heading
 		player.heading = MathX.lerp_angle_(player.heading, dirTh, minf(0.95, 0.55 + 0.45 * into) if hit else minf(1, dt * 12))
+		# the body on screen swings round in a blink instead of jumping (syncCar lets wallYaw fade)
+		player.wallYaw = clamp_(player.wallYaw + fposmod(h0 - player.heading + PI, TAU) - PI, -1.4, 1.4)
 		if hit: player.yr *= 0.3
 		hx = sin(player.heading); hz = cos(player.heading)
 		player.speed = vx * hx + vz * hz
@@ -1398,7 +1405,9 @@ func syncCar(dt: float) -> void:
 	var heave := pl.heave + shakeY
 	car.g.position = Vector3(pl.pos.x, pl.y + heave, pl.pos.z)
 	car.g.rotation_order = EULER_ORDER_YXZ
-	car.g.rotation = Vector3(-atan(slope) + pitch, pl.heading - drift, -roll)
+	pl.wallYaw *= exp(-dt * 16)
+	if absf(pl.wallYaw) < 1e-4: pl.wallYaw = 0.0
+	car.g.rotation = Vector3(-atan(slope) + pitch, pl.heading - drift + pl.wallYaw, -roll)
 	tiltRig(car, pitch, roll, heave)
 	# ---- wheels: the fronts point where the steering puts them, the rears stand still on the handbrake, driven
 	# wheels spin up on a hard launch
@@ -1434,6 +1443,7 @@ func camParams() -> Dictionary:
 
 func snapCamera() -> void:
 	camLift = 0
+	player.camSide = 0
 	camHeading = player.heading
 	camY = player.y
 	var c := camParams()
@@ -1446,7 +1456,8 @@ func placeCam(c: Dictionary) -> void:
 	var fx := sin(camHeading); var fz := cos(camHeading)
 	var dist: float = c.dist + player.camD
 	camPos = Vector3(player.pos.x - fx * dist, camY + c.h, player.pos.z - fz * dist)
-	camLook = Vector3(player.pos.x + fx * 8, camY + 1.05, player.pos.z + fz * 8)
+	# (camSide: a little into the corner, to the right of the nose when turning right)
+	camLook = Vector3(player.pos.x + fx * 8 - fz * player.camSide, camY + 1.05, player.pos.z + fz * 8 + fx * player.camSide)
 
 func lookHeld() -> bool:
 	return actHeld(activeP, "look") or padFor(activeP).look
@@ -1464,6 +1475,8 @@ func updateCamera(dt: float) -> void:
 	camY += (player.y - camY) * (1 - exp(-dt * 8))
 	# the car pulls away from the camera when it accelerates, the camera closes in under braking
 	player.camD += ((clamp_(player.ax * 0.03, -0.45, 0.3) if live else 0.0) - player.camD) * (1 - exp(-dt * 3))
+	# and looks a little into the corner the car is turning into
+	player.camSide += ((clamp_(player.yr * 0.9, -1.2, 1.2) if live and player.speed > 3 else 0.0) - player.camSide) * (1 - exp(-dt * 3))
 	placeCam(c)
 	var look := lookHeld() and state != "countdown"
 	var hood := int(G.prefs.cam) == 2 and not look
