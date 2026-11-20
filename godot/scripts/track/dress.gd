@@ -165,7 +165,9 @@ static func parkedCars(n: int, lat: float, filter = null) -> void:
 		World.add(g)
 		placed += 1
 
-static func adBoards(every: float, lat: float) -> void:
+## yc: height of the middle of a board above the road; along = true: the boards run along the track (on top of the
+## circuit's tyre wall, facing the road) instead of standing square to it, where the cars drove through them
+static func adBoards(every: float, lat: float, yc := 0.75, along := false) -> void:
 	var texts := ["POLDERRACE", "DIJKBANDEN", "STROOPWAFEL", "KLOMPEN", "MOLENOLIE", "TULPENBOL"]
 	var cols := ["#1d4f9e", "#c8302a", "#f2c200", "#2e5d3e", "#f36f21"]
 	var mats := []
@@ -183,14 +185,16 @@ static func adBoards(every: float, lat: float) -> void:
 	while d < Trk.TRACK_LEN:
 		var i := int(round(d / Trk.SPC)) % Trk.NS
 		for s in [-1, 1]:
+			# along a wall: not in a tight bend, where a straight board would leave the wall (the bend boards stand there)
+			if along and Trk.CURV[i] > 0.012: continue
 			var xz := Trk.onTrack(i, s * lat)
-			per[n % mats.size()].append(World.mtx(xz[0], Trk.HT[i] + 0.75, xz[1], Trk.heading_of(Trk.T[i]) + PI / 2, 0.12, 1.1, 5.4))
+			per[n % mats.size()].append(World.mtx(xz[0], Trk.hAt(i, lat) + yc, xz[1], Trk.heading_of(Trk.T[i]) + (0.0 if along else PI / 2), 0.12, 1.1, 5.4))
 			n += 1
 		d += every
 	for k in per.size():
 		World.inst(Geo.box(1, 1, 1), mats[k], per[k], null, false)
 
-static func tyreStacks() -> void:
+static func tyreStacks(lat := 17.5) -> void:
 	var m := []
 	var NS := Trk.NS
 	var T := Trk.T
@@ -200,7 +204,7 @@ static func tyreStacks() -> void:
 		var b := T[(i + 3) % NS]
 		var sg := MathX.sgn(a.z * b.x - a.x * b.z)
 		if sg == 0: sg = 1
-		var xz := Trk.onTrack(i, sg * 17.5)
+		var xz := Trk.onTrack(i, sg * lat)
 		for k in 3:
 			m.append(World.mtx(xz[0] + (k - 1) * 0.9 * T[i].x, Trk.HT[i] + 0.15 + 0.3 * (k % 2), xz[1] + (k - 1) * 0.9 * T[i].z, 0, 0.42, 0.3, 0.42))
 	World.inst(Geo.cylinder(1, 1, 1, 12), M(0x1b1b1b), m, null, true)
@@ -312,7 +316,8 @@ static func dressTrack(id: String) -> void:
 	match id:
 		"polder": reeds(9, 2, 5); flowers(7, 1, 8); fences(6, 14)
 		"dorp": planters(18, 7.5); benches(55, 7.7)
-		"circuit": adBoards(26, 19.6); tyreStacks(); flowers(12, 4, 12, ["#f2c200", "#e8e4dc"])
+		# boards on top of the tyre wall and the extra tyres against it: at 19.6 / 17.5 m the cars drove through them
+		"circuit": adBoards(26, 20.72, 1.77, true); tyreStacks(20.62); flowers(12, 4, 12, ["#f2c200", "#e8e4dc"])
 		"afsluitdijk": reeds(8, 4, 10); bushes(40, 6, 16, 0x5f7f3a)
 		"haven": crates(40)
 		"veluwe":

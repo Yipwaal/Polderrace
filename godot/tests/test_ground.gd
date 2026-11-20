@@ -196,9 +196,9 @@ func check() -> Dictionary:
 ## does the triangle pass through (or within FLOAT under) the box? Clip it to the box's footprint and compare heights
 func on_tri(b: AABB, a: Vector3, c1: Vector3, c2: Vector3) -> bool:
 	var poly := PackedVector3Array([a, c1, c2])
-	poly = Scan.clip_range(poly, 0, b.position.x - SLACK, b.end.x + SLACK)
+	poly = Scan.clip_range(poly, 0, b.position.x - FLOAT, b.end.x + FLOAT)
 	if poly.size() < 3: return false
-	poly = Scan.clip_range(poly, 2, b.position.z - SLACK, b.end.z + SLACK)
+	poly = Scan.clip_range(poly, 2, b.position.z - FLOAT, b.end.z + FLOAT)
 	if poly.size() < 3: return false
 	var lo := 1e18; var hi := -1e18
 	for p in poly:
