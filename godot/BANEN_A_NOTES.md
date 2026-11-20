@@ -46,3 +46,10 @@ Tekenaanroepen high: 491/121, 206k driehoeken -> 535/151, 255k (budget 650/170/2
 - world.gd: World.noDress; dress.gd: alongSides en crates slaan noDress over
 - common.gd: landPlane(..., cell) optioneel onderverdeeld
 - startlijn/vuilstrook: bekeken (circuit), ziet er goed uit, niet veranderd
+
+## Na de merges (Beeld, Rijgedrag, Aanpassen)
+- circuit: driehoeken 600 347 > budget 600 000 na de merge -> duinen 16x7 segmenten: 563k
+- sway (Beeld) op polderbomen en -riet, circuitdennen en helmgras
+- CI: stap "Map tests" met TRACKS=polder,dorp,circuit,afsluitdijk,haven,rotterdam (Banen B-banen faalden nog)
+- tekenaanroepen high na merge (beeld/spiegel/driehoeken): polder 636/420/639k, dorp 540/186/333k,
+  circuit 687/122/563k, afsluitdijk 625/142/381k, haven 602/139/260k
