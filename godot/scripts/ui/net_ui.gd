@@ -31,12 +31,14 @@ var race_pic: TrackPic
 var race_lbl: Label
 var race_sub: Label
 var host_ctl: VBoxContainer
+var host_ctl2: VBoxContainer       ## host: the options of the evening (start order, next track, open) under the chat
+var act: HBoxContainer
 var cyc := {}                      ## name -> value Label of a host option row
 var pts_box: VBoxContainer
 var pts_list: VBoxContainer
 var pts_reset: Button
 var car_lbl: Label
-var col_swatch: ColorRect
+var col_swatch: Panel
 var ip_note: Label
 var net_note: Label
 var upnp_note: Label
@@ -211,9 +213,7 @@ func _build_game() -> void:
 	var c1 := _arrow("◀"); var c2 := _arrow("▶")
 	c1.pressed.connect(func(): Net.cycleColor(-1))
 	c2.pressed.connect(func(): Net.cycleColor(1))
-	col_swatch = ColorRect.new()
-	col_swatch.custom_minimum_size = Vector2(26, 22)
-	col_swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	col_swatch = _swatch(Vector2(26, 22))
 	car_btn = _small("Auto kiezen")
 	car_btn.pressed.connect(func():
 		Net.setReady(false)
@@ -242,6 +242,9 @@ func _build_game() -> void:
 	chat_in.max_length = 60
 	_style_edit(chat_in, 14)
 	left.add_child(chat_in)
+	host_ctl2 = VBoxContainer.new()
+	host_ctl2.add_theme_constant_override("separation", 3)
+	left.add_child(host_ctl2)
 	# ---- right: the race
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 5)
@@ -267,39 +270,39 @@ func _build_game() -> void:
 	host_ctl = VBoxContainer.new()
 	host_ctl.add_theme_constant_override("separation", 3)
 	right.add_child(host_ctl)
-	var S := G.settings
+	# (G.settings is looked up each time: tests and the menus may swap the whole Dictionary)
 	_cycler("track", "Baan", func(d: int):
 		var ids: Array = TrackLoader.ported()
-		var i := ids.find(S.track)
-		S.track = ids[(i + d + ids.size()) % ids.size()]
+		var i := ids.find(G.settings.track)
+		G.settings.track = ids[(i + d + ids.size()) % ids.size()]
 		G.saveSettings()
 		Net.pushCfg()
-		get_tree().current_scene.load_track(S.track))
+		get_tree().current_scene.load_track(G.settings.track))
 	_cycler("dir", "Richting", func(_d: int):
-		S.dir = "fwd" if S.dir == "rev" else "rev"
+		G.settings.dir = "fwd" if G.settings.dir == "rev" else "rev"
 		G.saveSettings()
 		Net.pushCfg()
-		get_tree().current_scene.load_track(S.track))
+		get_tree().current_scene.load_track(G.settings.track))
 	_cycler("laps", "Ronden", func(d: int):
-		S.laps = clampi(int(S.laps) + d, 1, 5); G.saveSettings(); Net.pushCfg())
+		G.settings.laps = clampi(int(G.settings.laps) + d, 1, 5); G.saveSettings(); Net.pushCfg())
 	_cycler("bots", "Bots", func(d: int):
-		S.bots = clampi(mini(int(S.bots), 5) + d, 0, 5); G.saveSettings(); Net.pushCfg())
+		G.settings.bots = clampi(mini(int(G.settings.bots), 5) + d, 0, 5); G.saveSettings(); Net.pushCfg())
 	_cycler("diff", "Niveau bots", func(d: int):
 		var ks: Array = G.DIFF.keys()
-		S.diff = ks[(ks.find(S.diff) + d + ks.size()) % ks.size()]; G.saveSettings(); Net.pushCfg())
+		G.settings.diff = ks[(ks.find(G.settings.diff) + d + ks.size()) % ks.size()]; G.saveSettings(); Net.pushCfg())
 	_cycler("time", "Tijd", func(d: int):
 		var ks: Array = Env.TIME_NAMES.keys()
-		S.time = ks[(ks.find(S.time) + d + ks.size()) % ks.size()]; G.saveSettings(); Net.pushCfg()
-		if Env.me != null: Env.me.apply(S.time, S.weather))
+		G.settings.time = ks[(ks.find(G.settings.time) + d + ks.size()) % ks.size()]; G.saveSettings(); Net.pushCfg()
+		if Env.me != null: Env.me.apply(G.settings.time, G.settings.weather))
 	_cycler("weather", "Weer", func(d: int):
 		var ks: Array = Env.WEATHER_NAMES.keys()
-		S.weather = ks[(ks.find(S.weather) + d + ks.size()) % ks.size()]; G.saveSettings(); Net.pushCfg()
-		if Env.me != null: Env.me.apply(S.time, S.weather))
-	_cycler("grid", "Start", func(d: int): Net.setGridMode(_cycle(Net.GRID_MODES, Net.onl().get("grid", "rev"), d)))
-	_cycler("next", "Volgende baan", func(d: int): Net.setNextMode(_cycle(Net.NEXT_MODES, Net.onl().get("next", "host"), d)))
-	_cycler("open", "Nieuwe spelers", func(_d: int): Net.setOpen(not Net.net.open))
-	# ---- under both: ready / start, watching, name tags
-	var act := HBoxContainer.new()
+		G.settings.weather = ks[(ks.find(G.settings.weather) + d + ks.size()) % ks.size()]; G.saveSettings(); Net.pushCfg()
+		if Env.me != null: Env.me.apply(G.settings.time, G.settings.weather))
+	_cycler("grid", "Startvolgorde", func(d: int): Net.setGridMode(_cycle(Net.GRID_MODES, Net.onl().get("grid", "rev"), d)), host_ctl2)
+	_cycler("next", "Volgende baan", func(d: int): Net.setNextMode(_cycle(Net.NEXT_MODES, Net.onl().get("next", "host"), d)), host_ctl2)
+	_cycler("open", "Nieuwe spelers", func(_d: int): Net.setOpen(not Net.net.open), host_ctl2)
+	# ---- under both, always in view (not in the scrolling part): ready / start, watching, name tags
+	act = HBoxContainer.new()
 	act.add_theme_constant_override("separation", 8)
 	start_btn = Hud.mk_button("Start race")
 	start_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -321,7 +324,7 @@ func _build_game() -> void:
 		G.savePrefs()
 		refresh())
 	act.add_child(tags_btn)
-	game_box.add_child(act)
+	outer.add_child(act)
 	# ---- the standings of the evening
 	pts_box = VBoxContainer.new()
 	pts_box.add_theme_constant_override("separation", 3)
@@ -425,6 +428,18 @@ func _build_over() -> void:
 	var v: Node = O.results.get_parent()
 	v.add_child(over_box)
 	v.move_child(over_box, O.results.get_index() + 1)
+	# 8 players and their bots: more rows than the board was made for. They get thinner and the three tiles make way.
+	O.results.child_entered_tree.connect(func(row: Node):
+		if Net.net == null or Game.state != "over" or not (row is PanelContainer): return
+		var n: int = maxi(Game.resultRows.size(), Net.standings().size() if Game.overView == "netpts" else 0)
+		if n <= 8: return
+		O.rstats.visible = false
+		var sb = row.get_theme_stylebox("panel")
+		if sb is StyleBoxFlat:
+			sb = sb.duplicate()
+			var pad := 4 if n <= 11 else 2
+			sb.content_margin_top = pad; sb.content_margin_bottom = pad
+			row.add_theme_stylebox_override("panel", sb))
 
 # ------------------------------------------------------------------ small parts
 func _lab(t: String) -> Label:
@@ -455,7 +470,7 @@ func _style_edit(e: LineEdit, size := 16) -> void:
 	e.add_theme_color_override("font_placeholder_color", Color(0.84, 0.88, 0.95, 0.6))
 
 ## one option row of the host: label, ◀ value ▶
-func _cycler(key: String, label: String, cb: Callable) -> void:
+func _cycler(key: String, label: String, cb: Callable, parent: Control = null) -> void:
 	var r := HBoxContainer.new()
 	r.add_theme_constant_override("separation", 8)
 	var l := _lab(label)
@@ -474,7 +489,7 @@ func _cycler(key: String, label: String, cb: Callable) -> void:
 		cb.call(1)
 		refresh())
 	for c in [l, a, v, b]: r.add_child(c)
-	host_ctl.add_child(r)
+	(parent if parent != null else host_ctl).add_child(r)
 	cyc[key] = v
 
 static func _cycle(modes: Array, cur, d: int) -> String:
@@ -487,6 +502,22 @@ static func _mode_name(modes: Array, cur) -> String:
 	for m in modes:
 		if m[0] == cur: return m[1]
 	return modes[0][1]
+
+## a little square in a car's colour, with a light edge (a blue car on the blue sign)
+func _swatch(sz: Vector2) -> Panel:
+	var p := Panel.new()
+	p.custom_minimum_size = sz
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var sb := StyleBoxFlat.new()
+	sb.set_corner_radius_all(4)
+	sb.border_color = Color(0.97, 0.97, 0.95, 0.75)
+	sb.set_border_width_all(1)
+	p.add_theme_stylebox_override("panel", sb)
+	return p
+
+func _paint(p: Panel, color: String) -> void:
+	var sb: StyleBoxFlat = p.get_theme_stylebox("panel")
+	sb.bg_color = Color(color) if Color.html_is_valid(color) else Color.WHITE
 
 ## a small round arrow button for the option rows
 func _arrow(t: String) -> Button:
@@ -679,6 +710,7 @@ func refresh() -> void:
 	var inGame: bool = Net.net != null
 	lobby_box.visible = not inGame
 	game_box.visible = inGame
+	act.visible = inGame
 	leave_btn.visible = inGame
 	status.text = Net.status
 	status.visible = Net.status != ""
@@ -691,7 +723,8 @@ func refresh() -> void:
 	if not inGame: _fill_list()
 	else: _fill_game(w)
 	# all of it when it fits, else a scroll bar inside the sign (name, status and the buttons below stay in view)
-	scroll.custom_minimum_size = Vector2(minf(w, vp.x - 72), minf(box.get_combined_minimum_size().y, vp.y - 150 - (status.get_combined_minimum_size().y if status.visible else 0.0)))
+	var fixed := 150.0 + (status.get_combined_minimum_size().y + 8 if status.visible else 0.0) + (act.get_combined_minimum_size().y + 8 if inGame else 0.0)
+	scroll.custom_minimum_size = Vector2(minf(w, vp.x - 72), minf(box.get_combined_minimum_size().y, vp.y - fixed))
 	var fnow := get_viewport().gui_get_focus_owner()
 	if fnow == null or not fnow.is_visible_in_tree(): _focus_main.call_deferred()
 
@@ -759,7 +792,7 @@ func _fill_game(w: float) -> void:
 		_player_row(r.name, r.carId, r.color, r.host, false, r.rdy, id, r.off)
 	players_head.text = "SPELERS · %d VAN %d" % [n.remotes.size() + 1, NetRoom.MAX_GUESTS + 1]
 	car_lbl.text = Cars.CARS[S.car].name
-	col_swatch.color = Color(str(S.color))
+	_paint(col_swatch, str(S.color))
 	var lines := []
 	for c in n.chat.slice(-3): lines.append("%s: %s" % [c[0], c[1]])
 	chat_log.text = "\n".join(lines) if not lines.is_empty() else "Nog niets gezegd."
@@ -777,6 +810,7 @@ func _fill_game(w: float) -> void:
 		if cf.get("open", true) == false: sub += "\nGesloten voor nieuwe spelers."
 	race_sub.text = sub if not cf.is_empty() else "Wachten op de instellingen van de host…"
 	host_ctl.visible = host
+	host_ctl2.visible = host
 	if host:
 		cyc.track.text = TrackDefs.TRACKS[S.track].name
 		cyc.dir.text = "Omgekeerd" if S.dir == "rev" else "Vooruit"
@@ -851,9 +885,9 @@ func _host_diag() -> String:
 	elif Net.fw_state == "none": fw = "Windows heeft Polderrace nog niet toegelaten tot het netwerk. Klik op 'Windows-firewall openzetten', of kies Toestaan (ook voor openbare netwerken) als Windows erom vraagt; die vraag kan achter het spel staan (Alt+Tab). "
 	if not lan.is_serving():
 		return fw + addr + "Je game staat niet in de lijst van anderen; meedoen kan via je IP-adres."
-	if lan.selftest == "nonet":
-		return "Deze pc heeft geen netwerkverbinding (geen wifi of kabel): anderen kunnen je game niet vinden."
 	var s := lan.searching()
+	if lan.selftest == "nonet" and s == 0 and n.remotes.is_empty():
+		return "Deze pc heeft geen netwerkverbinding (geen wifi of kabel): anderen kunnen je game niet vinden."
 	if s > 0:
 		return fw + "%d %s nu naar games en %s de jouwe in de lijst. " % [s, "speler zoekt" if s == 1 else "spelers zoeken", "ziet" if s == 1 else "zien"] + addr
 	if not n.remotes.is_empty():
@@ -909,10 +943,8 @@ func _player_row(name: String, carId, color, host: bool, me: bool, rdy: bool, pe
 	nm.custom_minimum_size = Vector2(120, 0)
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(nm)
-	var sw := ColorRect.new()
-	sw.color = Color(str(color)) if Color.html_is_valid(str(color)) else Color.WHITE
-	sw.custom_minimum_size = Vector2(12, 12)
-	sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var sw := _swatch(Vector2(14, 14))
+	_paint(sw, str(color))
 	h.add_child(sw)
 	var cl := Hud.mk_label(Cars.CARS[carId].name if Cars.CARS.has(str(carId)) else "", "700 12px Nunito", Hud.SUB)
 	cl.custom_minimum_size = Vector2(84, 0)
@@ -978,11 +1010,10 @@ func _over_fill() -> void:
 	var info := ""
 	if not final:
 		info = "De anderen rijden nog%s. De punten komen als iedereen binnen is." % (" (nog %d s)" % left if left > 0 else "")
-	elif not cands.is_empty():
-		info = "Stem op de volgende baan:"
-	elif TrackDefs.TRACKS.has(str(cf.get("nt", ""))):
-		info = "Volgende baan: %s." % TrackDefs.TRACKS[cf.nt].name
-	if final and not n.host: info += (" " if info != "" else "") + "De host start de volgende race."
+	else:
+		info = "Klik op Nieuwe race voor de volgende." if n.host else "De host start de volgende race."
+		if not cands.is_empty(): info += " Stem op de baan:"
+		elif TrackDefs.TRACKS.has(str(cf.get("nt", ""))): info += " Volgende baan: %s." % TrackDefs.TRACKS[cf.nt].name
 	over_info.text = info
 	over_info.visible = info != ""
 	var can_spec: bool = not Net.specTargets().is_empty() and not final

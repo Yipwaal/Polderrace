@@ -183,7 +183,7 @@ func netEnter(room: NetRoom, host: bool) -> void:
 		"cfg": {}, "cd": null, "cdN": 0, "cdAt": 0, "cdSeen": -1, "pts": {}, "res": null, "resSent": "", "resAt": 0, "q": {}, "seats": {}, "open": true,
 		"rdy": host, "vote": "", "eSeq": 0, "race": null, "raced": false, "firstFin": 0, "final": false, "forced": false, "warned": 0,
 		"spec": null, "watch": false, "wspd": {}, "mig": null, "prevS": null, "chat": [], "joinedOnce": host, "nt": "", "cands": [],
-		"clock": 0.0, "lookAt": 0, "seatsSent": "", "reconn": false, "preloaded": false, "noRoad": 0, "probe": null, "lostIps": []}
+		"clock": 0.0, "lookAt": 0, "seatsSent": "", "reconn": false, "preloaded": false, "noRoad": 0, "probe": null, "lostIps": [], "clockAt": Time.get_ticks_msec()}
 	# the host's races use this player's settings for a while: they come back when he leaves the game
 	# (the host keeps what he picked in the online screen; only the mode and the grid place are the game's)
 	net.prevS = G.settings.duplicate(true) if not host else {"mode": G.settings.mode, "grid": G.settings.grid}
@@ -881,7 +881,10 @@ func netTick(dt: float) -> void:
 	var room: NetRoom = net.game
 	var rid := int(net.raceId)
 	var live: bool = net.inRace or net.watch
-	if net.inRace and Game.state != "countdown" and Game.state != "menu": net.clock += dt
+	# the race clock for the results: real time since green (as fast as the game runs), whatever the frame rate
+	if net.inRace and Game.state != "countdown" and Game.state != "menu":
+		net.clock += minf(2.0, (now - int(net.clockAt)) / 1000.0) * Engine.time_scale
+	net.clockAt = now
 	for p in room.peers():
 		if p.sameTab: continue
 		var pr: Dictionary = p.presence if p.presence is Dictionary else {}
@@ -928,7 +931,8 @@ func netTick(dt: float) -> void:
 					if r.vdist >= Game.raceLaps * Trk.TRACK_LEN - 60.0:
 						r.done = true
 						var ft := float(st[8])
-						r.ft = ft if (ft > float(net.clock) - 5.0 and ft < float(net.clock) + 2.0) or not net.host else float(net.clock)
+						# its own time, when that can be right by the clock here (else the moment it came in)
+						r.ft = ft if (ft > float(net.clock) - 6.0 and ft < float(net.clock) + 3.0) else float(net.clock)
 					elif not r.bad:
 						r.bad = true
 						if net.host: netStatus("De finish van %s telt niet: die auto kan daar nog niet zijn." % r.name)

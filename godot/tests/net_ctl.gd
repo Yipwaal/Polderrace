@@ -21,12 +21,17 @@ var bot_track := []                ## per frame: how far bot 0's car moved (smoo
 var hitches := 0
 var ram_until := 0                 ## while ramming: steer for bot 0's lane instead of the middle
 var ts := 1.0                      ## Engine.time_scale while racing (the countdown runs at real speed)
+var me_track := []                 ## per frame: wall clock, x, z of my own car (truth for the others' picture of it)
+var rem_track := []                ## per frame: wall clock, x, z of the car of `rem_name` as this game shows it
+var rem_name := ""
+var tracking := false
+var said := []                     ## chat lines heard
 
 func say(seq: String, v) -> void:
 	print("NET %s %s" % [seq, JSON.stringify(v)])
 
 func _ready() -> void:
-	var a := {"name": "p1", "ctl": "", "nick": "", "car": "hatch", "ts": "1", "color": ""}
+	var a := {"name": "p1", "ctl": "", "nick": "", "car": "hatch", "ts": "1", "color": "", "tok": "", "look": ""}
 	for s in OS.get_cmdline_user_args():
 		var kv := s.split("=", true, 1)
 		if kv.size() == 2: a[kv[0]] = kv[1]
@@ -37,7 +42,11 @@ func _ready() -> void:
 	# own save file per player (never the player's), owning every car
 	var owned := {}
 	for id in Cars.CARS: owned[id] = true
-	G.use_store("user://test-netctl-%s.json" % pname, {"polderrace3d-garage": {"owned": owned}})
+	# (the same token every time this player starts: a game that crashed comes back as the same player)
+	var store := {"polderrace3d-garage": {"owned": owned}, "polderrace3d-online": {"tok": ("tok-%s-0123456789abcdef" % pname) if a.get("tok", "") == "" else a.tok}}
+	if a.get("look", "") != "": store["polderrace3d-garage"]["cars"] = {a.car: JSON.parse_string(a.look)}
+	G.use_store("user://test-netctl-%s.json" % pname, store)
+	Net.said.connect(func(who, text): said.append([who, text]))
 	G.prefs.nick = a.nick if a.nick != "" else pname
 	G.settings.track = "dorp"; G.settings.bots = 2; G.settings.laps = 1; G.settings.car = a.car
 	if a.color != "": G.settings.color = a.color
@@ -84,6 +93,15 @@ func _watch(_dt: float) -> void:
 		bot_track.append(snappedf(Game.bots[0].m.g.position.x, 0.001))
 		bot_track.append(snappedf(Game.bots[0].m.g.position.z, 0.001))
 		bot_track.append(snappedf(Game.clock, 0.0001))
+	# my own car and one other player's car as shown here, against the wall clock (the same on every game of this PC)
+	if tracking and st == "racing":
+		var t := Time.get_unix_time_from_system()
+		if me_track.size() < 9000:
+			me_track.append_array([t, snappedf(Game.player.pos.x, 0.001), snappedf(Game.player.pos.z, 0.001)])
+		if Net.net != null and rem_track.size() < 9000:
+			for r in Net.net.remotes.values():
+				if r.name == rem_name and r.car != null and r.car.g.visible:
+					rem_track.append_array([t, snappedf(r.car.g.position.x, 0.001), snappedf(r.car.g.position.z, 0.001)])
 
 ## the player's hands: gas, and steering keys like the autopilot of test_laps
 func _drive() -> void:
@@ -134,14 +152,23 @@ func _wait(cond: Callable, secs: float) -> bool:
 		await get_tree().process_frame
 	return true
 
-## one row of the online screen's option rows (Baan, Ronden, Bots): its ▶ button
-func _arrow(label: String, right := true) -> Control:
-	var all := []
-	_buttons(NetUi, all)
-	for b in all:
-		var row: Node = b.get_parent()
-		if row is HBoxContainer and row.get_child_count() >= 4 and row.get_child(0) is Label and row.get_child(0).text == label:
-			if _text(b) == ("▶" if right else "◀"): return b
+## one row of the host's option rows in the online screen (track, laps, bots, ...): its ◀ or ▶ button
+func _arrow(key: String, right := true) -> Control:
+	if not NetUi.cyc.has(key): return null
+	var row: Node = NetUi.cyc[key].get_parent()
+	var b: Control = row.get_child(3 if right else 1)
+	return b if b.is_visible_in_tree() else null
+
+## the value a host option has now
+func _opt(key: String) -> String:
+	if key == "grid" or key == "next": return str(Net.onl().get(key, "rev" if key == "grid" else "host"))
+	if key == "open": return "1" if Net.net != null and Net.net.open else "0"
+	return str(G.settings[key])
+
+## the row of a player in the lobby
+func _player_row(nick: String) -> Node:
+	for c in NetUi.players.get_children():
+		if not c.is_queued_for_deletion() and c.get_meta("nick", "") == nick: return c
 	return null
 
 func _run(line: String) -> void:
@@ -177,18 +204,88 @@ func _run(line: String) -> void:
 			jb.pressed.emit()
 			say(seq, true)
 		"set":
-			# host: Baan / Ronden / Bots with the arrows of the online screen until it has the value
-			var label: String = {"track": "Baan", "laps": "Ronden", "bots": "Bots"}[args[0]]
+			# host: an option of the online screen (track, dir, laps, bots, diff, time, weather, grid, next, open) with its
+			# arrows until it has the value
 			var want: String = args[1]
 			var ok := false
 			for _i in 14:
-				if str(G.settings[args[0]]) == want: ok = true; break
-				# numbers: ◀ to go down, ▶ to go up; tracks: ▶ round the list
-				var b := _arrow(label, not want.is_valid_int() or int(want) > int(G.settings[args[0]]))
+				if _opt(args[0]) == want: ok = true; break
+				# numbers: ◀ to go down, ▶ to go up; the rest: ▶ round the list
+				var b := _arrow(args[0], not want.is_valid_int() or args[0] == "open" or int(want) > int(_opt(args[0])))
 				if b == null: break
 				b.emit_signal("pressed")
 				await get_tree().process_frame
 			say(seq, ok)
+		"start":
+			# the host's start button, whatever it says ("Start race", "Start toch (...)", "Annuleren (...)")
+			var ok: bool = NetUi.start_btn.is_visible_in_tree()
+			if ok: NetUi.start_btn.pressed.emit()
+			say(seq, ok)
+		"ready":
+			var ok: bool = NetUi.ready_btn.is_visible_in_tree()
+			if ok and Net.isReady() != (rest != "off"): NetUi.ready_btn.pressed.emit()
+			say(seq, ok and Net.isReady() == (rest != "off"))
+		"kick":
+			# the host's "Eruit" button on a player's row, twice (the second click is the "Zeker?")
+			var ok := false
+			for _i in 2:
+				var row := _player_row(rest)
+				if row == null or not (row.get_child(row.get_child_count() - 1) is Button): break
+				row.get_child(row.get_child_count() - 1).pressed.emit()
+				await get_tree().process_frame
+				ok = _i == 1
+			say(seq, ok)
+		"say":
+			if rest.is_valid_int(): Net.say(int(rest))
+			else:
+				NetUi.chat_in.text = rest
+				NetUi.chat_in.grab_focus()
+				await _key(KEY_ENTER)
+			say(seq, true)
+		"key":
+			await _key(OS.find_keycode_from_string(rest))
+			say(seq, true)
+		"follow":
+			# from now on: my own car and the car of this player as shown here, frame by frame against the wall clock
+			rem_name = rest
+			me_track = []
+			rem_track = []
+			tracking = rest != "off"
+			say(seq, true)
+		"tracks":
+			say(seq, {"me": me_track, "rem": rem_track})
+		"shot":
+			for _i in 3: await RenderingServer.frame_post_draw
+			DirAccess.make_dir_recursive_absolute(rest.get_base_dir())
+			get_viewport().get_texture().get_image().save_png(rest)
+			say(seq, rest)
+		"hostile":
+			# what a broken or hostile game could send: straight onto the wire, past this game's own checks
+			var room: NetRoom = Net.net.game
+			var big := "x".repeat(3000)
+			var deep = 1
+			for _i in 200: deep = [deep]
+			var junk := [{"t": "p", "p": {"st": "boem", "nick": 12, "car": {"a": 1}, "color": "rood", "k": [1, 2, "x"], "look": [1, 2], "rdy": "ja", "e": "x", "vote": 4}},
+				{"t": "p", "p": {"st": [1, 2, 3], "host": true, "race": {"id": 99, "track": "polder"}, "cfg": {"track": "x"}, "pts": {"a": [1]}, "b": [[0, 0, 0, 0, 0, 0, 0]], "uid": "h4x", "off": true}},
+				{"t": "p", "p": {"st": ["1", null, {}, [], 1, 1, 1, 1, 1, 1, 1]}},
+				{"t": "p", "p": {"look": {"num": "veel", "rim": 5, "stripe": big, "wing": {"x": 1}, "exhaust": null}}},
+				{"t": "p", "p": {"nick": big, "e": [1, big]}},
+				{"t": "p", "p": deep}, {"t": "p"}, {"t": 5}, {"t": "all", "you": "h", "peers": {}}, {"t": "end"}, {"t": "kick"}, {"t": "bye", "id": "h"},
+				{"t": "f", "m": {"h": {"st": null}}}, {"t": "hi", "v": 3, "tok": "een-andere-token-0123456789"}, {"p": {"nick": "x"}}, []]
+			for j in junk:
+				room.enet.set_target_peer(1)
+				room.enet.transfer_channel = 0
+				room.enet.transfer_mode = MultiplayerPeer.TRANSFER_MODE_RELIABLE
+				room.enet.put_packet(JSON.stringify(j).to_utf8_buffer())
+			for raw in [PackedByteArray([0, 255, 254, 1, 2, 3]), "{\"t\":\"p\",\"p\":{".to_utf8_buffer(), ("[".repeat(5000)).to_utf8_buffer(), big.repeat(4).to_utf8_buffer(),
+					"{\"t\":\"p\",\"p\":{\"st\":[1e999,-1e999,1,1,1,1,1,1,1,1,1]}}".to_utf8_buffer()]:
+				room.enet.set_target_peer(1)
+				room.enet.put_packet(raw)
+			# and a flood: far more than a game ever sends
+			for _i in 400:
+				room.enet.set_target_peer(1)
+				room.enet.put_packet(JSON.stringify({"t": "p", "p": {"nick": "Flood %d" % _i}}).to_utf8_buffer())
+			say(seq, true)
 		"car":
 			# the car step of the online screen (Auto kiezen), pick the car (and colour), Klaar
 			var ok := press("Auto kiezen")
@@ -209,7 +306,7 @@ func _run(line: String) -> void:
 			# pause and Stoppen: back to the menu, still in the online game
 			Game.setPaused(true)
 			await get_tree().process_frame
-			say(seq, press("Naar menu"))
+			say(seq, press("Naar lobby"))
 		"drive":
 			drive = rest != "off"
 			say(seq, drive)
@@ -260,6 +357,15 @@ func _run(line: String) -> void:
 		_:
 			say(seq, "unknown " + cmd)
 
+func _key(k: Key) -> void:
+	var ev := InputEventKey.new()
+	ev.keycode = k; ev.physical_keycode = k; ev.pressed = true
+	Input.parse_input_event(ev)
+	await get_tree().process_frame
+	var up := ev.duplicate(); up.pressed = false
+	Input.parse_input_event(up)
+	await get_tree().process_frame
+
 func _card_btn(n: int) -> Control:
 	var card: Node = NetUi.list.get_child(n)
 	var all := []
@@ -279,25 +385,54 @@ func report() -> Dictionary:
 		"go_at": go_at, "grid": grid, "grid_bots": grid_bots, "goDelay": g.goDelay, "cd": g.cd,
 		"over": Menu.overOv.visible, "again": Menu.overUI.againBtn.visible and Menu.overOv.visible,
 		"hud": Hud.hud.visible, "nodes": get_tree().get_node_count(),
-		"lobbies": Net.lobbies().map(func(l): return {"name": l.get("name"), "ip": l.get("ip"), "track": l.get("track"), "n": l.get("n"), "open": l.get("open"), "race": l.get("race")}),
+		"lobbies": Net.lobbies().map(func(l): return {"name": l.get("name"), "ip": l.get("ip"), "track": l.get("track"), "n": l.get("n"), "open": l.get("open"), "race": l.get("race"), "deaf": l.get("deaf", false), "v": l.get("v")}),
+		"help": NetUi.help.text if NetUi.help.is_visible_in_tree() else "", "sweeps": Net.lan.sweeps, "searching": Net.lan.searching(), "selftest": Net.lan.selftest,
+		"recent": Net.recentIps(), "banner": NetUi.banner_lbl.text if NetUi.banner.visible else "", "specbar": NetUi.spec_lbl.text if NetUi.specbar.visible else "",
+		"said": said, "settings": {"track": G.settings.track, "dir": G.settings.dir, "laps": G.settings.laps, "bots": G.settings.bots, "mode": G.settings.mode, "time": G.settings.time, "weather": G.settings.weather},
+		"mapdots": Net.mapDots().size(), "raceTime": snappedf(g.raceTime, 0.01), "speed": snappedf(g.player.speed, 0.1), "mode": g.mode,
 		"cards": NetUi.list.get_children().map(func(c): return c.find_children("*", "Label", true, false).map(func(x): return x.text)),
 		"focus": str(get_viewport().gui_get_focus_owner().get_path()) if get_viewport().gui_get_focus_owner() != null else "",
 		"list_n": NetUi.list.get_child_count(), "bot_track": bot_track}
 	if Net.net != null:
-		r.me = Net.net.game.me
-		r.raceId = Net.net.raceId
-		r.order = Net.net.order
-		r.seen = Net.net.seen
+		var nn: Dictionary = Net.net
+		r.me = nn.game.me
+		r.raceId = nn.raceId
+		r.order = nn.order
+		r.seen = nn.seen
+		r.cfg = Net.cfg()
+		r.countdown = snappedf(Net.countdown(), 0.01)
+		r.ready = Net.isReady()
+		r.pts = Net.standings()
+		r.res = nn.res
+		r.chat = nn.chat
+		r.spec = Net.specName() if Net.spectating() else ""
+		r.watch = nn.watch
+		r.canWatch = Net.canWatch()
+		r.reconn = nn.game.is_reconnecting()
+		r.mig = nn.mig != null
+		r.open = nn.open
+		r.up = nn.game.up_bps
+		r.down = nn.game.down_bps
+		r.dropped = nn.game.dropped
+		r.ping = nn.game.my_ping()
+		r.diag = NetUi.ip_note.text if NetUi.ip_note.is_visible_in_tree() else ""
+		r.race_ui = [NetUi.race_lbl.text, NetUi.race_sub.text] if NetUi.race_lbl.is_visible_in_tree() else []
+		r.start_ui = NetUi.start_btn.text if NetUi.start_btn.is_visible_in_tree() else ""
+		r.over_ui = NetUi.over_info.text if NetUi.over_box != null and NetUi.over_box.is_visible_in_tree() else ""
+		r.over_btns = NetUi.over_btns.get_children().filter(func(c): return not c.is_queued_for_deletion()).map(func(c): return _text(c)) if NetUi.over_box != null and NetUi.over_box.is_visible_in_tree() else []
+		r.rows_ui = Menu.overUI.results.get_children().filter(func(c): return not c.is_queued_for_deletion()).map(func(c): return c.find_children("*", "Label", true, false).map(func(x): return x.text)) if Menu.overOv.visible else []
 		var rem := []
 		for rm in Net.net.remotes.values():
-			rem.append({"peer": rm.peer, "name": rm.name, "car": rm.carId, "color": rm.color, "host": rm.host, "has_st": rm.st != null,
+			rem.append({"peer": rm.peer, "name": rm.name, "car": rm.carId, "color": rm.color, "host": rm.host, "has_st": rm.st != null, "rdy": rm.rdy, "off": rm.off, "uid": rm.uid,
+				"look": rm.lookD, "q": Net.quality(rm.peer), "tag": rm.tag != null and rm.tag.visible and rm.tag.text == rm.name, "vote": rm.vote, "vdist": snappedf(rm.vdist, 0.1),
+				"meshes": rm.car.g.find_children("*", "MeshInstance3D", true, false).size() if rm.car != null else 0,
 				"visible": rm.car != null and rm.car.g.visible, "s": rm.st[5] if rm.st != null else -1, "lap": rm.lap, "done": rm.done, "ft": rm.ft,
 				"x": rm.car.g.position.x if rm.car != null else 0.0, "z": rm.car.g.position.z if rm.car != null else 0.0})
 		r.remotes = rem
 		var pl := []
 		for c in NetUi.players.get_children():
 			if c.is_queued_for_deletion(): continue
-			pl.append(c.get_child(1).text)
+			pl.append(c.get_child(1).text + " | " + c.get_child(4).text)
 		r.players_ui = pl
 	if g.state == "over" or g.state == "replay":
 		r.results = g.resultRows.map(func(x): return {"name": x.name, "finished": x.finished, "ft": snappedf(x.ft, 0.01), "me": x.get("me", false)})
