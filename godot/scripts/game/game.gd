@@ -70,6 +70,9 @@ const HATCH_COLORS := [0xe9e9e4, 0x2f6db3, 0x8c1c24, 0x3f444b, 0x5f8a3a, 0xd9a21
 const BOT_NAMES := ["Henk", "Ingrid", "Daan", "Fenna", "Kees", "Sanne", "Joost"]
 ## rivals tune too: the bots get most of the edge your upgrades give over the stock car
 const RIVAL_TUNE := 0.8
+## how firmly a bot covers its line when a faster car comes up behind it (0 = never)
+const DEFEND := {"easy": 0.0, "normal": 0.5, "hard": 0.8, "extreme": 1.0}
+const WIDE_LEN := 1.5        ## seconds a bot's small mistake (running wide) lasts
 var traffic: Array = []
 var bots: Array = []
 var lampsOn := false
@@ -196,7 +199,8 @@ func poseOnTrack(g: Node3D, s: float, lat: float, yawOff := 0.0) -> void:
 	var a := Trk.trackAt(s)
 	var y: float = Trk.hAt(a.i, lat) * (1 - a.t) + Trk.hAt(a.j, lat) * a.t
 	g.position = Vector3(a.px + a.rx * lat, y, a.pz + a.rz * lat)
-	g.rotation = Vector3(0, atan2(a.tx, a.tz) + yawOff, 0)
+	# nose up the hill, down the dip (the road's own slope; the lean of the body comes on top, see leanBot)
+	g.rotation = Vector3(-atan((Trk.hAt(a.j, lat) - Trk.hAt(a.i, lat)) / Trk.SPC) * cos(yawOff), atan2(a.tx, a.tz) + yawOff, 0)
 
 func laneFree(c: Mover, l: int, obs: Array) -> bool:
 	var x: float = Trk.LANES[l]
@@ -359,6 +363,8 @@ func updateBots(dt: float) -> void:
 			b.m.beam.visible = lampsOn and not b.out
 		if not racing:
 			b.speed = 0; b.cur = 0; b.vx = 0; b.vz = 0; b.lp = 0; b.yawK = 0; b.spin = 0; b.yawOff = 0; b.spun = false; b.pushDv = 0
+			b.roll = 0; b.pitch = 0; b.prevV = 0; b.wideT = 0; b.defT = 0
+			tiltRig(b.m, 0, 0, 0)
 			poseOnTrack(b.m.g, b.s, b.lat)
 			continue
 		if netInRace() and not netIsHost():
@@ -401,8 +407,13 @@ func updateBots(dt: float) -> void:
 			if b.mistT == null: b.mistT = 5 + randf() / df.mist
 			b.mistT -= dt
 			if b.mistT <= 0:
+				# a small mistake: a moment too late on the brakes, so the car runs wide (to the outside of the bend that
+				# is coming, or just off its line on a straight) and loses a little time
 				b.mistT = 4 + randf() / df.mist
-				b.lp += (-1.0 if randf() < .5 else 1.0) * (2 + randf() * 2)
+				var li: float = Trk.LINE[(int(floor(b.s / SPC)) + 30) % NS]
+				b.wideDir = -MathX.sgn(li) if absf(li) > 0.5 else (-1.0 if randf() < .5 else 1.0)
+				b.wideAmp = 1.2 + randf() * 1.3
+				b.wideT = WIDE_LEN
 				b.slowT = 1.2
 		if b.slowT > 0:
 			b.slowT -= dt; target *= 0.82
@@ -422,25 +433,53 @@ func updateBots(dt: float) -> void:
 		while dd < 160:
 			bend = maxf(bend, CURV[int(floor(fmod(b.s + dd, LEN) / SPC)) % NS])
 			dd += 10
+		# which side is the inside of the bend that is coming (the racing line leans to it)
+		var insideSgn := MathX.sgn(Trk.LINE[(int(floor(b.s / SPC)) + 45) % NS])
 		var kq := clamp_((into - 60) / 260, 0, 1)
 		var kk := maxf(kq, clamp_((bend - 0.004) / 0.01, 0, 1) * clamp_(into / 40, 0, 1))
 		if b.gridLat != null and kk < 1:
 			wantLat = b.gridLat * (1 - kk) + wantLat * kk
+		var defend := 0.0
 		for o in obs:
 			if o.ref == b: continue
 			var dz := Trk.wrapD(o.s - b.s)
-			if dz > 0 and dz < 24 and absf(o.lat - b.lat) < 2.3 and o.cur < b.speed + 4:
-				if b.passT <= 0 and into > 150:
+			var closing: float = b.speed - o.cur
+			# a much slower car (a spin, a crash, a back marker) is seen from further away
+			if dz > 0 and dz < 24 + maxf(0, closing) * 1.1 and absf(o.lat - b.lat) < 2.3 and o.cur < b.speed + 4:
+				if b.passT <= 0 and into > 150 and dz < 24 + maxf(0, closing) * 0.6:
 					var lim := Trk.ROAD_HALF - 1.4
-					var opts := []
+					var best = null
+					var bs := 1e9
 					for v in [o.lat - 3.4, o.lat + 3.4]:
-						if absf(v) <= lim: opts.append(v)
-					if not opts.is_empty():
-						var best: float = opts[0]
-						for v in opts:
-							if absf(v - b.lat) < absf(best - b.lat): best = v
+						if absf(v) > lim: continue
+						# not into a car that is already there or coming up on that side
+						var taken := false
+						for q in obs:
+							if q.ref == b or q == o: continue
+							var dq := Trk.wrapD(q.s - b.s)
+							if dq > -9 and dq < dz + 8 and absf(q.lat - v) < 2.2:
+								taken = true; break
+						if taken: continue
+						# the nearest side, with a preference for the inside of the bend that is coming
+						var sc: float = absf(v - b.lat) - (1.2 if (v - o.lat) * insideSgn > 0 else 0.0)
+						if sc < bs:
+							bs = sc; best = v
+					if best != null:
 						b.passLat = best; b.passT = 1.6
 				if dz < 16: target = minf(target, o.cur + clamp_((dz - 8) * 0.7, -6, 4))
+				elif closing > 6: target = minf(target, sqrt(o.cur * o.cur + 2 * b.brk * 0.7 * (dz - 12)))
+			# someone faster is coming up from behind on a straight: cover the side they are on, once, and only while
+			# they are still well behind (never into a car that is alongside)
+			elif DEFEND[G.settings.diff] > 0 and dz < -7 and dz > -22 and closing < -1.5 and bend < 0.003 and b.passT <= 0 and b.defCool <= 0 \
+					and absf(o.lat - b.lat) > 1.0 and absf(o.lat - b.lat) < 4.5:
+				defend = clamp_(o.lat - b.lat, -1.6, 1.6) * DEFEND[G.settings.diff]
+		if defend != 0.0 and b.defT <= 0:
+			b.defT = 1.6; b.defLat = clamp_(b.lat + defend, -(Trk.ROAD_HALF - 1.6), Trk.ROAD_HALF - 1.6); b.defCool = 7.0
+		b.defCool -= dt
+		if b.defT > 0:
+			b.defT -= dt; wantLat = b.defLat
+		if b.wideT > 0:
+			b.wideT -= dt; wantLat += b.wideDir * b.wideAmp * sin(PI * (1 - b.wideT / WIDE_LEN))
 		if b.passT > 0:
 			b.passT -= dt; wantLat = b.passLat
 		if absf(b.speed - target) < 0.4:
@@ -500,12 +539,31 @@ func updateBots(dt: float) -> void:
 				b.finished = true; b.finishTime = raceTime
 		poseOnTrack(b.m.g, b.s, b.lat, -atan2(b.latV, maxf(4, b.speed)) + b.yawK + b.yawOff)
 		var i2 := int(floor(b.s / Trk.SPC)) % Trk.NS
+		leanBot(b, i2, dt)
 		var lv: float = b.latV + b.lp
 		b.vx = Trk.T[i2].x * b.speed + Trk.R[i2].x * lv
 		b.vz = Trk.T[i2].z * b.speed + Trk.R[i2].z * lv
 		for w in b.m.wheels:
 			w.spin.rotation.x += wheelSpin(b.speed, w.r, dt)
 	botCollisions()
+
+## a bot's body leans like the player's: out of the bend, forward under braking (and its wheels stay on the road)
+func leanBot(b: Mover, i: int, dt: float) -> void:
+	var NS := Trk.NS
+	var ta := Trk.T[(i - 2 + NS) % NS]
+	var tb := Trk.T[(i + 2) % NS]
+	var right := -MathX.sgn(ta.z * tb.x - ta.x * tb.z)          # +1 in a right-hand bend
+	var soft: float = handling(b.type).roll
+	var ay: float = b.speed * b.speed * Trk.CURV[i] * right + b.latV * 2.0
+	var ax: float = (b.speed - b.prevV) / maxf(dt, 1e-4)
+	b.prevV = b.speed
+	var k := minf(1, dt * 6)
+	b.roll += (clamp_(ay * 0.0011 * soft, -0.07, 0.07) - b.roll) * k
+	b.pitch += (clamp_(-ax * 0.0014 * (0.6 + 0.4 * soft), -0.03, 0.045) - b.pitch) * k
+	var g: Node3D = b.m.g
+	g.rotation.x += b.pitch
+	g.rotation.z = -b.roll
+	tiltRig(b.m, b.pitch, b.roll, 0.0)
 
 func playerPosition() -> int:
 	if mode == "elim" and playerOut: return elimPos

@@ -325,7 +325,7 @@ func places() -> void:
 				var c0: int = Game.raceContacts
 				var touch := 0
 				for k in 3 * 120:
-					H.tick(H.keep(Game.player.lat), 1, 0)
+					H.drive_step(1.0, true)
 					if k % 6 == 0: touch += _overlaps()
 				if Game.raceContacts > c0 or touch > 0: bad.append("%s start: %d tikken, %d keer overlap" % [tr, Game.raceContacts - c0, touch])
 	r.check(bad.is_empty(), "startopstelling met 7 bots: niemand staat in een ander en de eerste seconden raakt niemand elkaar", str(bad))

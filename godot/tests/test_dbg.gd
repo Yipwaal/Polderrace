@@ -18,6 +18,49 @@ func run(host: Node) -> TestReport:
 				print("D %s %s k=%s lap=%.2f walls=%d off=%.2f top=%.0f beta=%.0f" % [tr, car, k, d.lap, d.walls, d.off, d.top, d.beta])
 		H.done()
 		return r
+	if what == "slow":
+		# bots coming up on a slow player: on the racing line at 55 %, then parked on the line
+		for tr in OS.get_environment("TRACKS").split(","):
+			for diff in ["easy", "normal", "extreme"]:
+				H.start(tr, car, "dry", "fwd", 7, diff, 3, "pole")
+				H.countdown()
+				var t := 0.0
+				var log := []
+				var c0 := 0
+				while t < 60:
+					var pl := Game.player
+					var a := Trk.trackAt(pl.s + 12)
+					var lt: float = Trk.LINE[a.i]
+					var want := atan2(a.px + a.rx * lt - pl.pos.x, a.pz + a.rz * lt - pl.pos.z)
+					var park := t > 35
+					H.tick(clampf(-H.angDiff(want, pl.heading) * 3.5, -1, 1), 1.0 if (pl.speed < 28 and not park) else 0.0, 1.0 if park else 0.0)
+					t += 1.0 / 120
+					if Game.raceContacts != c0:
+						c0 = Game.raceContacts
+						var near: Mover = Game.bots[0]
+						for b in Game.bots:
+							if absf(Trk.wrapD(b.s - pl.s)) < absf(Trk.wrapD(near.s - pl.s)): near = b
+						log.append("t=%.1f v=%.0f bot %s ds=%.1f dlat=%.1f bv=%.0f" % [t, pl.speed, near.name, Trk.wrapD(near.s - pl.s), near.lat - pl.lat, near.speed])
+				print("D slow %s %s contacts=%d  %s" % [tr, diff, Game.raceContacts, str(log.slice(0, 6))])
+		H.done()
+		return r
+	if what == "grid":
+		for tr in OS.get_environment("TRACKS").split(","):
+			for grid in ["back", "mid", "pole"]:
+				H.start(tr, car, "dry", "fwd", 7, "normal", 2, grid)
+				H.countdown()
+				var c0 := 0
+				var lat0: float = Game.player.lat
+				for k in 4 * 120:
+					H.tick(H.keep(lat0), 1, 0)
+					if Game.raceContacts != c0:
+						c0 = Game.raceContacts
+						var pl := Game.player
+						for b in Game.bots:
+							if absf(Trk.wrapD(b.s - pl.s)) < 6: print("D grid %s %s t=%.2f pv=%.1f plat=%.2f bot %s ds=%.1f lat=%.2f gridLat=%.2f v=%.1f latV=%.2f" % [tr, grid, k / 120.0, pl.speed, pl.lat, b.name, Trk.wrapD(b.s - pl.s), b.lat, b.gridLat, b.speed, b.latV])
+				print("D grid %s %s contacts=%d" % [tr, grid, Game.raceContacts])
+		H.done()
+		return r
 	if what == "spin":
 		H.start("haven", car); H.free_plane(); H.put(40, 0, 0, 30)
 		Game.player.spin = 3.0
