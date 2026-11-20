@@ -112,6 +112,10 @@ varying vec3 v_dir;
 
 void vertex() {
 	v_dir = VERTEX;
+	// a sky box: round every camera (main view, mirror, split screen) and behind everything, whatever its far plane
+	// (the depth buffer is reversed: 0 = far)
+	vec4 p = PROJECTION_MATRIX * vec4(mat3(VIEW_MATRIX) * VERTEX, 1.0);
+	POSITION = vec4(p.xy, p.w * 0.00001, p.w);
 }
 
 void fragment() {
@@ -401,6 +405,7 @@ func _set_lights(hs: Color, hg: Color, hi: float, sc: Color, si: float, l: Vecto
 	_wet_param = Vector4(0, 0, 0, _wet_param.w)
 	_gset("pr_wet", _wet_param)
 	if glows != null: glows.visible = false
+	if Fx.me != null: Fx.me.stage()
 	# the light itself only gives the shadow and the light pass; LMat takes its colour from pr_sun
 	sun.light_color = Color.WHITE
 	sun.light_energy = 1.0 if si > 0.0 else 0.0

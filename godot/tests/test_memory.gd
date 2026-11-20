@@ -160,7 +160,7 @@ func run(h: Node) -> TestReport:
 	r.check(b.static_mb <= a.static_mb * 1.02 + 4, "geheugen (static) stabiel", "%.1f -> %.1f MB" % [a.static_mb, b.static_mb])
 	# what a long session could pile up: the replay goes with the race, the pools and caches have a fixed size
 	r.check(Rep.replay == null and Rep.rp == null, "replay opgeruimd in het menu", "ghost-opname: %d getallen (hooguit een ronde, de volgende ghost-race begint opnieuw)" % Rep.ghostRec.size())
-	r.check(Fx.me.parts.size() == 90 and Fx.me.skids.multimesh.instance_count == Fx.SKID_MAX, "rook en remsporen: vaste pool", "%d rookwolkjes, %d remsporen" % [Fx.me.parts.size(), Fx.me.skids.multimesh.instance_count])
+	r.check(Fx.me.parts.multimesh.instance_count == Fx.PART_MAX and Fx.me.skids.multimesh.instance_count == Fx.SKID_MAX, "rook en remsporen: vaste pool", "%d rookwolkjes, %d remsporen" % [Fx.me.parts.multimesh.instance_count, Fx.me.skids.multimesh.instance_count])
 	r.check(Sfx._tones.size() <= 64 and Sfx._bursts.size() <= 64 and Sfx.get_child_count() <= 6, "geluid: begrensde caches, vaste spelers", "%d tonen, %d klappen, %d spelers" % [Sfx._tones.size(), Sfx._bursts.size(), Sfx.get_child_count()])
 	r.check(Canvas2D._specs.size() < 64, "lettertypecache begrensd", str(Canvas2D._specs.size()))
 	main.queue_free()

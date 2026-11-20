@@ -1240,15 +1240,24 @@ func setPaused(p: bool) -> void:
 	Hud.setPaused(p)
 	clearKeys()
 
-## JS applyPrefs: picture quality (low: no shadows, lower 3D resolution; mid: smaller shadow map) and sound on/off.
-## The settings menu calls this after changing a preference.
+## JS applyPrefs: picture quality and sound on/off. The settings menu calls this after changing a preference.
+##   laag:   no shadows (a soft blob under each car), 75% 3D resolution, no anti-aliasing, a simpler sky, no smoke,
+##           no screen effects; the mirror looks 600 m back
+##   middel: shadows (2048, soft edge, 150 m), MSAA 2x, all effects
+##   hoog:   shadows (4096, softer, 220 m, blended splits), MSAA 4x, all effects
+## Split screen and the mirror: MSAA 2x at most (they are small), none on laag. See Env.set_quality, Fx.set_quality.
 func applyPrefs() -> void:
 	var q: String = G.prefs.get("quality", "high")
-	if Env.me != null: Env.me.set_shadows(q != "low")
-	RenderingServer.directional_shadow_atlas_set_size(4096 if q == "high" else 2048, true)
+	if q != "low" and q != "mid": q = "high"
+	if Env.me != null: Env.me.set_quality(q)
+	if Fx.me != null: Fx.me.set_quality(q)
 	var vp := get_viewport()
 	vp.scaling_3d_scale = 0.75 if q == "low" else 1.0
-	vp.msaa_3d = Viewport.MSAA_DISABLED if q == "low" else Viewport.MSAA_2X
+	vp.msaa_3d = Viewport.MSAA_DISABLED if q == "low" else (Viewport.MSAA_2X if q == "mid" else Viewport.MSAA_4X)
+	if SplitView.me != null:
+		for v in [SplitView.me.vp1, SplitView.me.vp2]:
+			v.msaa_3d = Viewport.MSAA_DISABLED if q == "low" else Viewport.MSAA_2X
+			v.scaling_3d_scale = 0.75 if q == "low" else 1.0
 	Sfx.muted = not bool(G.prefs.get("sound", true))
 
 func bestKey(id: String, cls := "") -> String:
