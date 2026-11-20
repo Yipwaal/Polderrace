@@ -193,12 +193,12 @@ func max_corner(car: String, R: float, weather := "dry") -> Dictionary:
 		var e := rel.length() - R
 		# heading of the circle's tangent (clockwise seen from above = turning right), corrected towards the line
 		var tang := atan2(-rel.y, rel.x)
-		var want := tang - clampf(e * 0.06, -0.5, 0.5)
+		var want := tang - clampf(e * 0.15, -0.6, 0.6)
 		var df := angDiff(want, g.player.heading)
 		tick(clampf(-df * 5.0, -1, 1), hold(tv), 0)
 		t += DT
 		tv += 0.7 * DT
-		if e > maxf(1.5, R * 0.05): break
+		if e > maxf(2.5, R * 0.06): break
 		if t > 2.0:
 			best = maxf(best, v())
 			bmax = maxf(bmax, absf(beta()))
@@ -232,10 +232,11 @@ func mid_corner(car: String, kmh: float, steer: float, brake: float, weather := 
 	var ymax := y0; var bmax := 0.0; var bend := 0.0
 	var h0 := Game.player.heading
 	for k in int(1.5 * HZ):
+		if v() < 4.0: break       # stopped (holding the brake would reverse)
 		tick(steer, gas, brake)
 		ymax = maxf(ymax, yawRate)
 		bmax = maxf(bmax, absf(beta()))
-		if k == int(1.0 * HZ) - 1: bend = v()
+		if k <= int(1.0 * HZ) - 1: bend = v()
 	return {"yaw0": y0, "yawPeak": ymax / maxf(1e-6, y0), "beta0": rad_to_deg(b0), "betaMax": rad_to_deg(bmax), "v1s": bend * KMH, "v0": v0 * KMH,
 		"turned": rad_to_deg(-angDiff(Game.player.heading, h0)), "spun": absf(beta()) > 1.2}
 
@@ -246,7 +247,13 @@ func power_exit(car: String, kmh: float, keys := false) -> Dictionary:
 	for _k in int(2.5 * HZ):
 		tick(1, 1, 0, false, keys)
 		bmax = maxf(bmax, absf(beta()))
-	return {"betaMax": rad_to_deg(bmax), "vEnd": v() * KMH, "yaw": yawRate}
+	var vEnd := v()
+	# then lift with the lock still on: does the slide die out by itself
+	var b2 := 0.0
+	for _k in int(1.0 * HZ):
+		tick(1, 0, 0, false, keys)
+		b2 = maxf(b2, absf(beta()))
+	return {"betaMax": rad_to_deg(bmax), "vEnd": vEnd * KMH, "liftMax": rad_to_deg(b2), "liftEnd": rad_to_deg(beta())}
 
 ## handbrake turn: full lock and handbrake for `hold_s`, then let go and steer against the slide
 func handbrake(car: String, kmh: float, hold_s := 0.7, counter := true) -> Dictionary:
@@ -417,7 +424,7 @@ func clean_lap(track: String, car: String, k: float, weather := "dry", dir := "f
 	return {"lap": t - lap0 if lap0 >= 0 and Game.player.lap >= 2 else -1.0, "walls": walls - w0, "ditch": ditches - d0, "off": offT - o0, "top": top * KMH, "beta": rad_to_deg(bmax)}
 
 ## the tidy driver's best clean lap: the highest k that stays on the tarmac and off the walls
-func best_clean(track: String, car: String, weather := "dry", ks := [1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7]) -> Dictionary:
+func best_clean(track: String, car: String, weather := "dry", ks := [2.0, 1.8, 1.6, 1.4, 1.2, 1.0, 0.8]) -> Dictionary:
 	var best := {}
 	for k in ks:
 		var r := clean_lap(track, car, k, weather)

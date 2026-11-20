@@ -54,6 +54,7 @@ func run(host: Node) -> TestReport:
 			rec("brake120/" + car, H.mid_corner(car, 120, 0.9, 1.0))
 			rec("brake120-half/" + car, H.mid_corner(car, 120, 0.9, 0.5))
 			rec("brake120-rain/" + car, H.mid_corner(car, 120, 0.9, 1.0, "rain"))
+			rec("power40/" + car, H.power_exit(car, 40))
 			rec("power60/" + car, H.power_exit(car, 60))
 			rec("power60-keys/" + car, H.power_exit(car, 60, true))
 			rec("hand80/" + car, H.handbrake(car, 80))

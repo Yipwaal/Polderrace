@@ -625,14 +625,18 @@ const AP_R := 0.10
 const TY_C := 1.3            ## tyre curve sin(C atan(B x)): 1 at x = 1, 0.89 far past it (a slide keeps most of its grip)
 const TY_B := 2.6427
 const STEER_OVER := 1.05     ## full lock asks 5 % more than the front tyres have: you hear and feel the limit
-const WT_K := 0.0065         ## weight moved per m/s2 of acceleration (share of the car's weight)
+const WT_K := 0.0035         ## weight moved per m/s2 of acceleration (share of the car's weight)
 const TYRE_LS := 0.8         ## a tyre with twice the load has 2^0.8 times the grip
 const BRAKE_USE_F := 0.62    ## share of the front / rear tyres' grip that full braking takes
-const BRAKE_USE_R := 0.74
+const BRAKE_USE_R := 0.64
 const POWER_USE_MAX := 0.86  ## traction: power never takes more than this share of the driven tyres' grip
-const HAND_GRIP := 0.3       ## rear grip left with the handbrake on
-const SCRUB := 0.45          ## share of the natural speed loss of a slipping tyre that is kept (1 = real, 0 = slides cost nothing)
-const BETA_SOFT := 0.6       ## slip angle (rad) past which the car helps you catch the slide (handbrake: 1.1)
+const STEER_AID := 1.0      ## how far the stability aid opens the steering when the tail slides (0 = off)
+const POWER_GRIP := 0.78     ## grip along the car against grip across it (lower: power slides sooner)
+const HAND_GRIP := 0.4       ## rear grip left with the handbrake on
+const SCRUB := 0.4          ## share of the natural speed loss of a slipping tyre that is kept (1 = real, 0 = slides cost nothing)
+const BETA_LIFT := 0.14      ## slip angle (rad) past which the car helps you catch the slide: off the gas,
+const BETA_GAS := 0.42       ## on the gas (a power slide),
+const BETA_HAND := 1.1       ## with the handbrake on
 const LOAD_G := 32.0         ## "gravity" for crests and dips (m/s2): the car gets light when v2 x curvature nears it
 
 ## what kind of car each model is (how fast it is stays in Cars.CARS): driven wheels (f front, r rear, a all), share of
@@ -793,18 +797,25 @@ func driveStep(dt: float, inp: Dictionary) -> void:
 	var Nf: float = H.wf - pl.wt
 	var capF: float = A * H.wf * pow(Nf / H.wf, TYRE_LS)
 	var capR: float = A * (1 - H.wf) * pow((1 - Nf) / (1 - H.wf), TYRE_LS) * H.kr
+	# brakes and power use up grip. When the rear starts to slide they let go of it again (as ABS and traction control
+	# do): hard braking in a corner turns the car in but does not spin it, power slides stay catchable
 	var useF := braking * BRAKE_USE_F
-	var useR := braking * BRAKE_USE_R
+	var useR := braking * BRAKE_USE_R * (1 - 0.85 * clamp_((pl.slipR - 0.8) / 0.6, 0, 1))
 	if aDrive > 0:
-		var Ax := A * 1.25
+		var Ax := A * POWER_GRIP
 		useF = minf(POWER_USE_MAX, aDrive * H.df / (Ax * Nf))
-		useR = minf(POWER_USE_MAX, aDrive * (1 - H.df) / (Ax * (1 - Nf)))
+		useR = minf(POWER_USE_MAX, aDrive * (1 - H.df) / (Ax * (1 - Nf))) * (1 - 0.7 * clamp_((pl.slipR - 1.8) / 1.5, 0, 1))
 	capF *= sqrt(1 - useF * useF)
 	capR *= sqrt(1 - useR * useR)
 	if pl.hand: capR *= HAND_GRIP
 	# ---- the front wheels: steering asks for a yaw rate; they turn as far as that takes in a steady corner
 	var wFull := 1.7 * GRIP * clamp_(av / 8, 0, 1) * maxf(0.32, 1 - 0.5 * sAbs)
-	var wc := pl.steer * wFull * STEER_OVER
+	# hard on the brakes the fronts have less to steer with: ask for less, as the game always did
+	var wc := pl.steer * wFull * STEER_OVER * (1 - 0.26 * braking * clamp_((av - 10) / 5, 0, 1))
+	# stability aid: the tail is sliding out and you still steer into the corner: the car opens the steering a little
+	# for you (counter-steering yourself, or the handbrake, switches it off)
+	if not pl.hand and pl.steer * pl.beta < 0:
+		wc *= 1 - STEER_AID * clamp_((pl.slipR - 1.1 - 0.8 * inp.gas) / 1.2, 0, 1)
 	var q := absf(wc) * av / (GRIP * gf * surf * latGrip(av))
 	var den := maxf(av, 3.0)
 	var delta: float = clamp_(MathX.sgn(wc) * (H.L * absf(wc) / maxf(av, 8.0) + AP_F * tyreInv(q) - AP_R * tyreInv(q / H.kr)), -0.6, 0.6)
@@ -820,9 +831,14 @@ func driveStep(dt: float, inp: Dictionary) -> void:
 	# a wheel on the grass drags that side back
 	yawAcc += (dragR - dragL) * 0.03
 	var beta := atan2(w, den)
-	# a slide that gets too deep: the car helps to catch it (not while a hit is spinning it)
-	var over := maxf(0, absf(beta) - (1.1 if pl.hand else BETA_SOFT)) * (1 - clamp_(absf(pl.spin), 0, 1))
-	if over > 0: yawAcc += -MathX.sgn(beta) * over * 14.0 - pl.yr * minf(6.0, over * 12.0)
+	# a slide that gets too deep: the car helps to catch it (not while a hit is spinning it). On the gas you may
+	# hold a deeper slide (a power slide), the handbrake allows a deeper one still; lifting off brings the car back
+	var soft := BETA_HAND if pl.hand else lerpf(BETA_LIFT, BETA_GAS, clamp_(inp.gas, 0, 1))
+	var over := maxf(0, absf(beta) - soft) * (1 - clamp_(absf(pl.spin), 0, 1))
+	if over > 0:
+		# turn the nose back towards where the car is going, and brake any turning that makes the slide deeper
+		yawAcc += MathX.sgn(beta) * over * 16.0
+		if pl.yr * beta < 0: yawAcc -= pl.yr * minf(8.0, over * 16.0)
 	var latAcc := (FF + FR) * kd
 	pl.yr += yawAcc * kd * dt
 	var turn := 1.7 * GRIP * gf * clamp_(av / 8, 0, 1) * maxf(0.32, 1 - 0.5 * sAbs)
@@ -831,7 +847,7 @@ func driveStep(dt: float, inp: Dictionary) -> void:
 	pl.yr += (pl.steer * turn * (MathX.sgn(u) if u != 0 else 1.0) - pl.yr) * (1 - kd) * minf(1, dt * 30)
 	# a slipping tyre costs speed; part of that is given back (SCRUB), less the deeper the slide
 	if latAcc * w < 0 and u > 5:
-		ax += (1 - SCRUB) * absf(latAcc * w) / sqrt(u * u + w * w) * clamp_(1 - (absf(beta) - 0.35) / 0.5, 0, 1)
+		ax += (1 - SCRUB) * absf(latAcc * w) / sqrt(u * u + w * w) * clamp_(1 - (absf(beta) - 0.9) / 0.5, 0, 1)
 	u += ax * dt
 	w += latAcc * dt
 	u = clamp_(u, minf(REVMAX, v), MAXV)
@@ -1193,6 +1209,7 @@ func edges(prevIdx: int, fx: float, fz: float, dt: float) -> bool:
 		var vn := vx * nx + vz * nz
 		var vt := vx * tx + vz * tz
 		var hit := vn > 0.3
+		var v0 := sqrt(vx * vx + vz * vz)
 		if vn > 0:
 			vt -= MathX.sgn(vt) * minf(absf(vt), vn * WALL_RUB)
 			vn = -vn * WALL_BOUNCE
@@ -1201,12 +1218,12 @@ func edges(prevIdx: int, fx: float, fz: float, dt: float) -> bool:
 		vx = tx * vt + nx * vn
 		vz = tz * vt + nz * vn
 		# the nose is turned along the wall: at once by the hit, then gently while the car leans on it
-		player.heading = MathX.lerp_angle_(player.heading, dirTh, 0.55 if hit else minf(1, dt * 12))
+		player.heading = MathX.lerp_angle_(player.heading, dirTh, minf(0.95, 0.55 + 0.45 * into) if hit else minf(1, dt * 12))
 		if hit: player.yr *= 0.3
 		hx = sin(player.heading); hz = cos(player.heading)
 		player.speed = vx * hx + vz * hz
 		player.slide = Vector2(vx - hx * player.speed, vz - hz * player.speed)
-		if absf(player.speed) > 4 and clock - wallT > 0.35:
+		if v0 > 4 and clock - wallT > 0.35:
 			wallT = clock
 			if fxOn(): shake = minf(0.22, 0.05 + into * 0.25)
 			Sfx.noise(0.22, 0.4, 650)
