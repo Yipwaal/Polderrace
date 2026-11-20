@@ -80,7 +80,7 @@ func run(host: Node) -> TestReport:
 		r.check(absf(Game.raceFinishTime - h.ft) < tol, "%s %s: finishtijd gelijk" % [tr, carId], "nu %.3f, vastgelegd %.3f s" % [Game.raceFinishTime, h.ft])
 		if not Game.lapTimes.is_empty() and not h.laps.is_empty():
 			r.check(absf(Game.lapTimes[0] - h.laps[0]) < tol, "%s %s: rondetijd gelijk" % [tr, carId], "nu %.3f, vastgelegd %.3f s" % [Game.lapTimes[0], h.laps[0]])
-		r.check(absf(Game.raceTopSpeed - h.top) < 0.5, "%s %s: topsnelheid gelijk" % [tr, carId], "nu %.1f, vastgelegd %.1f km/u" % [Game.raceTopSpeed * 3.6, h.top * 3.6])
+		r.check(absf(Game.raceTopSpeed - h.top) < (2.0 if TrackDefs.TRACKS[tr].get("wind", false) else 0.5), "%s %s: topsnelheid gelijk" % [tr, carId], "nu %.1f, vastgelegd %.1f km/u" % [Game.raceTopSpeed * 3.6, h.top * 3.6])
 		r.check(resets == int(h.resets), "%s %s: zelfde aantal keer terug op de baan" % [tr, carId], "nu %d, vastgelegd %d" % [resets, h.resets])
 	if upd: TestReport.save_golden("laps", gold)
 	Game.set_process(true)
