@@ -4,7 +4,7 @@ extends RefCounted
 ## Every triangle of every visible mesh and MultiMesh instance (real geometry, in world space) is cut against the space
 ## above the road, sample by sample (2 m slices in the track's own frame: metres along, metres right of the centre line,
 ## metres above the road surface). Three zones:
-##   rijbaan  the asphalt, from 13 cm above the surface (road, kerbs, start line, grime lie below that) up to CLEAR
+##   rijbaan  the asphalt, from 16 cm above the surface (road, kerbs, start line, grime lie below that) up to CLEAR
 ##            (4.6 m): anything at all in there is a fault. Gantries, banners and bridge decks above CLEAR are fine.
 ##   berm     the first 1.5 m of verge beside the asphalt (cars run wide there): only big things, at least 3 m across,
 ##            between 0.6 and 2 m above the road (a dune, a wall, a building). Posts, bollards, benches and flowers are fine.
@@ -18,7 +18,7 @@ extends RefCounted
 ## The world is checked as TrackLoader.build_world makes it; World.batch only merges those same triangles afterwards.
 
 const CLEAR := 4.6       ## free height above the road
-const UP_ROAD := 0.13    ## the road's own layers end below this
+const UP_ROAD := 0.16    ## the road's own layers end below this (road 7, start line 9, kerbs 11, grime 13 cm)
 const EDGE_IN := 0.15    ## the outer 15 cm of the asphalt may hold the kerb stones of a pavement
 const VERGE := 1.5
 const VERGE_H := 2.0     ## the verge is checked up to this height (tree crowns hang over it higher up)

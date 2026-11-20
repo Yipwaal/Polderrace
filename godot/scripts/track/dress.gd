@@ -72,6 +72,8 @@ static func fences(every: float, lat: float) -> void:
 			var xz := Trk.onTrack(i, s * l)
 			var x: float = xz[0]; var z: float = xz[1]
 			if Trk.distToTrack(x, z) < Trk.ROAD_HALF + 2: continue
+			# along a dike (polder): not where a tight bend puts the fence on the slope of the road further on
+			if Trk.TRK.edge == "ditch" and Trk.distToTrack(x, z) < Trk.SHOULDER + lat - 4: continue
 			var y := groundY(x, z)
 			p.append(World.mtx(x, y + 0.6, z))
 			var j := int(round(minf(d + every, Trk.TRACK_LEN) / Trk.SPC)) % Trk.NS
@@ -244,16 +246,20 @@ static func flagPoles(every: float, lat: float) -> void:
 	World.inst(Geo.cylinder(0.05, 0.07, 8, 6), M(0xe8e4dc), p, null, false)
 	World.inst(Geo.box(1, 1, 1), M(0xffffff), f, c, false)
 
-static func horizonHills() -> void:
+## the far horizon: two rings of hills. low = true: flat land (polder, village): a low, darker line of distant woods instead
+static func horizonHills(low := false) -> void:
 	var cx := (Trk.BX0 + Trk.BX1) / 2
 	var cz := (Trk.BZ0 + Trk.BZ1) / 2
-	for spec in [[1500.0, 0x3f5a3a, 0.62, 1.0, 1.3], [1180.0, 0x4a6a3f, 0.48, 0.62, 4.1]]:
+	var specs := [[1500.0, 0x3f5a3a, 0.62, 1.0, 1.3], [1180.0, 0x4a6a3f, 0.48, 0.62, 4.1]]
+	if low: specs = [[1500.0, 0x3a5638, 0.6, 0.24, 1.3], [1180.0, 0x40603a, 0.44, 0.2, 4.1]]
+	for spec in specs:
 		var R0: float = spec[0]; var base: int = spec[1]; var k: float = spec[2]; var amp: float = spec[3]; var seed: float = spec[4]
 		var n := 160
 		var g := Geo.new()
 		for i in n + 1:
 			var a := float(i) / n * PI * 2
 			var h := amp * (45 + 60 * absf(sin(a * 3.3 + seed)) + 38 * absf(sin(a * 7.1 + seed * 2)) + 18 * sin(a * 13 + seed))
+			if low: h += 5.0 + 4.0 * sin(a * 67 + seed) + 3.0 * sin(a * 101 + seed * 3)   # the ragged top of distant trees
 			var x := cx + cos(a) * R0
 			var z := cz + sin(a) * R0
 			g.pos.append(Vector3(x, -6, z)); g.pos.append(Vector3(x, h, z))
@@ -283,7 +289,8 @@ static func grimeTex() -> ImageTexture:
 static func roadGrime() -> void:
 	var m := M(0xffffff, {"map": grimeTex(), "transparent": true, "depthWrite": false, "opacity": 0.75})
 	for sd in [-1, 1]:
-		World.ribbon(sd * (Trk.ROAD_HALF - 0.55), sd * (Trk.ROAD_HALF + 0.55), m, 6, 0.085)
+		# 13 cm: 2 cm above the kerbs (11 cm) and 4 cm above the start line (9 cm); at 10.5 cm it flickered on both
+		World.ribbon(sd * (Trk.ROAD_HALF - 0.55), sd * (Trk.ROAD_HALF + 0.55), m, 6, 0.13)
 
 static func grassTufts(every: float, near: float, far: float) -> void:
 	var m := []; var c := []
@@ -299,7 +306,7 @@ static func grassTufts(every: float, near: float, far: float) -> void:
 
 static func dressTrack(id: String) -> void:
 	roadGrime()
-	if not id in ["afsluitdijk", "zeeland", "haven"]: horizonHills()
+	if not id in ["afsluitdijk", "zeeland", "haven"]: horizonHills(id in ["polder", "dorp"])
 	if id == "polder": grassTufts(6, 0.2, 1.2)
 	elif id in ["afsluitdijk", "circuit", "veluwe", "limburg", "zeeland"]: grassTufts(6, 0.4, 4)
 	match id:
