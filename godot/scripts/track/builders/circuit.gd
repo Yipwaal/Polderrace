@@ -208,7 +208,8 @@ static func build() -> void:
 		bi += 2
 	TrackCommon.people(folk)
 	World.inst(Geo.cone(2.2, 8, 7), M(0x35512f), pines2, null, true)
-	World.inst(Geo.sphere(1, 20, 10, 0, PI * 2, 0, PI / 2), M(0xd9c99c), dunes, null, false)
+	# 16 x 7 segments: the 20 x 10 of the JS cost 40 % more triangles for the same low dunes (perf budget)
+	World.inst(Geo.sphere(1, 16, 7, 0, PI * 2, 0, PI / 2), M(0xd9c99c), dunes, null, false)
 	# bend boards on top of the tyre wall, big enough to read from the track
 	TrackCommon.chevrons(20.75, 1.6, 0.02, 12.0, 1.9)
 	World.inst(Geo.cone(0.5, 1, 5), M(0xffffff), tufts, tuftC, false)
