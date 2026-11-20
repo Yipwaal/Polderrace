@@ -140,7 +140,7 @@ static func makeTruck() -> Dictionary:
 	T.color(cFrame).box(1.1, 0.3, 7.2, 0, 0.82, 3.0)
 	T.box(2.3, 0.12, 1.3, 0, 1.05, 3.3)
 	for sx in [1.0, -1.0]:
-		var tank := Geo.cylinder(0.3, 0.3, 1.3, 14); tank.rotate_x(PI / 2); tank.translate(sx * 0.92, 0.72, 3.5)
+		var tank := Geo.cylinder(0.3, 0.3, 1.3, 10); tank.rotate_x(PI / 2); tank.translate(sx * 0.92, 0.72, 3.5)
 		T.color(sc(0xb9bec4, 0.85)).geo(tank)
 		T.color(cDark).box(0.5, 0.06, 0.9, sx * 1.02, 1.08, 5.1)     # front mudguards
 	# trailer: container on a frame, ribs, rear doors with lock bars, landing legs, underride bar, mud flaps

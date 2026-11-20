@@ -96,6 +96,11 @@ Gevonden en opgelost:
 
 Wielen na de Beeld-merge lichter gemaakt (band 22 segmenten, velgrand 22, schijven 18): 1284 → 1102 driehoeken per wiel,
 want Rotterdam kwam 126 driehoeken boven het nieuwe budget (beeld + spiegel 350k); nu 338k.
+Na de Banen A-merge kwam Haven boven het driehoekbudget (beeld + spiegel 310k, budget 280k): acht auto's op de grid en
+vrachtwagens. Daarom: autowielen band 20 segmenten / 10 profielpunten, moeren als blokjes (1284 → ±800 per wiel);
+stalen wielen (bus, vrachtwagen) 16 segmenten zonder binnenvat; carrosserie-stations 0,19 m (was 0,14), cabine 0,12 m
+(was 0,075); verkeer (`coarse` in CAR_SPECS city/van) nog grover. Een auto is nu ±13,5k driehoeken (was 16,6k; vóór
+fase 2 11-12k). Haven nu 277k. Bij heel ronde vormen (retro achterklep) zie je van dichtbij soms een facet.
 Na de laatste merge (perf met renderer): polder beeld 457 / spiegel 374 tekenaanroepen (budget 750 / 520), alle banen
 groen, ook de driehoekbudgetten.
 

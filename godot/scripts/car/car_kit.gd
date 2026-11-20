@@ -175,7 +175,7 @@ static func tyreWallGeo(r: float, w: float, style: String) -> Geo:
 	var hw := w / 2.0
 	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7))
 	# the outer sidewall of wheelGeos' tyre as (radius, x), from the tread shoulder to the bead
-	var prof := [Vector2(r - 0.008, hw - 0.04), Vector2(r - 0.03, hw - 0.012), Vector2(r - 0.075, hw), Vector2(rb + 0.012, hw - 0.004)]
+	var prof := [Vector2(r - 0.008, hw - 0.04), Vector2(r - 0.03, hw - 0.012), Vector2(r - 0.075, hw), Vector2(rb + 0.004, hw - 0.017)]
 	var A := CarAcc.new()
 	var n := 36
 	# (accumulator uv run bottom-up like three.js; the mesh flips them to the canvas' top-down)
@@ -334,26 +334,35 @@ static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine :=
 	var hw := w / 2.0
 	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7))
 	var ro := r - (0.04 if style == "tractor" else 0.0)   # lugs stand on a tractor tyre
-	var tyre := Geo.lathe([Vector2(rb, -hw + 0.018), Vector2(rb + 0.012, -hw + 0.004), Vector2(ro - 0.075, -hw), Vector2(ro - 0.03, -hw + 0.012),
-		Vector2(ro - 0.008, -hw + 0.04), Vector2(ro, -hw + 0.075), Vector2(ro, hw - 0.075), Vector2(ro - 0.008, hw - 0.04), Vector2(ro - 0.03, hw - 0.012),
-		Vector2(ro - 0.075, hw), Vector2(rb + 0.012, hw - 0.004), Vector2(rb, hw - 0.018)], 22)
+	var steel := style == "steel"   # vans and lorries (many wheels, seen from a distance): a lighter tyre, a closed disc
+	var tyre: Geo
+	if steel:
+		tyre = Geo.lathe([Vector2(rb, -hw + 0.018), Vector2(ro - 0.06, -hw), Vector2(ro - 0.012, -hw + 0.03), Vector2(ro, -hw + 0.08),
+			Vector2(ro, hw - 0.08), Vector2(ro - 0.012, hw - 0.03), Vector2(ro - 0.06, hw), Vector2(rb, hw - 0.018)], 16)   # (a multiple of 4: a corner on the road)
+	else:
+		tyre = Geo.lathe([Vector2(rb, -hw + 0.018), Vector2(ro - 0.075, -hw), Vector2(ro - 0.03, -hw + 0.012),
+			Vector2(ro - 0.008, -hw + 0.04), Vector2(ro, -hw + 0.075), Vector2(ro, hw - 0.075), Vector2(ro - 0.008, hw - 0.04), Vector2(ro - 0.03, hw - 0.012),
+			Vector2(ro - 0.075, hw), Vector2(rb, hw - 0.018)], 20)
 	tyre.rotate_z(-PI / 2)
 	var A := CarAcc.new()
 	A.color(sc(0x161617, 0.07)).geo(tyre)
 	var disc := func(rad: float, th: float, x: float, seg: int) -> void:
 		var g := Geo.cylinder(rad, rad, th, seg); g.rotate_z(X90); g.translate(x, 0, 0); A.geo(g)
 	var ringG := func(r0: float, r1: float, x: float) -> void:
-		var g := Geo.ring(r0, r1, 22); g.rotate_y(X90); g.translate(x, 0, 0); A.geo(g)
+		var g := Geo.ring(r0, r1, 18); g.rotate_y(X90); g.translate(x, 0, 0); A.geo(g)
 	var spoke := func(a: float, len: float, wid: float, th: float, x: float, r0: float) -> void:
 		var g := Geo.box(th, len, wid); g.translate(0, r0 + len / 2, 0); g.rotate_x(a); g.translate(x, 0, 0); A.geo(g)
 	var face := hw - 0.03
 	# barrel and back plate (dark), brake disc (steel) behind the spokes
 	A.color(sc(0x1b1c1f, 0.15))
-	var bg := Geo.cylinder(rb * 0.985, rb * 0.985, w - 0.05, 18, 1, true); bg.rotate_z(X90)
-	for i in bg.nrm.size(): bg.nrm[i] = -bg.nrm[i]   # seen from inside the rim
-	bg.idx = _flip(bg.idx)
-	A.geo(bg)
-	var bp := Geo.circle(rb * 0.985, 18); bp.rotate_y(X90); bp.translate(-hw + 0.03, 0, 0); A.geo(bp)
+	if not steel:   # (the steel wheel's disc closes the rim: no barrel to see)
+		var bg := Geo.cylinder(rb * 0.985, rb * 0.985, w - 0.05, 18, 1, true); bg.rotate_z(X90)
+		for i in bg.nrm.size(): bg.nrm[i] = -bg.nrm[i]   # seen from inside the rim
+		bg.idx = _flip(bg.idx)
+		A.geo(bg)
+		var bp := Geo.circle(rb * 0.985, 18); bp.rotate_y(X90); bp.translate(-hw + 0.03, 0, 0); A.geo(bp)
+	else:
+		var bp := Geo.circle(rb * 0.985, 12); bp.rotate_y(-X90); bp.translate(-hw + 0.03, 0, 0); A.geo(bp)   # the inner side, facing in
 	if style == "tractor":
 		# chevron lugs round the tyre
 		A.color(sc(0x161617, 0.07))
@@ -368,11 +377,13 @@ static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine :=
 		A.color(sc(0x2a2c30, 0.4)); disc.call(rb * 0.34, 0.03, face - 0.05, 16)
 	A.color(rc)
 	if style == "steel" or style == "tractor":
-		ringG.call(rb * 0.86, rb, face + 0.012); disc.call(rb * 0.86, 0.02, face - 0.03, 18)
-		A.color(sc(0x3a3d42, 0.4)); disc.call(rb * 0.28, 0.05, face - 0.005, 14)
+		var sg := 14 if steel else 18
+		var g0 := Geo.ring(rb * 0.86, rb, sg); g0.rotate_y(X90); g0.translate(face + 0.012, 0, 0); A.geo(g0)
+		disc.call(rb * 0.86, 0.02, face - 0.03, sg)
+		A.color(sc(0x3a3d42, 0.4)); disc.call(rb * 0.28, 0.05, face - 0.005, 10 if steel else 14)
 	else:
 		# rim lip with some depth, then the spokes
-		var lip := Geo.lathe([Vector2(rb, face + 0.014), Vector2(rb * 0.93, face + 0.014), Vector2(rb * 0.9, face - 0.006), Vector2(rb * 0.9, face - 0.05)], 22)
+		var lip := Geo.lathe([Vector2(rb, face + 0.014), Vector2(rb * 0.93, face + 0.014), Vector2(rb * 0.9, face - 0.006), Vector2(rb * 0.9, face - 0.05)], 18)
 		lip.rotate_z(-PI / 2)
 		A.geo(lip)
 		if style == "spoke":
@@ -393,7 +404,7 @@ static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine :=
 		A.color(sc(0x2a2c30, 0.5))
 		for k in 5:
 			var a := (k + 0.5) / 5.0 * PI * 2
-			var nut := Geo.cylinder(0.012, 0.012, 0.012, 6); nut.rotate_z(X90); nut.translate(face + 0.008, cos(a) * rb * 0.14, sin(a) * rb * 0.14); A.geo(nut)
+			var nut := Geo.box(0.012, 0.02, 0.02); nut.rotate_x(a); nut.translate(face + 0.008, cos(a) * rb * 0.14, sin(a) * rb * 0.14); A.geo(nut)
 	var o := {"all": A.build(), "rb": rb, "face": face}
 	WGEO[key] = o
 	return o

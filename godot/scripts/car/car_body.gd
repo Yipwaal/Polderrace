@@ -99,21 +99,24 @@ func _init(spec: Dictionary) -> void:
 		roof_fn = MathX.mono(C.roof)
 	_find_hole()
 	# stations: dense at the nose and tail, around every wheel arch and at the zone edges the car asks for
+	# (traffic, S.coarse: fewer stations, it is many and mostly seen from a distance)
+	var coarse: bool = S.get("coarse", false)
+	var na := 7 if coarse else 12
 	var ex: Array = []
 	for az in S.wz:
 		for s in [-1, 1]:
 			ex.append(az + s * ra); ex.append(az + s * (ra - 0.002))
-		for i in range(1, 12):
-			ex.append(az + ra * cos(i / 12.0 * PI))
+		for i in range(1, na):
+			ex.append(az + ra * cos(i / float(na) * PI))
 	var d := 0.02
 	while d < 0.3:
 		ex.append(zF - d); ex.append(zR + d)
-		d += 0.05
+		d += 0.09 if coarse else 0.05
 	for z in S.get("zcuts", []):
 		ex.append(z)
 	if has_hole:
 		ex.append(hz0); ex.append(hz1)
-	zs = stationsOf(zR, zF, 0.14, ex)
+	zs = stationsOf(zR, zF, 0.24 if coarse else 0.19, ex)
 	body = loftGeo(zs, sec, _bodyMat, 0)
 	# cabin (greenhouse): glass sides, windscreen and rear window in frames; roof, pillars and rails in paint
 	if C != null:
@@ -127,7 +130,7 @@ func _init(spec: Dictionary) -> void:
 			extra.append(b)
 		if has_hole:
 			extra.append(hz0); extra.append(hz1)
-		cz = stationsOf(C.z1, C.z0, 0.075, extra)
+		cz = stationsOf(C.z1, C.z0, 0.14 if coarse else 0.12, extra)
 		cab = loftGeo(cz, csec, _cabMat, 0)
 
 func top(z: float) -> float:
