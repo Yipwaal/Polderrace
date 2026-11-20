@@ -35,12 +35,17 @@ Gast:
   Windows-firewall check/openzetten (PowerShell, NIET getest op Windows).
 
 ## Stand van het werk (opvolger, 20 nov avond)
-- [x] net_room/lan/net herschreven, net_ui, haken in game/menu/hud, tests, shot-tool (commits f8841a9..87f4cfe)
-- [x] overname: _close vertelt eerst (closed) en ruimt dan op, anders was de presence van de anderen weg (valse "verlaten")
-- [x] JSON van de lijn stil parsen (NetRoom.parse_json): JSON.parse_string gaf ERROR-regels bij elk kapot pakketje
-- [x] test hostile: "bye" uit de rommel (een bye is gewoon weggaan)
-- [ ] scenario 2, 3, 4 groen; docs PLAN.md/README.md; CI (test_net_more?)
-- [ ] merge claude/new-session-vj6qwu, alle tests, eindverslag (LAN_NOTES.md verwijderen)
+- [x] overname neemt presence mee (_close: eerst closed, dan leave); geen st=null bij overstappen (anders r.out bij nieuwe host)
+- [x] kapotte JSON stil (NetRoom.parse_json); hostile-test zonder "bye"
+- [x] looks via G.lookOf (+paint), CarLook.clean bij ontvangst, podium toont andere spelers in eigen look, PROTO 4
+- [x] dubbele namen "Bram (2)" op stoelvolgorde; docs README/PLAN; test_net_more in CI
+- [x] merge main (Aanpassen, Rijgedrag, Beeld) zonder conflicten
+- [ ] test_net_more volledig na merge, run.py-suites, play, shot_net.py bekijken, eindverslag (dit bestand weg)
+- Gemeld aan bugjacht: hatch + stripe "twin" (ook oude saves met stripe white/black/yellow) => 'Parameter "material" is null' (CarLook/_styleStd);
+  G.lookOf zet paint als StringName-sleutel (L.paint = …); startvolgorde-check in scenario 1 faalde één keer (niet herhaald).
 
-## Gemeten / bekeken (aanvullen)
-- test_net.py: 13/13, 17 s. Scenario 1: 103 s.
+## Gemeten
+- test_net.py 13/13 (±20 s). Scenario 1 ±105 s, 2 ±60-190 s, 3 ±15 s, 4 ±220 s.
+- 150 ms ± 30 ms, 5% verlies: auto van de speler bij de host mediaan 0,36 m, 95% 0,66 m, sprong 0,44 m; LAN 95% 0,85 m.
+- 8 spelers + 5 bots: host 59 kB/s omhoog, 9 kB/s omlaag; speler 1,4 kB/s omhoog, 8,6 kB/s omlaag.
+- overname na crash van de host (andere pc): 27 s (ENet-timeout + overstappen).

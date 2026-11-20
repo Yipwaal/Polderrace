@@ -897,7 +897,7 @@ func _host_diag() -> String:
 	if lan.selftest == "fail":
 		return fw + "Deze pc ontvangt zijn eigen zoekbericht niet: vrijwel zeker houdt de firewall het spel tegen. Sta Polderrace toe, ook voor 'Openbare netwerken'. " + addr
 	if waited < 8.0:
-		return fw + "Je game staat in de lijst van spelers op hetzelfde netwerk. " + addr
+		return fw + "Je game staat klaar: spelers op hetzelfde netwerk zien hem in hun lijst. " + addr
 	return fw + "Nog niemand ziet je game. Zoeken de anderen al (Online spelen)? Zo ja: sta Polderrace toe in de firewall van deze pc, ook voor 'Openbare netwerken' (de vraag van Windows kan achter het spel staan: Alt+Tab), en check dat iedereen op hetzelfde netwerk zit. Het kan ook via je IP-adres. " + addr
 
 func _lobby_card(l: Dictionary) -> Control:

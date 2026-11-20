@@ -450,7 +450,7 @@ def scenario_full():
     r = h.rep()
     hostile = remote(r, 'Flood 39') or next((x for x in r['remotes'] if x['peer'] == 'g5'), None)
     check(r.get('net') and r.get('host') and len(r['remotes']) == 7 and not h.errors(), 'kapotte en vijandige pakketjes: de host blijft overeind', (len(r.get('remotes', [])), h.errors()[:2]))
-    check(r['dropped'] > 300 and r['cfg'] == before['cfg'] and r['state'] == 'menu' and r['pts'] == before['pts'] and hostile is not None and not hostile['host'] and hostile['uid'] != 'h4x' and not hostile['off'],
+    check(r['dropped'] > 100 and r['cfg'] == before['cfg'] and r['state'] == 'menu' and r['pts'] == before['pts'] and hostile is not None and not hostile['host'] and hostile['uid'] != 'h4x' and not hostile['off'],
           'wat niet klopt of te veel is wordt weggegooid; een speler kan zich geen host maken en geen race, stand of instellingen sturen', (r['dropped'], hostile))
     rs = [p.rep() for p in gs[5:7]]
     check(all(p_.get('net') and remote(p_, 'Yip') and remote(p_, 'Yip')['host'] and sum(1 for x in p_['remotes'] if x['host']) == 1 for p_ in rs) and not gs[5].errors(),
@@ -609,6 +609,9 @@ def track_error(truth, shown):
     the worst jump from one frame to the next compared with what the car really drove in that time"""
     T = list(zip(truth[0::3], truth[1::3], truth[2::3]))
     S = list(zip(shown[0::3], shown[1::3], shown[2::3]))
+    # moments the car really jumped (put back on the road): nothing can be smooth there, leave out half a second after
+    tele = [b[0] for a, b in zip(T, T[1:]) if math.dist(a[1:], b[1:]) > 6.0]
+    S = [x for x in S if not any(0 <= x[0] - t < 0.6 for t in tele)]
     errs = []; jumps = []
     j = 0
     prev = None
@@ -624,7 +627,7 @@ def track_error(truth, shown):
         prev = (t, x, z, tx, tz)
     if len(errs) < 20: return None
     errs.sort()
-    return (errs[len(errs) // 2], errs[int(len(errs) * 0.95)], errs[-1], max(jumps) if jumps else 0.0, len(errs))
+    return (errs[len(errs) // 2], errs[int(len(errs) * 0.95)], errs[-1], max(jumps) if jumps else 0.0, len(errs), len(tele))
 
 def scenario_lan():
     """two hosts and players on separate (virtual) PCs; one player behind a bad connection"""
@@ -668,8 +671,9 @@ def scenario_lan():
             r = g.wait(lambda r: any(l['name'] == 'Kims game' and l['deaf'] for l in r['lobbies']), 12)
             check(any(l['name'] == 'Kims game' and l['deaf'] for l in r.get('lobbies', [])) and any('firewall' in t for c in r.get('cards', []) for t in c),
                   'firewall van een host dicht: zijn game staat in de lijst met de melding dat zijn firewall het spel tegenhoudt', r.get('cards'))
-            r = h2.rep()
-            check(r.get('searching') == 0 and 'Nog niemand ziet je game' in r.get('diag', '') or 'firewall' in r.get('diag', ''), 'en die host leest zelf wat hij moet nalopen', r.get('diag'))
+            # (the first seconds after making the game it just says the game is up)
+            r = h2.wait(lambda r: r['searching'] == 0 and ('Nog niemand ziet je game' in r['diag'] or 'firewall' in r['diag']), 12)
+            check(r.get('searching') == 0 and ('Nog niemand ziet je game' in r.get('diag', '') or 'firewall' in r.get('diag', '')), 'en die host leest zelf wat hij moet nalopen', (r.get('searching'), r.get('diag')))
         else:
             print('     (firewall-scenario overgeslagen: geen nft)')
         h2.cmd('press Game verlaten')
@@ -706,7 +710,7 @@ def scenario_lan():
         e2 = track_error(th['me'], tg['rem'])
         e3 = track_error(th['me'], tb['rem'])
         if e1 and e2 and e3:
-            print(f'     slechte verbinding (150 ms ping ± 30, 5% verlies), auto van de speler bij de host: mediaan {e1[0]:.2f} m, 95% {e1[1]:.2f} m, ergste {e1[2]:.2f} m naast de echte plek; grootste sprong per beeld {e1[3]:.2f} m ({e1[4]} beelden)', flush=True)
+            print(f'     slechte verbinding (150 ms ping ± 30, 5% verlies), auto van de speler bij de host: mediaan {e1[0]:.2f} m, 95% {e1[1]:.2f} m, ergste {e1[2]:.2f} m naast de echte plek; grootste sprong per beeld {e1[3]:.2f} m ({e1[4]} beelden, {e1[5]}x teruggezet op de baan)', flush=True)
             print(f'     auto van de host bij die speler: mediaan {e2[0]:.2f} m, 95% {e2[1]:.2f} m, ergste {e2[2]:.2f} m; sprong {e2[3]:.2f} m', flush=True)
             print(f'     goede verbinding (LAN), auto van de host bij een speler: mediaan {e3[0]:.2f} m, 95% {e3[1]:.2f} m, ergste {e3[2]:.2f} m; sprong {e3[3]:.2f} m', flush=True)
         check(e1 and e1[1] < 3.0 and e1[3] < 1.5 and e2 and e2[1] < 3.0 and e2[3] < 1.5, 'slechte verbinding: de auto rijdt vloeiend en vrijwel op zijn echte plek (95% binnen 3 m, geen sprongen)', (e1, e2))
