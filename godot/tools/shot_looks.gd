@@ -36,8 +36,8 @@ const BUSY := {"stripe": "flames", "sc": "yellow", "sc2": "red", "num": 7, "d1":
 const KIT_A := {"wing": "rally", "splitter": "race", "canard": "on", "skirt": "black", "arch": "black", "diffuser": "on", "flap": "red", "scoop": "scoop",
 	"roofx": "bar", "tow": "on", "exhaust": "big", "wsize": "l", "track": "l", "ride": "high"}
 const KIT_B := {"wing": "swan", "splitter": "street", "skirt": "paint", "arch": "paint", "scoop": "vents", "roofx": "rack", "wsize": "m", "track": "m", "ride": "low",
-	"stripe": "twin", "sc": "white", "rim": "black"}
-const KIT_C := {"wing": "lip", "roofx": "scoop", "flap": "black", "exhaust": "big"}
+	"stripe": "twin", "sc": "white", "rim": "black", "hood": "carbon", "tw": "letter"}
+const KIT_C := {"wing": "lip", "roofx": "scoop", "flap": "black", "exhaust": "big", "hood": "black"}
 var kitCars: Array = []
 
 var out := "/tmp"
@@ -106,7 +106,7 @@ func _ready() -> void:
 	if only.has("kits"):
 		Menu.home.visible = false
 		for id in (kitCars if not kitCars.is_empty() else Cars.CARS.keys()):
-			for kv in [["a", KIT_A, ["q", "rearlow"]], ["b", KIT_B, ["nose", "side"]], ["c", KIT_C, ["rear"]]]:
+			for kv in [["a", KIT_A, ["q", "rearlow"]], ["b", KIT_B, ["nose", "side", "wheel"]], ["c", KIT_C, ["rear", "q"]]]:
 				for view in kv[2]:
 					await _wear(id, kv[1], view)
 					await shot("kit_%s_%s_%s" % [id, kv[0], view], 34, true)

@@ -40,6 +40,8 @@ const ITEMS := [
 	{"k": "roof", "g": "lak", "name": "Dak in tweede kleur", "type": "color", "def": "", "none": "Lakkleur", "kit": 350, "mix": true, "fit": "cab", "view": "top",
 		"opts": [["black", "Zwart", 0, {"hex": "#1b1b1b"}], ["white", "Wit", 0, {"hex": "#f2f2ee"}], ["silver", "Zilver", 0, {"hex": "#a1a4a8"}], ["red", "Rood", 0, {"hex": "#d62a2a"}],
 			["orange", "Oranje", 0, {"hex": "#f36f21"}], ["yellow", "Geel", 0, {"hex": "#f2c200"}], ["blue", "Blauw", 0, {"hex": "#1d4f9e"}], ["green", "Groen", 0, {"hex": "#2f8f5b"}]]},
+	{"k": "hood", "g": "lak", "name": "Motorkap", "type": "choice", "def": "none", "view": "top",
+		"opts": [["none", "In lakkleur", 0], ["carbon", "Carbon", 800], ["black", "Mat zwart", 400]]},
 	# n: how many of the two stripe colours a design uses; cols: the colours it gets when you pick it
 	{"k": "stripe", "g": "stripe", "name": "Ontwerp", "type": "choice", "def": "std", "view": "top",
 		"opts": [["std", "Af fabriek", 0, {"n": 0}], ["none", "Geen", 0, {"n": 0}], ["twin", "Dubbele streep", 0, {"n": 1}], ["center", "Middenstreep", 200, {"n": 1}],
@@ -101,7 +103,7 @@ const ITEMS := [
 		"opts": [["none", "Geen", 0], ["on", "Diffuser", 600]]},
 	{"k": "flap", "g": "body", "name": "Spatlappen", "sub": "Alleen klasse B en A", "type": "choice", "def": "none", "fit": "BA", "view": "rearlow",
 		"opts": [["none", "Geen", 0], ["black", "Zwart", 200], ["red", "Rood met wit", 250]]},
-	{"k": "scoop", "g": "parts", "name": "Motorkap", "type": "choice", "def": "none", "view": "top",
+	{"k": "scoop", "g": "parts", "name": "Op de motorkap", "type": "choice", "def": "none", "view": "top",
 		"opts": [["none", "Glad", 0], ["scoop", "Luchthapper", 400], ["vents", "Kieuwen", 350]]},
 	{"k": "roofx", "g": "parts", "name": "Op het dak", "sub": "Klasse B en A met een dak", "type": "choice", "def": "none", "fit": "cabBA", "view": "top",
 		"opts": [["none", "Niets", 0], ["rack", "Dakrek", 400], ["bar", "Lichtbalk", 650], ["scoop", "Dakhapper", 300]]},
@@ -152,6 +154,13 @@ static func fits(car: String, k: String) -> bool:
 	if f == "cabBA": return fits(car, "roof") and Cars.CARS.has(car) and Cars.CARS[car].cls != "S"
 	if f == "nodiff": return Cars.CAR_SPECS.has(car) and not CarKit.carKit(car).diff
 	return true
+
+## does this value of the item go on this car: a body-kit part that cannot be fitted to the model is not offered
+## (CarParts.builds: e.g. bonnet vents need a flat bonnet)
+static func optFits(car: String, k: String, v) -> bool:
+	if car == "" or not Cars.CAR_SPECS.has(car) or not (v is String) or not k in CarParts.PART_KEYS or v in ["none", "std"]: return true
+	if (k == "wing" and not v in CarParts.WINGS) or (k == "exhaust" and not v in CarParts.EXHAUSTS): return true
+	return CarParts.builds(car, k, v)
 
 static func isHex(v) -> bool:
 	if not (v is String) or v.length() != 7 or v[0] != "#": return false
@@ -215,6 +224,7 @@ static func clean(u, car := "") -> Dictionary:
 	for it in ITEMS:
 		var k: String = it.k
 		L[k] = cleanValue(k, src.get(k, it.def)) if fits(car, k) else it.def
+		if not optFits(car, k, L[k]): L[k] = it.def
 	# stripes from before the catalogue: the colour was the choice
 	var st = src.get("stripe")
 	if st is String and OLD_STRIPES.has(st):
@@ -747,10 +757,12 @@ static func _flushSoon() -> void:
 # ------------------------------------------------------------------ bots and rivals
 ## the career rivals drive a car of their own making
 const RIVAL_LOOKS := {
-	"Daan": {"num": 13, "stripe": "rally", "sc": "white", "sc2": "black", "rim": "black", "rimStyle": "spoke", "numStyle": "square", "numBg": "white", "wing": "gt", "d2": "patat"},
-	"Ingrid": {"num": 1, "finish": "metallic", "stripe": "center", "sc": "white", "rim": "white", "rimStyle": "dish", "numBg": "orange", "numFg": "white", "d1": "delta", "ban": "TEAM DELTA", "banCol": "blue"},
+	"Daan": {"num": 13, "stripe": "rally", "sc": "white", "sc2": "black", "rim": "black", "rimStyle": "spoke", "numStyle": "square", "numBg": "white", "wing": "rally", "d2": "patat",
+		"flap": "red", "splitter": "street", "tow": "on", "ride": "high"},
+	"Ingrid": {"num": 1, "finish": "metallic", "stripe": "center", "sc": "white", "rim": "white", "rimStyle": "dish", "numBg": "orange", "numFg": "white", "d1": "delta", "ban": "TEAM DELTA", "banCol": "blue",
+		"wing": "lip", "skirt": "paint", "splitter": "race", "canard": "on", "wsize": "m"},
 	"De Baron": {"num": 5, "finish": "pearl", "stripe": "twin", "sc": "gold", "rim": "gold", "rimStyle": "dish", "numStyle": "ring", "numBg": "gold", "numFg": "gold", "tint": "black", "roof": "black",
-		"ban": "DE BARON", "banCol": "gold", "plate": "BARON-1", "plateStyle": "black"}}
+		"ban": "DE BARON", "banCol": "gold", "plate": "BARON-1", "plateStyle": "black", "wing": "swan", "arch": "paint", "wsize": "l", "ride": "low", "track": "m"}}
 
 static func _hash(s: String) -> int:
 	var h := 2166136261
@@ -782,4 +794,12 @@ static func botLook(name: String, type: String, color, rival := false) -> Dictio
 		L.numStyle = "square"
 	if dark and (h >> 15) % 2 == 0:
 		L.numBg = "yellow"
+	# a light kit now and then (a part or two: bots are many, and everyone online builds them)
+	var k := (h >> 17) % 8
+	if k == 0: L.wing = "lip"
+	elif k == 1: L.skirt = "black"
+	elif k == 2: L.splitter = "street"
+	elif k == 3: L.wsize = "m"
+	elif k == 4: L.ride = "low"
+	if (h >> 21) % 6 == 0: L.wsize = "m"
 	return compact(clean(L, type))

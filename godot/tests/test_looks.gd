@@ -60,6 +60,7 @@ func run(host: Node) -> TestReport:
 	Game.set_process_input(false)
 	part_catalogue()
 	part_apply()
+	part_kits()
 	part_roundtrip()
 	part_junk()
 	part_saves()
@@ -138,7 +139,7 @@ func part_apply() -> void:
 				bad.append("ronde %d: niet afgemaakt" % i)
 			else:
 				for k in look:
-					var want = look[k] if CarLook.fits(id, k) else CarLook.item(k).def
+					var want = look[k] if CarLook.fits(id, k) and CarLook.optFits(id, k, look[k]) else CarLook.item(k).def
 					if k == "paint": want = CarLook.cleanValue(k, want)
 					if m.look.get(k) != want and not (k == "paint" and want == ""): bad.append("%s = %s werd %s" % [k, want, m.look.get(k)])
 				if m.len != base.len or m.wid != base.wid or m.rc != base.rc or m.wheels.size() != base.wheels.size(): bad.append("ronde %d: hitbox of wielen veranderd" % i)
@@ -196,6 +197,110 @@ func part_apply() -> void:
 	r.check(no_room.is_empty(), "elke auto heeft plek voor een sticker, een deurontwerp en (met dak) de voorruitband", ", ".join(no_room))
 	print("--   ", total, " auto's gebouwd")
 
+# ------------------------------------------------------------------ body kits (CarParts): every part on every car it fits
+const KIT_A := {"wing": "rally", "splitter": "race", "canard": "on", "skirt": "black", "arch": "black", "diffuser": "on", "flap": "red", "scoop": "scoop",
+	"roofx": "bar", "tow": "on", "exhaust": "big", "wsize": "l", "track": "l", "ride": "low"}
+const KIT_B := {"wing": "swan", "splitter": "street", "skirt": "paint", "arch": "paint", "scoop": "vents", "roofx": "rack", "wsize": "m", "track": "m", "ride": "high", "flap": "black"}
+const KIT_C := {"wing": "lip", "roofx": "scoop", "exhaust": "big", "ride": "low"}
+
+## cells of 10 cm holding the skin of a model (body and cabin)
+func _skinCells(K: CarBody) -> Dictionary:
+	var cells := {}
+	for g in [K.body, K.cab]:
+		if g == null: continue
+		for v in g.pos: cells[Vector3i((v / 0.1).floor())] = true
+	return cells
+
+func _touches(A: CarAcc, cells: Dictionary) -> bool:
+	for i in range(0, A.P.size(), 3):
+		var c := Vector3i((A.P[i] / 0.1).floor())
+		for dx in [-1, 0, 1]:
+			for dy in [-1, 0, 1]:
+				for dz in [-1, 0, 1]:
+					if cells.has(c + Vector3i(dx, dy, dz)): return true
+	return false
+
+func part_kits() -> void:
+	var missing := []
+	var offered := {}      ## "k=v" -> [cars it fits by the item's rule, cars it builds on]
+	var outside := []
+	var floating := []
+	var n := 0
+	for id in Cars.CARS:
+		var K := CarKit.carKit(id)
+		var S := K.S
+		var cells := _skinCells(K)
+		var hl: float = float(S.len) / 2.0
+		var off: float = S.get("off", 0.0)
+		for it in CarLook.ITEMS:
+			if not it.k in CarParts.PART_KEYS or not CarLook.fits(id, it.k): continue
+			for o in it.opts:
+				var v: String = o[0]
+				if v in ["none", "std"] or (it.k == "wing" and not v in CarParts.WINGS) or (it.k == "exhaust" and not v in CarParts.EXHAUSTS): continue
+				n += 1
+				var P := CarParts.part(K, it.k, v)
+				var kv: String = it.k + "=" + v
+				if not offered.has(kv): offered[kv] = [0, 0]
+				offered[kv][0] += 1
+				if P.d == null and P.p == null:
+					missing.append("%s %s" % [id, kv])
+					if CarLook.optFits(id, it.k, v): outside.append(id + " " + kv + ": niet gebouwd maar wel te koop")
+					continue
+				offered[kv][1] += 1
+				for A in [P.d, P.p]:
+					if A == null: continue
+					var mn := Vector3(1e9, 1e9, 1e9)
+					var mx := -mn
+					for q in A.P: mn = mn.min(q); mx = mx.max(q)
+					# inside the hitbox's plan (wide arches and splitters a few centimetres proud), above the road
+					if maxf(-mn.x, mx.x) > float(S.wid) / 2.0 + 0.08 or mx.z > off + hl + 0.1 or mn.z < off - hl - 0.08 or mn.y < 0.075:
+						outside.append("%s %s=%s %s..%s" % [id, it.k, v, mn.snapped(Vector3.ONE * 0.01), mx.snapped(Vector3.ONE * 0.01)])
+					if not _touches(A, cells): floating.append("%s %s=%s" % [id, it.k, v])
+	var rare := []
+	for kv in offered:
+		if offered[kv][1] * 4 < offered[kv][0] * 3: rare.append("%s: %d van %d" % [kv, offered[kv][1], offered[kv][0]])
+	r.check(rare.is_empty(), "elk bodykit-onderdeel past op (bijna) elke auto; waar niet, staat het niet in de garage", ("%d onderdelen, niet op: %s" % [n, ", ".join(missing)]) if rare.is_empty() else ", ".join(rare))
+	r.check(outside.is_empty(), "onderdelen binnen de hitbox (bovenaanzicht) en boven de weg", ", ".join(outside.slice(0, 4)))
+	r.check(floating.is_empty(), "onderdelen zitten aan de carrosserie vast (niets zweeft)", ", ".join(floating.slice(0, 6)))
+	# a full kit on every car: still a sound car (wheels on the road, nothing through it, budgets), same hitbox, two meshes more
+	var bad := []
+	var extra := 0
+	for id in Cars.CARS:
+		var base := car(id, {})
+		var n0: int = Cars_.dump_nodes(base.g).filter(func(o): return o.visible).size()
+		for kit in [KIT_A, KIT_B, KIT_C]:
+			var m := car(id, kit)
+			var fl: String = Cars_.faults(id + "/kit", m, true)
+			if fl != "": bad.append("%s: %s" % [id, fl])
+			if m.len != base.len or m.wid != base.wid or m.rc != base.rc or m.off != base.off: bad.append(id + ": hitbox veranderd")
+			for wh in m.wheels:
+				if absf(wh.pivot.position.x) + float(wh.w) / 2.0 > float(m.wid) / 2.0 + 1e-3: bad.append(id + ": wiel buiten de hitbox")
+			var parts: Array = Cars_.dump_nodes(m.g).filter(func(o): return o.has_meta("parts"))
+			if parts.size() > 2: bad.append("%s: %d meshes voor de onderdelen" % [id, parts.size()])
+			extra = maxi(extra, Cars_.dump_nodes(m.g).filter(func(o): return o.visible).size() - n0)
+			drop(m)
+		drop(base)
+	r.check(bad.is_empty(), "volle bodykit op elke auto: wielen op de weg, niets door de weg, binnen het budget, hitbox gelijk", ", ".join(bad.slice(0, 4)) if not bad.is_empty() else "hooguit %d meshes extra" % extra)
+	# wheel size, track and ride height do what they say
+	var a := car("gt", {})
+	var b := car("gt", {"wsize": "l", "track": "l", "ride": "low"})
+	var rbA: float = CarKit.wheelGeos(a.wheels[0].r, a.wheels[0].w, "std").rb
+	var rbB: float = CarKit.wheelGeos(b.wheels[0].r, b.wheels[0].w, "std", null, 0.72, b.wheels[0].get("big", 0.0)).rb
+	r.check(rbB > rbA + 0.02 and b.wheels[0].mesh.get_meta("geo") != a.wheels[0].mesh.get_meta("geo"), "velgmaat: grotere velg", "%.3f -> %.3f" % [rbA, rbB])
+	r.check(absf(b.wheels[0].pivot.position.x) > absf(a.wheels[0].pivot.position.x) + 0.01 and b.wheels[0].pivot.position.y == a.wheels[0].pivot.position.y, "spoorbreedte: wielen verder naar buiten, op dezelfde hoogte")
+	r.check(b.shell.position.y < -0.01 and a.shell.position.y == 0.0, "rijhoogte: de carrosserie zakt, de wielen niet")
+	drop(a); drop(b)
+	var flat := []
+	for id in Cars.CARS:
+		var lo := car(id, {"ride": "low"})
+		if lo.shell.position.y > -0.015: flat.append("%s %.3f" % [id, lo.shell.position.y])
+		drop(lo)
+	r.check(flat.is_empty(), "Verlaagd: elke auto zakt minstens 1,5 cm (en nooit tot op de weg)", ", ".join(flat))
+	# a spoiler from the kit replaces the factory one; the kanon replaces the factory exhaust
+	var w := car("gt", {"wing": "swan", "exhaust": "big"})
+	r.check(w.stockWing.all(func(o): return not o.visible) and w.g.get_meta("exh").meshes.all(func(o): return not o.visible), "bodykit-spoiler en kanon vervangen die van de fabriek")
+	drop(w)
+
 # ------------------------------------------------------------------ save -> lookOf -> JSON -> the same car
 func part_roundtrip() -> void:
 	var owned := {}
@@ -209,7 +314,8 @@ func part_roundtrip() -> void:
 	G.use_store("user://test-looks.json", {"polderrace3d-settings": {"car": "gt", "color": "#f36f21"}, "polderrace3d-garage": {"credits": 100, "owned": owned, "looks": looks, "ach": ach}})
 	var want := {"paint": "#2a6fdb", "finish": "pearl", "roof": "white", "stripe": "lion", "sc": "gold", "sc2": "#123456", "rimStyle": "dish", "rim": "#aa5500", "cal": "blue", "tw": "letter",
 		"tint": "bronze", "lamp": "purple", "glow": "pink", "num": 46, "numStyle": "ring", "numBg": "yellow", "numFg": "white", "numFont": "round", "numPos": "doors", "plate": "YIP-46",
-		"plateStyle": "old", "d1": "kaas", "d2": "molen", "ban": "TEAM YIP", "banCol": "orange", "wing": "gt", "exhaust": "dual"}
+		"plateStyle": "old", "d1": "kaas", "d2": "molen", "ban": "TEAM YIP", "banCol": "orange", "wing": "swan", "exhaust": "big",
+		"splitter": "race", "canard": "on", "skirt": "paint", "arch": "paint", "diffuser": "on", "flap": "red", "scoop": "vents", "roofx": "bar", "tow": "on", "wsize": "l", "track": "m", "ride": "low"}
 	for k in want: G.lookPick("gt", k, want[k])
 	r.check(G.fit.look.is_empty() and G.garage.credits == 100, "alles in bezit: keuzes gaan meteen op de auto, niets in de paskamer")
 	var L := G.lookOf("gt")

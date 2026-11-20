@@ -34,8 +34,11 @@ static func pre(m: Dictionary, L: Dictionary) -> void:
 static func post(m: Dictionary, L: Dictionary) -> void:
 	var K = m.get("kit", null)
 	var shell: Node3D = m.get("shell", m.g)
-	# ride height (the shell; the wheels stay on the road) and track (the wheel pivots, inside the hitbox)
-	shell.position.y = RIDE.get(L.get("ride", "std"), 0.0) if K != null else 0.0
+	# ride height (the shell; the wheels stay on the road; lowered no further than 6.5 cm above the road) and track (the
+	# wheel pivots, inside the hitbox)
+	var ride: float = RIDE.get(L.get("ride", "std"), 0.0) if K != null else 0.0
+	if ride < 0: ride = maxf(ride, minf(0.0, 0.065 - lowY(K, L)))
+	shell.position.y = ride
 	var tr: float = TRACK.get(L.get("track", "std"), 0.0)
 	for wh in m.get("wheels", []):
 		var pv: Node3D = wh.pivot
@@ -44,6 +47,7 @@ static func post(m: Dictionary, L: Dictionary) -> void:
 		var room: float = float(m.wid) / 2.0 - (absf(x0) + float(wh.w) / 2.0) - 0.005
 		pv.position.x = x0 + signf(x0) * clampf(tr, 0.0, maxf(room, 0.0))
 	if K == null: return
+	_hood(m, K, L)
 	var key := comboKey(L)
 	if key == "": return
 	var w: String = L.get("wing", "std")
@@ -58,6 +62,22 @@ static func post(m: Dictionary, L: Dictionary) -> void:
 		CarKit.mesh(shell, G[0], CarKit.detailMat, true).set_meta("parts", true)
 	if G[1] != null:
 		CarKit.mesh(shell, G[1], m.paint, true).set_meta("parts", true)
+
+## the lowest point of a model's body with the parts of a look
+static func lowY(K: CarBody, L: Dictionary) -> float:
+	if not K.has_meta("lowY"):
+		var lo := INF
+		for k in ["paint", "detail", "glass", "lamp", "tail", "plate", "exh", "wingT", "wingP"]:
+			var g = K.G.get(k)
+			if g is Geo:
+				for p in g.pos: lo = minf(lo, p.y)
+		K.set_meta("lowY", lo)
+	var low: float = K.get_meta("lowY")
+	if comboKey(L) != "":
+		for g in combo(K, L):
+			if g != null:
+				for p in g.pos: low = minf(low, p.y)
+	return low
 
 ## the parts of a look that are built here, as a key ("" = none)
 static func comboKey(L: Dictionary) -> String:
@@ -141,6 +161,17 @@ static func _slab(A: CarAcc, pts: Array, y0: float, y1: float) -> void:
 		if sn.dot(Vector3(a.x - cen.x, 0, a.y - cen.y)) < 0: sn = -sn
 		_quad(A, Vector3(a.x, y0, a.y), Vector3(b.x, y0, b.y), Vector3(b.x, y1, b.y), Vector3(a.x, y1, a.y), sn)
 
+## is the deck between x0..x1, z0..z1 a smooth, fairly flat surface (no fender humps, fins or ends of the skin)
+static func _flatDeck(K: CarBody, x0: float, x1: float, z0: float, z1: float, ny := 0.6) -> bool:
+	for i in 6:
+		for j in 4:
+			var x: float = lerpf(x0, x1, i / 5.0)
+			var z: float = lerpf(z0, z1, j / 3.0)
+			if absf(x) > K.shoulderX(z) - 0.01: return false
+			var s = K.on_top(x, z)
+			if s == null or s[1].y < ny: return false
+	return true
+
 ## the deck height where a wing stands (roof for hatchbacks)
 static func _deck(K: CarBody, troof: bool, z: float, x: float) -> float:
 	return K.cabY(z, x) if troof else K.topY(z, x)
@@ -175,6 +206,10 @@ static func _wing(K: CarBody, d: CarAcc, p: CarAcc, v: String) -> void:
 			while q <= z1 + 1e-4:
 				xw = minf(xw, K.shoulderX(q) * 0.94)
 				q += 0.02
+			# narrower where the deck is not smooth (tail fins, humps)
+			var x0: float = T.get("duckGap", 0.0) + 0.01 if T.get("duckGap", 0.0) else -xw
+			while xw > 0.3 and not _flatDeck(K, x0 if x0 > 0 else -xw, xw, z0, z1, 0.45): xw -= 0.04
+			if xw <= 0.3: return
 			var shape := func(u: float, vv: float) -> float:
 				return 0.03 + 0.045 * pow(1.0 - vv, 1.6) * (1.0 - 0.4 * pow(absf(u * 2.0 - 1.0), 6.0))
 			if T.get("duckGap", 0.0):
@@ -415,12 +450,19 @@ static func _scoop(K: CarBody, d: CarAcc, p: CarAcc, v: String) -> void:
 		if b.is_empty(): return
 		var z: float = b[0]
 		var hl: float = minf(b[1], 0.16)
+		# beside the middle (clear of the stripes), as far out as the bonnet is flat
+		var xs = null
+		for xr in [[0.3, 0.54], [0.3, 0.46], [0.26, 0.4]]:
+			if _flatDeck(K, xr[0], xr[1], z - hl, z + hl, 0.75): xs = xr; break
+		if xs == null: return
+		var x0: float = xs[0]
+		var x1: float = xs[1]
 		d.color(sc(0x0c0d0f, 0.2))
-		CarKit.patch(d, K.on_top, 0.3, 0.54, z - hl, z + hl, 3, 4, 0.03, true)
+		CarKit.patch(d, K.on_top, x0, x1, z - hl, z + hl, 3, 4, 0.03, true)
 		d.color(sc(C_TRIM, 0.5))
 		for k in 4:
 			var zz: float = z - hl + (k + 0.5) * hl * 2 / 4.0
-			CarKit.patch(d, K.on_top, 0.31, 0.53, zz - 0.018, zz + 0.018, 3, 1, func(_u: float, vv: float) -> float: return 0.035 + 0.02 * vv, true)
+			CarKit.patch(d, K.on_top, x0 + 0.01, x1 - 0.01, zz - 0.018, zz + 0.018, 3, 1, func(_u: float, vv: float) -> float: return 0.035 + 0.02 * vv, true)
 		return
 	var b := _bonnet(K, 0.24)
 	if b.is_empty(): return
@@ -481,3 +523,61 @@ static func _roof(K: CarBody, d: CarAcc, p: CarAcc, v: String) -> void:
 			if p.P.is_empty(): return
 			d.color(sc(0x08080a, 0.1))
 			d.box(0.22, 0.045, 0.012, 0, y.call(z1, 0) + 0.03 + 0.028, z1 + 0.006)
+
+# ------------------------------------------------------------------ the bonnet in carbon or matt black
+const HOODS := {"carbon": [0x1d2024, 0.55], "black": [0x17181b, 0.12]}
+
+static func _hood(m: Dictionary, K: CarBody, L: Dictionary) -> void:
+	var v: String = L.get("hood", "none")
+	var body = m.get("body", null)
+	if not HOODS.has(v) or body == null: return
+	var roof: bool = L.get("roof", "") != "" and K.cab != null
+	var sp := hoodSplit(K, roof, v)
+	if sp.is_empty(): return
+	CarKit.set_geo(body, sp[0])
+	CarKit.mesh(m.get("shell", m.g), sp[1], CarKit.detailMat, true).set_meta("hood", true)
+
+## the paint of a model split at the bonnet: [paint Geo without the bonnet (and without the cabin when the roof has its own
+## colour, see CarLook's two-tone roof), the bonnet in the detail colours of `v`]; built once per model. The bonnet: the
+## skin's upward faces between the windscreen and the nose, inside the shoulders
+static func hoodSplit(K: CarBody, roof: bool, v: String) -> Array:
+	var c: Dictionary = K.get_meta("hoods", {})
+	var key := "%s/%s" % [roof, v]
+	if c.has(key): return c[key]
+	var S := K.S
+	var C = K.C
+	var zA: float = (C.z0 + 0.02) if C != null else float(S.wz[0]) - 0.75
+	var rg := Geo.new()
+	var hg := Geo.new()
+	var g: Geo = K.body
+	var col := sc(HOODS[v][0], HOODS[v][1])
+	# the front edge: where the bonnet starts to fall away to the nose (whole quads of the skin, so the edge is clean)
+	var zCut: float = zA
+	while zCut < K.zF - 0.05:
+		var t = K.on_top(0.0, zCut + 0.02)
+		if t == null or t[1].y < 0.6: break
+		zCut += 0.02
+	for gr in g.groups:
+		if gr[2] != 0: continue
+		for i in range(gr[0], gr[0] + gr[1], 3):
+			var ids := [g.idx[i], g.idx[i + 1], g.idx[i + 2]]
+			var on := true
+			for k in ids:
+				var q: Vector3 = g.pos[k]
+				if q.z < zA or q.z > zCut or absf(q.x) > K.shoulderX(q.z) + 0.005 or g.nrm[k].y < 0.2: on = false; break
+			var M: Geo = hg if on else rg
+			for k in ids:
+				M.pos.append(g.pos[k]); M.nrm.append(g.nrm[k]); M.uv.append(Vector2.ZERO)
+				M.col.append(col if on else Color(1, 1, 1, 1))
+	if hg.pos.size() < 60:
+		c[key] = []
+	else:
+		var rest := CarKit.Mb.new()
+		rest.acc(rg)
+		if not roof and K.cab != null: rest.group(K.cab, 0, Color(1, 1, 1, 0))
+		rest.acc(K.G.paintAcc, Color(1, 1, 1, 0))
+		var hood := CarKit.Mb.new()
+		hood.acc(hg)
+		c[key] = [rest.build(), hood.build()]
+	K.set_meta("hoods", c)
+	return c[key]
