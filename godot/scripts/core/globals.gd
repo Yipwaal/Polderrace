@@ -123,6 +123,10 @@ func _load_settings() -> void:
 		prefs.quality = "low" if prefs.get("shadows", true) == false else "high"
 	var saved = _json("polderrace3d-garage", null)
 	garage.merge(saved if saved is Dictionary else {}, true)
+	# junk in the garage of a save: no car list, or a car entry that is not a Dictionary, is dropped
+	if not (garage.get("cars") is Dictionary): garage.cars = {}
+	for id in garage.cars.keys():
+		if not (garage.cars[id] is Dictionary): garage.cars.erase(id)
 	# looks you own (see "looks" below). A save from before the catalogue keeps the free colour picker it had.
 	if not (garage.get("looks") is Dictionary):
 		garage.looks = {"mix": 1} if saved is Dictionary else {}
@@ -170,16 +174,21 @@ static func fmtCr(n: float) -> String:
 func carUp(id: String) -> Dictionary:
 	if not garage.cars.has(id):
 		garage.cars[id] = {"eng": 0, "turbo": 0, "tyre": 0, "brake": 0, "body": 0, "rim": "silver", "stripe": "std"}
-	var u: Dictionary = garage.cars[id]
-	if not u.has("num"):
-		u.num = 0; u.wing = "std"; u.rimStyle = "std"
+	var u = garage.cars[id]
+	if not (u is Dictionary):
+		u = {}
+		garage.cars[id] = u
+	# old and partial saves: every field the car code reads gets its default (a save with num but no rimStyle, ...)
+	var d := Cars.default_up()
+	for k in d:
+		if not u.has(k): u[k] = d[k]
 	if not u.get("exhaust", ""):
-		u.exhaust = "std"
+		u["exhaust"] = "std"
 	# stripes from before the catalogue: the colour was the choice
 	var st = u.get("stripe")
 	if st is String and CarLook.OLD_STRIPES.has(st):
-		u.sc = CarLook.OLD_STRIPES[st]
-		u.stripe = "twin"
+		u["sc"] = CarLook.OLD_STRIPES[st]
+		u["stripe"] = "twin"
 	return u
 
 # ------------------------------------------------------------------ looks (catalogue: CarLook.ITEMS)
@@ -198,7 +207,7 @@ func lookOf(id: String) -> Dictionary:
 	var u: Dictionary = carUp(id) if Cars.CARS.has(id) else {}
 	var L := CarLook.compact(CarLook.clean(u, id))
 	var c = settings.color if id == settings.car else u.get("col", settings.color)
-	L.paint = ("#" + Color(str(c)).to_html(false)) if Color.html_is_valid(str(c)) else "#ffffff"
+	L["paint"] = ("#" + Color(str(c)).to_html(false)) if Color.html_is_valid(str(c)) else "#ffffff"   # (a String key: clean JSON)
 	return L
 
 ## what CarKit styles a car of yours from: its garage entry, with the fitting room's choices on top

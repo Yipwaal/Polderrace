@@ -7,6 +7,26 @@ extends RefCounted
 
 var r: TestReport
 var Cars_ := load("res://tests/test_cars.gd")
+var log: ErrLog
+
+## every error the engine or a script logs while the looks are tested (the headless dummy renderer's noise left out)
+class ErrLog extends Logger:
+	var errors: Array[String] = []
+	var strict := false       ## also the dummy renderer's complaints (a material freed before its mesh)
+	var mx := Mutex.new()
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String, _editor_notify: bool, error_type: int, _bt: Array[ScriptBacktrace]) -> void:
+		if error_type == ERROR_TYPE_WARNING or ("rendering/dummy/" in file and not strict): return
+		mx.lock()
+		errors.append("%s (%s:%d %s) %s" % [code, file.get_file(), line, function, rationale])
+		mx.unlock()
+	func _log_message(_message: String, _error: bool) -> void:
+		pass
+	func take() -> Array[String]:
+		mx.lock()
+		var e := errors.duplicate()
+		errors.clear()
+		mx.unlock()
+		return e
 
 func key(code: int) -> void:
 	var e := InputEventKey.new()
@@ -58,6 +78,9 @@ func run(host: Node) -> TestReport:
 	Game.camera = cam
 	Game.set_process(false)
 	Game.set_process_input(false)
+	log = ErrLog.new()
+	OS.add_logger(log)
+	part_repros()
 	part_catalogue()
 	part_apply()
 	part_kits()
@@ -76,7 +99,37 @@ func run(host: Node) -> TestReport:
 	Menu.homePanel("main")
 	Game.set_process(true)
 	Game.set_process_input(true)
+	var errs := log.take()
+	OS.remove_logger(log)
+	r.check(errs.is_empty(), "geen foutmeldingen van de engine tijdens de uiterlijk-test", "; ".join(errs.slice(0, 4)))
 	return r
+
+# ------------------------------------------------------------------ bugs that were found (each one stays fixed)
+func part_repros() -> void:
+	# a hatch with the twin stripe (and the old stripe colours of saves) logged "Parameter material is null" (LAN agent);
+	# strict: every engine error counts, the car is freed the plain way
+	log.strict = true
+	for st in [{"stripe": "twin"}, {"stripe": "white"}, {"stripe": "black"}, {"stripe": "yellow"}, {"stripe": "twin", "num": 4}, {"stripe": "twin", "paint": "#123456"}]:
+		for id in ["hatch", "gt", "roadster"]:
+			var m := car(id, st, "#ff0000")
+			m.g.free()
+	log.strict = false
+	var errs := log.take()
+	r.check(errs.is_empty(), "dubbele streep (en oude streepkleuren) zonder foutmeldingen", "; ".join(errs.slice(0, 3)))
+	# lookOf: plain String keys (clean JSON for the other players)
+	G.use_store("user://test-looks.json", {"polderrace3d-settings": {"car": "gt", "color": "#f36f21"}})
+	var L := G.lookOf("gt")
+	r.check(L.keys().all(func(k): return typeof(k) == TYPE_STRING) and L.has("paint"), "G.lookOf: alle sleutels zijn gewone tekst", str(L.keys().map(func(k): return type_string(typeof(k)))))
+	# a partial garage entry (num without rimStyle, no wing, ...) loads and styles without crashing
+	G.use_store("user://test-looks.json", {"polderrace3d-settings": {"car": "gt", "color": "#f36f21"}, "polderrace3d-garage": {"credits": 10, "cars": {"gt": {"num": 7}, "hatch": {"rimStyle": "dish"}, "mini": "rommel"}}})
+	var u := G.carUp("gt")
+	var ok: bool = u.has("rimStyle") and u.has("wing") and u.has("rim") and u.has("stripe") and G.carUp("hatch").has("num") and G.carUp("mini").has("rimStyle")
+	var m2 := CarKit.buildCar("gt", Color.RED)
+	CarKit.styleCar(m2, "gt")
+	r.check(ok and m2.get("lookDone", false) and int(m2.look.num) == 7, "half ingevulde garage (nummer zonder velgmodel, ...) wordt aangevuld", str(u))
+	drop(m2)
+	var e2 := log.take()
+	r.check(e2.is_empty(), "half ingevulde garage: geen foutmeldingen", "; ".join(e2.slice(0, 3)))
 
 # ------------------------------------------------------------------ the catalogue itself
 func part_catalogue() -> void:
@@ -436,7 +489,7 @@ func part_buying() -> void:
 	G.use_store("user://test-looks.json", {"polderrace3d-settings": {"car": "hatch", "color": "#f36f21"}, "polderrace3d-garage": {"credits": 1000, "owned": {"hatch": true, "gt": true}, "looks": {}}})
 	Game.rebuildPlayerCar()
 	G.lookPick("hatch", "finish", "pearl")
-	r.check(G.fit.look == {"finish": "pearl"} and not G.carUp("hatch").has("finish") and not G.lookOf("hatch").has("finish"), "niet gekocht: in de paskamer, niet op de auto bewaard, niet in lookOf")
+	r.check(G.fit.look == {"finish": "pearl"} and G.carUp("hatch").get("finish", "gloss") == "gloss" and not G.lookOf("hatch").has("finish"), "niet gekocht: in de paskamer, niet op de auto bewaard, niet in lookOf")
 	r.check(G.styleUp("hatch").get("finish") == "pearl", "paskamer is te zien op de auto in de garage")
 	r.check(G.lookShown("hatch", "finish") == "pearl", "de garage toont de gepaste waarde")
 	G.lookPick("hatch", "stripe", "flames")
