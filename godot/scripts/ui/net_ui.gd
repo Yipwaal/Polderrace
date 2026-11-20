@@ -859,6 +859,7 @@ func _fill_game(w: float) -> void:
 		pts_list.add_child(h)
 	# ---- host: the network
 	fw_btn.visible = host and (Net.fw_state == "block" or Net.fw_state == "none")
+	fw_btn.disabled = Net.fw_busy()
 	up_btn.visible = host
 	upnp_note.text = Net.upnp_status
 	upnp_note.visible = host and Net.upnp_status != ""
@@ -884,6 +885,7 @@ func _host_diag() -> String:
 	var fw := ""
 	if Net.fw_state == "block": fw = "De Windows-firewall BLOKKEERT Polderrace op deze pc: niemand kan meedoen. Klik op 'Windows-firewall openzetten'. "
 	elif Net.fw_state == "none": fw = "Windows heeft Polderrace nog niet toegelaten tot het netwerk. Klik op 'Windows-firewall openzetten', of kies Toestaan (ook voor openbare netwerken) als Windows erom vraagt; die vraag kan achter het spel staan (Alt+Tab). "
+	if Net.fw_msg != "": fw = Net.fw_msg + " " + fw
 	if not lan.is_serving():
 		return fw + addr + "Je game staat niet in de lijst van anderen; meedoen kan via je IP-adres."
 	var s := lan.searching()

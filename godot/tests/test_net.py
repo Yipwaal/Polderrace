@@ -21,6 +21,11 @@ def parse(out):
         if line.startswith('NET '):
             _, k, v = line.split(' ', 2); d[k] = json.loads(v)
     return d
+# first what can be checked without a network (tests/test_netunit.gd)
+u = subprocess.run([GODOT, '--headless', '--path', str(PROJ), 'res://tests/runner.tscn', '--', 'netunit'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=120)
+for line in u.stdout.splitlines():
+    if line.startswith(('OK', 'FOUT', '--', '==', 'SCRIPT ERROR')): print(line[:200])
+check(u.returncode == 0 and 'SCRIPT ERROR' not in u.stdout, 'online zonder netwerk (test_netunit.gd)')
 print('== online: host en speler via LAN')
 h = run('host', 'Yip'); time.sleep(4); g = run('guest', 'Gast')
 oh, _ = h.communicate(timeout=240); og, _ = g.communicate(timeout=240)
@@ -42,5 +47,5 @@ if hr and gr:
 hb, gb = H.get('bot_rel', []), Gd.get('bot_rel', [])
 check(hb and gb and all(abs(a - b) < 15 for a, b in zip(hb, gb)), 'bots staan bij beiden op dezelfde plek (t.o.v. de auto van de host)', (hb, gb))
 check(Gd.get('took_over') and 'Jij bent nu de host' in Gd.get('status', ''), 'de host stopt: de speler neemt de game over', Gd.get('status'))
-print(f'-- online: {11 + 2 - len(bad)}/{13} geslaagd' + ('' if not bad else '  | mislukt: ' + ', '.join(bad)))
+print(f'-- online: {14 - len(bad)}/14 geslaagd' + ('' if not bad else '  | mislukt: ' + ', '.join(bad)))
 sys.exit(1 if bad else 0)

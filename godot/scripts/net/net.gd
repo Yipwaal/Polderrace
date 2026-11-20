@@ -134,6 +134,7 @@ func netCreate() -> void:
 		return
 	var listed := lan.serve(_lobby_info)
 	netEnter(room, true)
+	fw_msg = ""
 	firewall_check()
 	# an evening goes on: the standings of a game this player was in less than three hours ago
 	var o := onl()
@@ -1857,43 +1858,92 @@ func close_internet(wait := false) -> void:
 ## "" unknown / not Windows, "ok" an allow rule for this game, "block" a block rule (Windows makes one when the
 ## question "allow access?" is answered with Cancel), "none" no rule yet (Windows will ask)
 var fw_state := ""
+var fw_msg := ""                   ## what came of the last "open the firewall" (shown in the host's screen; "" = nothing to say)
 var _fw: Thread = null
+
+## A PowerShell script for OS.execute, as -EncodedCommand (base64 of UTF-16LE): Godot puts an argument with spaces between
+## double quotes but does not escape the double quotes inside it, so a script handed over as text with "…" in it (the
+## program path for netsh) arrives cut up. This way the script itself never passes the command line.
+static func psArgs(script: String) -> PackedStringArray:
+	var u := PackedByteArray()
+	for i in script.length():
+		var c := script.unicode_at(i)
+		if c > 0xFFFF:      # (outside the BMP: a surrogate pair)
+			c -= 0x10000
+			var hi := 0xD800 + (c >> 10); var lo := 0xDC00 + (c & 0x3FF)
+			u.append_array([hi & 255, hi >> 8, lo & 255, lo >> 8])
+		else:
+			u.append_array([c & 255, c >> 8])
+	return PackedStringArray(["-NoProfile", "-NonInteractive", "-EncodedCommand", Marshalls.raw_to_base64(u)])
+
+## the path of this game's .exe as a PowerShell text between single quotes
+static func _psExe() -> String:
+	return "'" + OS.get_executable_path().replace("/", "\\").replace("'", "''") + "'"
+
+## the check (no admin rights needed): this game's own inbound rules
+static func fwCheckScript(exe: String) -> String:
+	return ("$r = Get-NetFirewallApplicationFilter -Program %s -ErrorAction SilentlyContinue | Get-NetFirewallRule -ErrorAction SilentlyContinue | " +
+		"Where-Object { $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' }\n" +
+		"if (-not $r) { 'none' } elseif ($r | Where-Object { $_.Action -eq 'Block' }) { 'block' } else { 'ok' }") % exe
+
+## opening it: netsh as administrator (Windows asks the player), first this game's own rules away (a block rule wins from
+## an allow rule), then one allow rule for every kind of network. Says "exit:N" (netsh's answer) or "denied" (no permission).
+static func fwOpenScript(exe: String) -> String:
+	return ("$e = %s\n" +
+		"$a = '/c netsh advfirewall firewall delete rule name=all program=\"' + $e + '\" & netsh advfirewall firewall add rule name=\"Polderrace 3D\" dir=in action=allow program=\"' + $e + '\" enable=yes profile=any'\n" +
+		"try { $p = Start-Process -FilePath cmd.exe -ArgumentList $a -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop; 'exit:' + $p.ExitCode } catch { 'denied' }") % exe
 
 func firewall_check() -> void:
 	if OS.get_name() != "Windows" or _fw != null: return
 	_fw = Thread.new()
 	_fw.start(func():
-		var exe := OS.get_executable_path().replace("/", "\\").replace("'", "''")
 		var out := []
-		var cmd := "$r = Get-NetFirewallApplicationFilter -Program '%s' -ErrorAction SilentlyContinue | Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' }; if (-not $r) { 'none' } elseif ($r | Where-Object { $_.Action -eq 'Block' }) { 'block' } else { 'ok' }" % exe
-		var code := OS.execute("powershell", ["-NoProfile", "-NonInteractive", "-Command", cmd], out, false, false)
+		var code := OS.execute("powershell", psArgs(fwCheckScript(_psExe())), out, false, false)
 		var s := "".join(out).strip_edges().to_lower() if code == 0 else ""
 		call_deferred("_fw_done", s if s in ["ok", "block", "none"] else ""))
 
 func _fw_done(s: String) -> void:
 	_fw.wait_to_finish()
 	_fw = null
-	if s != fw_state:
+	if s == "ok" and fw_msg != "": fw_msg = "De Windows-firewall laat Polderrace nu door."
+	if s != fw_state or fw_msg != "":
 		fw_state = s
 		changed.emit()
 
 ## Windows: ask (with the Windows permission question) to let this game through the firewall on every kind of network.
-## Removes this game's own block rules first: a block rule wins from an allow rule.
+## Whatever happens (no permission, netsh fails, no PowerShell) the player reads what happened; nothing else changes.
 func firewall_open() -> void:
 	if OS.get_name() != "Windows" or _fw != null: return
+	fw_msg = "Windows vraagt om toestemming (staat het venster achter het spel? Alt+Tab)…"
+	changed.emit()
 	_fw = Thread.new()
 	_fw.start(func():
-		var exe := OS.get_executable_path().replace("/", "\\")
-		var inner := "netsh advfirewall firewall delete rule name=all program=\"%s\" & netsh advfirewall firewall add rule name=\"Polderrace 3D\" dir=in action=allow program=\"%s\" enable=yes profile=any" % [exe, exe]
-		var cmd := "Start-Process -FilePath cmd.exe -Verb RunAs -WindowStyle Hidden -Wait -ArgumentList '/c', '%s'" % inner.replace("'", "''")
-		OS.execute("powershell", ["-NoProfile", "-NonInteractive", "-Command", cmd], [], false, false)
-		call_deferred("_fw_reopen"))
+		var out := []
+		var code := OS.execute("powershell", psArgs(fwOpenScript(_psExe())), out, false, false)
+		call_deferred("_fw_reopen", code, "".join(out).strip_edges()))
 
-func _fw_reopen() -> void:
+func fw_busy() -> bool:
+	return _fw != null
+
+func _fw_reopen(code: int, out: String) -> void:
 	_fw.wait_to_finish()
 	_fw = null
+	fw_msg = fwResult(code, out)
 	fw_state = ""
+	changed.emit()
 	firewall_check()
+
+## what the player reads after "open the firewall"
+static func fwResult(code: int, out: String) -> String:
+	var hlp := " Je kunt het ook zelf doen: Windows-beveiliging → Firewall en netwerkbeveiliging → Een app toestaan via de firewall → Polderrace, vink Privé en Openbaar aan."
+	if out.ends_with("denied"): return "De firewall is niet veranderd: Windows kreeg geen toestemming (Nee geklikt, of geen beheerder)." + hlp
+	if out.ends_with("exit:0"): return "De firewall is opengezet voor Polderrace."
+	if out.contains("exit:"):
+		var n := out.get_slice("exit:", 1).strip_edges()
+		if n == "": return "Klaar. Hieronder staat of de firewall Polderrace nu doorlaat."
+		return "Openzetten lukte niet (netsh gaf fout %s)." % n + hlp
+	if code == -1: return "Openzetten lukte niet: PowerShell is niet gevonden op deze pc." + hlp
+	return "Openzetten lukte niet." + hlp
 
 func _exit_tree() -> void:
 	if _upnp != null: _upnp.wait_to_finish()
