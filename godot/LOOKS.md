@@ -137,6 +137,16 @@ res://tools/shot_looks.tscn -- out=/map [only=groups,looks,cars] [car=gt]`.
 
 Catalogus nu: 40 items, 244 opties (deel 1: 27 items, 203 opties). Bezit blijft account-breed (`garage.looks`).
 
+## Meldingen van de LAN-agent (opgelost / nagekeken)
+
+- `G.lookOf`: `paint` is een gewone String-sleutel (was een StringName door `L.paint = ...`).
+- `G.carUp` vult elk ontbrekend veld uit `Cars.default_up()` aan (een entry met `num` maar zonder `rimStyle` liet de
+  auto crashen); garage-entries die geen woordenboek zijn, vallen bij het laden weg.
+- "Parameter material is null" bij hatch + dubbele streep: na de merge van Automodellen en LAN niet meer na te spelen
+  (ook niet streng, met de foutmeldingen van de dummy-renderer en gewoon vrijgeven); `test_looks` part_repros faalt
+  bij elke engine-fout daarbij, en de hele uiterlijk-test faalt bij elke engine-fout.
+- `lookOf` met alles (volle look + volle bodykit) blijft onder de 600 tekens (test), ruim onder de 1000 van `NetRoom`.
+
 ## Nog open
 
 - Spiegelkappen in een tweede kleur, deurontwerpen voorbij de wielkasten, toeter (geen toetertoets in het spel).
