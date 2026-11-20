@@ -141,3 +141,21 @@ static func chevrons(lat, y0 := 1.6, min_curv := 0.016, every := 10.0, size := 1
 		World.lampMats.append(m)
 		World.inst(Geo.plane(1.9, 0.72), m, per[k], null, false)
 	World.inst(Geo.cylinder(0.05, 0.05, 1, 5), Mats.M(0x8d9398), posts, null, false)
+
+## standing people (spectators, a market crowd): pts = [[x, y, z, yaw], ...] with y the ground under their feet. Three
+## instanced shapes (legs, body, head) with colours from the seeded World.rnd, so everybody online sees the same crowd.
+static func people(pts: Array) -> void:
+	if pts.is_empty(): return
+	var shirts := [0xc8302a, 0x1d4f9e, 0xf2c200, 0xecece8, 0x2f8f5b, 0xf36f21, 0x2b2f36, 0x8e44ad, 0x4aa3c8, 0xe85a9a].map(func(c): return MathX.col(c))
+	var trousers := [0x23304a, 0x2b2f36, 0x4a3a2a, 0x5a6a7a, 0x1b1b1b].map(func(c): return MathX.col(c))
+	var skins := [0xe8b890, 0xd9a47a, 0xf0c8a0, 0xa9744a, 0x7a4f30].map(func(c): return MathX.col(c))
+	var legs := []; var lc := []; var body := []; var bc := []; var head := []; var hc := []
+	for q in pts:
+		var s := 0.9 + World.rnd.next() * 0.2
+		var b := Basis(Vector3.UP, q[3]).scaled_local(Vector3(s, s, s))
+		legs.append(Transform3D(b, Vector3(q[0], q[1] + 0.42 * s, q[2]))); lc.append(World.pick(trousers))
+		body.append(Transform3D(b, Vector3(q[0], q[1] + 1.14 * s, q[2]))); bc.append(World.pick(shirts))
+		head.append(Transform3D(b, Vector3(q[0], q[1] + 1.62 * s, q[2]))); hc.append(World.pick(skins))
+	World.inst(Geo.box(0.36, 0.84, 0.22), Mats.M(0xffffff), legs, lc, false)
+	World.inst(Geo.box(0.48, 0.62, 0.26), Mats.M(0xffffff), body, bc, true)
+	World.inst(Geo.sphere(0.16, 6, 5), Mats.M(0xffffff), head, hc, false)
