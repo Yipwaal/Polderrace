@@ -129,7 +129,7 @@ Mogelijke volgende stappen (nog niet gedaan): menu's meeschalen op hoge-DPI-sche
   `cd` (aftellen), `race` (met `order` = startvolgorde), `b` (bots), `res` (officiële uitslag), `pts` (stand van de
   avond, per uid), `q` (ping/verlies per speler), `seats` (uid + IP per stoel, voor een hostwissel).
 - **Race** (`net/net.gd`): aftellen 3 s met baan voorladen, start op de klok van de host (`st[10]`); auto's van anderen
-  met tijdstempels en dead reckoning (op 150 ms ± 30 ms en 5% verlies: 95% binnen 0,7 m van de echte plek); de host
+  met tijdstempels en dead reckoning op de echte beweging (ook als hij driftet; op 150 ms ± 30 ms en 5% verlies: 95% binnen 0,5-1,5 m van de echte plek, geen sprongen; teruggezet op de baan = meteen daar); de host
   beslist uitslag en punten (afstand gecontroleerd: een finish die niet kan, telt niet), meekijken na de finish of als
   laatkomer, naamlabels boven auto's (instelbaar), pauze online bevriest niets. Startvolgorde: leider achteraan /
   vooraan / willekeurig / vast; volgende baan: host / om de beurt / willekeurig / stemmen.

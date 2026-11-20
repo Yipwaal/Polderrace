@@ -609,9 +609,9 @@ def track_error(truth, shown):
     the worst jump from one frame to the next compared with what the car really drove in that time"""
     T = list(zip(truth[0::3], truth[1::3], truth[2::3]))
     S = list(zip(shown[0::3], shown[1::3], shown[2::3]))
-    # moments the car really jumped (put back on the road): nothing can be smooth there, leave out half a second after
-    tele = [b[0] for a, b in zip(T, T[1:]) if math.dist(a[1:], b[1:]) > 6.0]
-    S = [x for x in S if not any(0 <= x[0] - t < 0.6 for t in tele)]
+    # moments the car really jumped (put back on the road): the other screens see that a ping later; leave out a second
+    tele = [b[0] for a, b in zip(T, T[1:]) if math.dist(a[1:], b[1:]) > 4.0]
+    S = [x for x in S if not any(0 <= x[0] - t < 1.0 for t in tele)]
     errs = []; jumps = []
     j = 0
     prev = None

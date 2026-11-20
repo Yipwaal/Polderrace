@@ -418,7 +418,7 @@ func netSyncRemotes() -> bool:
 			r = {"peer": p.peer, "car": null, "carId": null, "want": null, "color": null, "look": "", "lookD": {}, "st": null, "prev": null, "t": 0, "lap": 0,
 				"done": false, "ft": 0.0, "upd": 0, "name": "", "host": false, "out": false, "uid": "", "rdy": false, "off": false, "vote": "", "eSeq": -1,
 				"tag": null, "clk": 1e18, "clkAt": 0, "yaw": 0.0, "vy": 0.0, "dp": Vector3.ZERO, "dh": 0.0, "shown": false,
-				"vdist": 0.0, "vs": -1.0, "vt": 0, "bad": false}
+				"vdist": 0.0, "vs": -1.0, "vt": 0, "bad": false, "vel": Vector2.ZERO, "velOk": false}
 			net.remotes[p.peer] = r
 			news = true
 			if net.host: netStatus("%s doet mee." % str(pr.nick).substr(0, 24))
@@ -852,7 +852,7 @@ func netBegin(race: Dictionary) -> void:
 		get_tree().current_scene.load_track(race.track)
 	if Env.me != null: Env.me.apply(race.time, race.weather)
 	for r in net.remotes.values():
-		r.done = false; r.lap = 0; r.st = null; r.prev = null; r.out = false; r.shown = false; r.vs = -1.0; r.vdist = 0.0; r.bad = false; r.clk = 1e18
+		r.done = false; r.lap = 0; r.st = null; r.prev = null; r.velOk = false; r.out = false; r.shown = false; r.vs = -1.0; r.vdist = 0.0; r.bad = false; r.clk = 1e18
 	# the host decides when the race starts: results, replay, pause or a race still under way make way for it
 	if Game.state != "menu":
 		if Rep.rp != null: Rep.replayClose()
@@ -943,6 +943,9 @@ func netTick(dt: float) -> void:
 			changed.emit()
 		var st = pr.get("st")
 		if st is Array and st.size() > 10 and int(st[9]) == rid:
+			# (a position older than the one we have came late over a bad connection: it would pull the car back)
+			var stale: bool = r.st != null and float(st[10]) < float(r.st[10]) and int(st[7]) == int(r.st[7])
+			if stale: r.upd = p.updatedAt
 			if p.updatedAt != r.upd and not r.out:
 				r.upd = p.updatedAt
 				# the sender's clock against ours: the quickest packet so far (it slowly forgets, clocks drift)
@@ -953,6 +956,11 @@ func netTick(dt: float) -> void:
 					var dts: float = (float(st[10]) - float(r.st[10])) * Engine.time_scale
 					r.yaw = clampf(wrapf(float(st[3]) - float(r.st[3]), -PI, PI) / dts, -3.0, 3.0) if dts > 0.005 else 0.0
 					r.vy = clampf((float(st[1]) - float(r.st[1])) / dts, -12.0, 12.0) if dts > 0.005 else 0.0
+					# how it really moved (a drifting car goes sideways: its heading and speed alone would say otherwise);
+					# not over a jump (put back on the road) or a long gap
+					var mv := Vector2(float(st[0]) - float(r.st[0]), float(st[2]) - float(r.st[2])) / maxf(dts, 0.001)
+					r.velOk = dts > 0.005 and dts < 0.6 and mv.length() < absf(float(st[4])) + 12.0
+					if r.velOk: r.vel = mv
 				r.prev = r.st; r.st = st; r.t = now; r.lap = int(st[6])
 				# can it be true? the distance it covered at a speed a car can have (the host's results go by this)
 				if Trk.NS > 1:
@@ -1089,15 +1097,19 @@ func _showRemotes(dt: float, now: int) -> void:
 		var age := _age(r, b, now)
 		var v := float(b[4])
 		var h := float(b[3]) + float(r.yaw) * age
-		var hm := float(b[3]) + float(r.yaw) * age * 0.5
-		var target := Vector3(float(b[0]) + sin(hm) * v * age, float(b[1]) + float(r.vy) * age, float(b[2]) + cos(hm) * v * age)
-		if not r.shown or r.dp.distance_to(target) > 9.0:
+		# its velocity: as it really moved between its last two positions, else along its heading; turning as the car turns
+		var vel: Vector2 = r.vel if r.velOk else Vector2(sin(float(b[3])), cos(float(b[3]))) * v
+		var vm := vel.rotated(-float(r.yaw) * age * 0.5)
+		var vn := vel.rotated(-float(r.yaw) * age)
+		var target := Vector3(float(b[0]) + vm.x * age, float(b[1]) + float(r.vy) * age, float(b[2]) + vm.y * age)
+		# (more than a few metres off: the car was put back on the road, or the picture was far off: jump, do not glide)
+		if not r.shown or r.dp.distance_to(target) > 5.0:
 			r.dp = target
 			r.dh = h
 			r.shown = true
 		else:
 			# along with the car's own speed, and the rest of the difference a part every frame
-			r.dp += Vector3(sin(h) * v, float(r.vy), cos(h) * v) * dt
+			r.dp += Vector3(vn.x, float(r.vy), vn.y) * dt
 			r.dp += (target - r.dp) * (1.0 - exp(-dt * 10.0 / maxf(1.0, Engine.time_scale)))
 			r.dh = MathX.lerp_angle_(float(r.dh), h, 1.0 - exp(-dt * 14.0 / maxf(1.0, Engine.time_scale)))
 		g.visible = true
