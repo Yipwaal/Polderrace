@@ -70,6 +70,9 @@ const HATCH_COLORS := [0xe9e9e4, 0x2f6db3, 0x8c1c24, 0x3f444b, 0x5f8a3a, 0xd9a21
 const BOT_NAMES := ["Henk", "Ingrid", "Daan", "Fenna", "Kees", "Sanne", "Joost"]
 ## rivals tune too: the bots get most of the edge your upgrades give over the stock car
 const RIVAL_TUNE := 0.8
+## how firmly a bot covers its line when a faster car comes up behind it (0 = never)
+const DEFEND := {"easy": 0.0, "normal": 0.5, "hard": 0.8, "extreme": 1.0}
+const WIDE_LEN := 1.5        ## seconds a bot's small mistake (running wide) lasts
 var traffic: Array = []
 var bots: Array = []
 var lampsOn := false
@@ -196,7 +199,8 @@ func poseOnTrack(g: Node3D, s: float, lat: float, yawOff := 0.0) -> void:
 	var a := Trk.trackAt(s)
 	var y: float = Trk.hAt(a.i, lat) * (1 - a.t) + Trk.hAt(a.j, lat) * a.t
 	g.position = Vector3(a.px + a.rx * lat, y, a.pz + a.rz * lat)
-	g.rotation = Vector3(0, atan2(a.tx, a.tz) + yawOff, 0)
+	# nose up the hill, down the dip (the road's own slope; the lean of the body comes on top, see leanBot)
+	g.rotation = Vector3(-atan((Trk.hAt(a.j, lat) - Trk.hAt(a.i, lat)) / Trk.SPC) * cos(yawOff), atan2(a.tx, a.tz) + yawOff, 0)
 
 func laneFree(c: Mover, l: int, obs: Array) -> bool:
 	var x: float = Trk.LANES[l]
@@ -360,6 +364,9 @@ func updateBots(dt: float) -> void:
 			b.m.beam.visible = lampsOn and not b.out
 		if not racing:
 			b.speed = 0; b.cur = 0; b.vx = 0; b.vz = 0; b.lp = 0; b.yawK = 0; b.spin = 0; b.yawOff = 0; b.spun = false; b.pushDv = 0
+			b.roll = 0; b.pitch = 0; b.prevV = 0; b.wideT = 0; b.defT = 0
+			tiltRig(b.m, 0, 0, 0)
+			for k in 2: b.m.wheels[k].pivot.rotation.y = 0.0
 			poseOnTrack(b.m.g, b.s, b.lat)
 			continue
 		if netInRace() and not netIsHost():
@@ -402,8 +409,13 @@ func updateBots(dt: float) -> void:
 			if b.mistT == null: b.mistT = 5 + randf() / df.mist
 			b.mistT -= dt
 			if b.mistT <= 0:
+				# a small mistake: a moment too late on the brakes, so the car runs wide (to the outside of the bend that
+				# is coming, or just off its line on a straight) and loses a little time
 				b.mistT = 4 + randf() / df.mist
-				b.lp += (-1.0 if randf() < .5 else 1.0) * (2 + randf() * 2)
+				var li: float = Trk.LINE[(int(floor(b.s / SPC)) + 30) % NS]
+				b.wideDir = -MathX.sgn(li) if absf(li) > 0.5 else (-1.0 if randf() < .5 else 1.0)
+				b.wideAmp = 1.2 + randf() * 1.3
+				b.wideT = WIDE_LEN
 				b.slowT = 1.2
 		if b.slowT > 0:
 			b.slowT -= dt; target *= 0.82
@@ -423,25 +435,53 @@ func updateBots(dt: float) -> void:
 		while dd < 160:
 			bend = maxf(bend, CURV[int(floor(fmod(b.s + dd, LEN) / SPC)) % NS])
 			dd += 10
+		# which side is the inside of the bend that is coming (the racing line leans to it)
+		var insideSgn := MathX.sgn(Trk.LINE[(int(floor(b.s / SPC)) + 45) % NS])
 		var kq := clamp_((into - 60) / 260, 0, 1)
 		var kk := maxf(kq, clamp_((bend - 0.004) / 0.01, 0, 1) * clamp_(into / 40, 0, 1))
 		if b.gridLat != null and kk < 1:
 			wantLat = b.gridLat * (1 - kk) + wantLat * kk
+		var defend := 0.0
 		for o in obs:
 			if o.ref == b: continue
 			var dz := Trk.wrapD(o.s - b.s)
-			if dz > 0 and dz < 24 and absf(o.lat - b.lat) < 2.3 and o.cur < b.speed + 4:
-				if b.passT <= 0 and into > 150:
+			var closing: float = b.speed - o.cur
+			# a much slower car (a spin, a crash, a back marker) is seen from further away
+			if dz > 0 and dz < 24 + maxf(0, closing) * 1.1 and absf(o.lat - b.lat) < 2.3 and o.cur < b.speed + 4:
+				if b.passT <= 0 and into > 150 and dz < 24 + maxf(0, closing) * 0.6:
 					var lim := Trk.ROAD_HALF - 1.4
-					var opts := []
+					var best = null
+					var bs := 1e9
 					for v in [o.lat - 3.4, o.lat + 3.4]:
-						if absf(v) <= lim: opts.append(v)
-					if not opts.is_empty():
-						var best: float = opts[0]
-						for v in opts:
-							if absf(v - b.lat) < absf(best - b.lat): best = v
+						if absf(v) > lim: continue
+						# not into a car that is already there or coming up on that side
+						var taken := false
+						for q in obs:
+							if q.ref == b or q == o: continue
+							var dq := Trk.wrapD(q.s - b.s)
+							if dq > -9 and dq < dz + 8 and absf(q.lat - v) < 2.2:
+								taken = true; break
+						if taken: continue
+						# the nearest side, with a preference for the inside of the bend that is coming
+						var sc: float = absf(v - b.lat) - (1.2 if (v - o.lat) * insideSgn > 0 else 0.0)
+						if sc < bs:
+							bs = sc; best = v
+					if best != null:
 						b.passLat = best; b.passT = 1.6
 				if dz < 16: target = minf(target, o.cur + clamp_((dz - 8) * 0.7, -6, 4))
+				elif closing > 6: target = minf(target, sqrt(o.cur * o.cur + 2 * b.brk * 0.7 * (dz - 12)))
+			# someone faster is coming up from behind on a straight: cover the side they are on, once, and only while
+			# they are still well behind (never into a car that is alongside)
+			elif DEFEND[G.settings.diff] > 0 and dz < -7 and dz > -22 and closing < -1.5 and bend < 0.003 and b.passT <= 0 and b.defCool <= 0 \
+					and absf(o.lat - b.lat) > 1.0 and absf(o.lat - b.lat) < 4.5:
+				defend = clamp_(o.lat - b.lat, -1.6, 1.6) * DEFEND[G.settings.diff]
+		if defend != 0.0 and b.defT <= 0:
+			b.defT = 1.6; b.defLat = clamp_(b.lat + defend, -(Trk.ROAD_HALF - 1.6), Trk.ROAD_HALF - 1.6); b.defCool = 7.0
+		b.defCool -= dt
+		if b.defT > 0:
+			b.defT -= dt; wantLat = b.defLat
+		if b.wideT > 0:
+			b.wideT -= dt; wantLat += b.wideDir * b.wideAmp * sin(PI * (1 - b.wideT / WIDE_LEN))
 		if b.passT > 0:
 			b.passT -= dt; wantLat = b.passLat
 		if absf(b.speed - target) < 0.4:
@@ -501,12 +541,34 @@ func updateBots(dt: float) -> void:
 				b.finished = true; b.finishTime = raceTime
 		poseOnTrack(b.m.g, b.s, b.lat, -atan2(b.latV, maxf(4, b.speed)) + b.yawK + b.yawOff)
 		var i2 := int(floor(b.s / Trk.SPC)) % Trk.NS
+		leanBot(b, i2, dt)
 		var lv: float = b.latV + b.lp
 		b.vx = Trk.T[i2].x * b.speed + Trk.R[i2].x * lv
 		b.vz = Trk.T[i2].z * b.speed + Trk.R[i2].z * lv
 		for w in b.m.wheels:
 			w.spin.rotation.x += wheelSpin(b.speed, w.r, dt)
 	botCollisions()
+
+## a bot's body leans like the player's: out of the bend, forward under braking (and its wheels stay on the road)
+func leanBot(b: Mover, i: int, dt: float) -> void:
+	var NS := Trk.NS
+	var ta := Trk.T[(i - 2 + NS) % NS]
+	var tb := Trk.T[(i + 2) % NS]
+	var right := -MathX.sgn(ta.z * tb.x - ta.x * tb.z)          # +1 in a right-hand bend
+	var soft: float = handling(b.type).roll
+	var ay: float = b.speed * b.speed * Trk.CURV[i] * right + b.latV * 2.0
+	var ax: float = (b.speed - b.prevV) / maxf(dt, 1e-4)
+	b.prevV = b.speed
+	var k := minf(1, dt * 6)
+	b.roll += (clamp_(ay * 0.0011 * soft, -0.07, 0.07) - b.roll) * k
+	b.pitch += (clamp_(-ax * 0.0014 * (0.6 + 0.4 * soft), -0.03, 0.045) - b.pitch) * k
+	var g: Node3D = b.m.g
+	g.rotation.x += b.pitch
+	g.rotation.z = -b.roll
+	tiltRig(b.m, b.pitch, b.roll, 0.0)
+	# the front wheels point into the bend (and where the car is steering to across the road)
+	var sv := clamp_(right * Trk.CURV[i] * handling(b.type).L * 1.3 + b.latV * 0.04, -0.45, 0.45)
+	for q in 2: b.m.wheels[q].pivot.rotation.y = -sv
 
 func playerPosition() -> int:
 	if mode == "elim" and playerOut: return elimPos
@@ -599,62 +661,296 @@ func gearInfo() -> Dictionary:
 
 func skidAmount() -> float:
 	if not (state == "racing" or state == "finished"): return 0.0
-	var v := absf(player.speed)
-	return (1.6 if player.gear == 1 and player.gasIn > 0.9 and v < 9 and Cars.CARS[G.settings.car].cls != "B" else 0.0) \
-		+ player.slide.length() * 0.6 + (2.5 if player.hand and v > 5 else 0.0) + maxf(0, absf(player.steer) * v - 48) * 0.06 \
-		+ (1.3 if player.brk > 0.5 and v > 18 else 0.0)
+	var pl := player
+	var v := absf(pl.speed)
+	# tyres over their limit: the rear counts fully (a slide), the front less (scrubbing wide)
+	var tyres := clamp_((maxf(pl.slipF * 0.8, pl.slipR) - 0.9) * 3.0, 0, 3.5) * clamp_(v / 8, 0, 1)
+	return (1.6 if pl.gear == 1 and pl.gasIn > 0.9 and v < 9 and Cars.CARS[G.settings.car].cls != "B" else 0.0) \
+		+ (pl.push + pl.slide - pl.slideOut).length() * 0.6 + (2.5 if pl.hand and v > 5 else 0.0) + tyres \
+		+ (1.3 if pl.brk > 0.5 and v > 18 else 0.0)
+
+# ------------------------------------------------------------------ handling model
+## How the player's car drives (drive -> driveStep):
+##  - The car has a velocity of its own (`speed` along the nose, `slide` across it) and a yaw rate (`yr`). Two axles of
+##    tyres pull that velocity towards where the wheels point. Each axle has a limit: the lateral grip the game always
+##    had (grip stat x weather x surface; it grows with speed), shared by the weight on the axle. Up to the limit the
+##    car goes where you steer; past it the tyres slide: the front runs wide (understeer), the rear comes round.
+##  - What shifts the balance: braking moves weight to the front and uses grip (the tail gets light: trail braking
+##    turns the car in), power uses the grip of the driven wheels (a strong rear-drive car power-slides, a front-drive
+##    car pushes wide), lifting tucks the nose in, the handbrake lets go of the rear, a crest makes the car light.
+##  - Steering asks for a yaw rate (the turn rates the game always had) and the front wheels turn as far as that takes,
+##    so a steady corner is driven exactly as before; the limit shows in what you ask on top of it.
+##  - Below ~30 km/h and in reverse the car simply follows its wheels (parking and hairpins stay easy).
+##  - Shoves from outside (a hit, a wall, a gust) go through `push`: they move the car sideways for a moment and fade,
+##    as before, instead of being eaten by the tyres.
+const AP_F := 0.11           ## slip angle (rad) at which the front / rear tyres give their most
+const AP_R := 0.10
+const TY_C := 1.3            ## tyre curve sin(C atan(B x)): 1 at x = 1, 0.89 far past it (a slide keeps most of its grip)
+const TY_B := 2.6427
+const STEER_OVER := 1.05     ## full lock asks 5 % more than the front tyres have: you hear and feel the limit
+const WT_K := 0.0035         ## weight moved per m/s2 of acceleration (share of the car's weight)
+const TYRE_LS := 0.8         ## a tyre with twice the load has 2^0.8 times the grip
+const BRAKE_USE_F := 0.62    ## share of the front / rear tyres' grip that full braking takes
+const BRAKE_USE_R := 0.64
+const STEER_AID := 1.0      ## how far the stability aid opens the steering when the tail slides (0 = off)
+const POWER_GRIP := 0.78     ## grip along the car against grip across it (lower: power slides sooner)
+const HAND_GRIP := 0.4       ## rear grip left with the handbrake on
+const SCRUB := 0.4          ## share of the natural speed loss of a slipping tyre that is kept (1 = real, 0 = slides cost nothing)
+const BETA_LIFT := 0.14      ## slip angle (rad) past which the car helps you catch the slide: off the gas,
+const BETA_GAS := 0.42       ## on the gas (a power slide),
+const BETA_HAND := 1.1       ## with the handbrake on
+const LOAD_G := 70.0         ## "gravity" for crests and dips (m/s2): the car gets light when v2 x curvature nears it
+
+## what kind of car each model is (how fast it is stays in Cars.CARS): driven wheels (f front, r rear, a all), share of
+## the weight on the front wheels, how planted the rear is (1.04 lively .. 1.18 very steady), how much the body leans,
+## and how much of the driven tyres' grip full power may take (traction: 0.6 tidy .. 0.86 a handful)
+const FEEL := {
+	"hatch": ["f", 0.61, 1.16, 1.15, 0.7], "rally": ["a", 0.56, 1.10, 1.25, 0.8], "coupe": ["f", 0.59, 1.14, 1.05, 0.7],
+	"roadster": ["r", 0.50, 1.07, 1.0, 0.76], "mini": ["f", 0.62, 1.12, 1.2, 0.7], "retro": ["r", 0.53, 1.06, 1.3, 0.8],
+	"gt": ["r", 0.50, 1.10, 0.9, 0.72], "muscle": ["r", 0.55, 1.05, 1.35, 0.86], "fastback": ["r", 0.53, 1.07, 1.1, 0.78],
+	"sedan": ["r", 0.53, 1.13, 1.0, 0.66], "wagon": ["a", 0.55, 1.16, 1.1, 0.7], "evo": ["a", 0.57, 1.11, 0.95, 0.8],
+	"super": ["r", 0.43, 1.10, 0.6, 0.64], "hyper": ["a", 0.45, 1.14, 0.55, 0.7], "longtail": ["r", 0.42, 1.12, 0.6, 0.62],
+	"proto": ["r", 0.46, 1.16, 0.45, 0.58], "v12": ["r", 0.51, 1.08, 0.75, 0.7], "speedster": ["r", 0.47, 1.07, 0.65, 0.68]}
+var _feel := {}
+
+## the handling numbers of a model: L wheelbase, a/b centre of gravity to front/rear axle, k2 yaw inertia per mass,
+## wf front weight share, df share of the power on the front wheels, kr rear grip margin, roll body lean, pw traction
+func handling(id: String) -> Dictionary:
+	if _feel.has(id): return _feel[id]
+	var F: Array = FEEL.get(id, FEEL.gt)
+	var S: Dictionary = Cars.CAR_SPECS.get(id, Cars.CAR_SPECS.gt)
+	var L: float = S.wz[0] - S.wz[1]
+	var wf: float = F[1]
+	var m: float = Cars.CARS[id].mass if Cars.CARS.has(id) else 1.0
+	var h := {"L": L, "a": L * (1 - wf), "b": L * wf, "k2": L * L * wf * (1 - wf) * (0.8 + 0.25 * m), "wf": wf,
+		"df": 1.0 if F[0] == "f" else (0.0 if F[0] == "r" else 0.4), "kr": F[2], "roll": F[3], "drv": F[0], "pw": F[4]}
+	_feel[id] = h
+	return h
+
+static func tyre(x: float) -> float:
+	return sin(TY_C * atan(TY_B * x))
+
+## the slip (in units of the slip at the limit) that gives the share q of a tyre's grip; asked for more than it has
+## (q > 1) the tyre is pushed past its limit
+static func tyreInv(q: float) -> float:
+	if q >= 1.0: return minf(2.2, 1.0 + (q - 1.0) * 3.0)
+	return tan(asin(q) / TY_C) / TY_B
+
+## the lateral acceleration (m/s2) a car with grip 1 can hold at speed v: the turn rate the game always had times the speed
+static func latGrip(v: float) -> float:
+	var vv := maxf(v, 8.0)
+	return 1.7 * vv * maxf(0.32, 1 - 0.5 * vv / 69.4)
+
+## off the tarmac, per track: [where it starts (m past the road edge), grip, drag (m/s2), the speed the drag works down to, rumble]
+const VERGE := {"polder": [0.8, 0.7, 26.0, 17.0, 1.0], "limburg": [0.6, 0.72, 14.0, 16.0, 0.9], "veluwe": [0.6, 0.72, 14.0, 16.0, 0.9],
+	"circuit": [1.3, 0.75, 18.0, 25.0, 0.8]}
+const GRAVEL := [13.0, 0.6, 40.0, 9.0, 1.5]     ## circuit: the gravel trap, from 13 m off the centre line
+const COBBLES := {"dorp": 0.2, "grachten": 0.2}  ## brick roads rumble a little
+var _kerbKey := ""
+var _kerb := PackedByteArray()
+
+## circuit: the stretches with red and white kerbs (the rule of the track builder: where the road bends)
+func kerbAt(i: int) -> bool:
+	if Trk.TRACK_ID != "circuit": return false
+	var key := Trk.TRACK_DIR + str(Trk.NS)
+	if key != _kerbKey or _kerb.size() != Trk.NS:
+		_kerbKey = key
+		var NS := Trk.NS
+		_kerb = PackedByteArray()
+		_kerb.resize(NS)
+		for j in NS:
+			var a := Trk.T[(j - 4 + NS) % NS]
+			var b := Trk.T[(j + 4) % NS]
+			if acos(clampf(a.x * b.x + a.z * b.z, -1, 1)) > 0.07:
+				for k in range(-6, 7): _kerb[(j + k + NS) % NS] = 1
+	return _kerb[i] != 0
+
+## the ground under the wheels of one side, a metres from the centre line: [share off the tarmac, grip, drag, slowest, rumble]
+func groundAt(a: float, i: int) -> Array:
+	var id := Trk.TRACK_ID
+	var V = VERGE.get(id)
+	var rum: float = COBBLES.get(id, 0.0) if a < Trk.ROAD_HALF else 0.0
+	if V == null: return [0.0, 1.0, 0.0, 0.0, rum]
+	var t := clamp_((a - (Trk.ROAD_HALF + V[0])) / 0.8, 0, 1)
+	if id == "veluwe": t *= clamp_(maxf(7.4 - a, a - 9.6) / 0.3, 0, 1)      # the cycle path beside the road is paved
+	if id == "circuit":
+		if a > Trk.ROAD_HALF and a < Trk.ROAD_HALF + 1.3 and kerbAt(i): rum = 0.7
+		var g := clamp_((a - (GRAVEL[0] - 0.3)) / 0.6, 0, 1)
+		if g > 0:
+			return [1.0, V[1] + (GRAVEL[1] - V[1]) * g, V[2] + (GRAVEL[2] - V[2]) * g, V[3] + (GRAVEL[3] - V[3]) * g, V[4] + (GRAVEL[4] - V[4]) * g]
+	t = t * t * (3 - 2 * t)
+	return [t, V[1], V[2], V[3], maxf(rum, V[4] * t)]
+
+## how hard the road pushes back at sample i at speed v: less over a crest, more in a dip (0.85 .. 1.15)
+func roadLoad(i: int, v: float) -> float:
+	var NS := Trk.NS
+	var d := 3
+	var k: float = (Trk.HT[(i + d) % NS] - 2 * Trk.HT[i] + Trk.HT[(i - d + NS) % NS]) / (d * d * Trk.SPC * Trk.SPC)
+	return clamp_(1 + v * v * k / LOAD_G, 0.85, 1.15)
 
 func drive(dt: float, inp: Dictionary) -> void:
-	player.gasIn = inp.gas
+	# the tyre model wants short steps (the game loop gives at most 8.5 ms; anything longer is cut up here)
+	var n := maxi(1, int(ceil(dt / 0.009 - 1e-6)))
+	for _k in n: driveStep(dt / n, inp)
+
+func driveStep(dt: float, inp: Dictionary) -> void:
+	var pl := player
+	var H := handling(G.settings.car)
+	pl.gasIn = inp.gas
 	updateGear(dt, inp.gas)
-	var v := player.speed
-	var sAbs := absf(v) / 69.4
-	player.steer += (clamp_(inp.steer, -1, 1) - player.steer) * minf(1, dt * (14.0 if inp.analog else 7.0))
+	# ---- the velocity the tyres work on: along the nose (u) and to the right (w), without the shoves from outside
+	pl.push += pl.slide - pl.slideOut
+	var fx := sin(pl.heading); var fz := cos(pl.heading)
+	var tvx := fx * pl.speed + pl.slide.x - pl.push.x
+	var tvz := fz * pl.speed + pl.slide.y - pl.push.y
+	var u := tvx * fx + tvz * fz
+	var w := -tvx * fz + tvz * fx
+	var v := u
+	var av := absf(u)
+	var sAbs := av / 69.4
+	# ---- steering: a stick is followed almost directly; keys ease into the lock (calmer at speed) and centre quickly
+	var st := clamp_(inp.steer, -1, 1)
+	var rate := 16.0
+	if not inp.analog:
+		rate = 11.0 if (absf(st) < absf(pl.steer) or st * pl.steer < 0) else lerpf(8.5, 5.5, minf(1, sAbs))
+	pl.steer += (st - pl.steer) * minf(1, dt * rate)
+	# ---- the ground: verge, grass, gravel, kerbs (left and right wheels apart), crests and dips
+	var ti := pl.idx % Trk.NS
+	var gL := groundAt(absf(pl.lat - 0.8), ti)
+	var gR := groundAt(absf(pl.lat + 0.8), ti)
+	var off: float = (gL[0] + gR[0]) * 0.5
+	# loose ground has less grip; at walking pace that does not matter (you can always steer out of the gravel)
+	var surf: float = 1 - (gL[0] * (1 - gL[1]) + gR[0] * (1 - gR[1])) * 0.5 * clamp_((av - 6) / 10, 0, 1)
+	var dragL: float = gL[0] * gL[2] * clamp_((av - gL[3]) / 5.0, 0, 1)
+	var dragR: float = gR[0] * gR[2] * clamp_((av - gR[3]) / 5.0, 0, 1)
+	pl.offroad = off
+	pl.rumble += (maxf(gL[4], gR[4]) * clamp_(av / 12, 0, 1) - pl.rumble) * minf(1, dt * 10)
+	pl.load += (roadLoad(ti, av) - pl.load) * minf(1, dt * 8)
+	var gf := gripFactor()
+	# ---- engine, brakes, drag
 	var VM := MAXV
-	var gi := clampi(player.gear, 1, 6) - 1
+	var gi := clampi(pl.gear, 1, 6) - 1
 	var rpm := engineRpm()
 	var torque := 0.78 + 0.22 * clamp_(rpm / 0.45, 0, 1)
-	var limiter := 0.0 if maxf(0, player.speed) >= gearTop(clampi(player.gear, 1, 6)) * 0.995 else 1.0
-	var cut := (0.12 if player.shiftT > 0 and player.gear > 1 else 1.0) * limiter
+	var limiter := 0.0 if maxf(0, pl.speed) >= gearTop(clampi(pl.gear, 1, 6)) * 0.995 else 1.0
+	var cut := (0.12 if pl.shiftT > 0 and pl.gear > 1 else 1.0) * limiter
+	var aDrive := 0.0
+	var ax := 0.0
+	var braking := 0.0
 	if inp.gas > 0.05:
-		player.speed += ACC * GACC[gi] * torque * cut * inp.gas * maxf(0.04, 1 - pow(maxf(0, v) / VM, 2)) * dt
+		aDrive = ACC * GACC[gi] * torque * cut * inp.gas * maxf(0.04, 1 - pow(maxf(0, v) / VM, 2))
+		ax = aDrive
 	elif inp.brake > 0.05:
-		if v > 0.5: player.speed -= BRAKE * inp.brake * dt
-		else: player.speed -= 6 * inp.brake * dt
+		if v > 0.5:
+			# a wet or loose surface takes longer to stop on
+			braking = inp.brake
+			ax = -BRAKE * inp.brake * (0.4 + 0.6 * gf * surf)
+		else: ax = -6 * inp.brake
 	else:
-		var c := COAST * (0.7 + 0.9 * rpm * (1.2 - gi * 0.08)) * dt
-		player.speed = 0.0 if absf(v) <= c else v - MathX.sgn(v) * c
-	var sd = surfaceDrag(absf(player.lat))
-	if sd != null and player.speed > sd[0]: player.speed -= sd[1] * dt
-	player.speed = clamp_(player.speed, minf(REVMAX, v), maxf(VM, minf(player.speed, MAXV)))
-	if player.speed > VM: player.speed -= 6 * dt
-	var turn := 1.7 * GRIP * gripFactor() * clamp_(absf(player.speed) / 8, 0, 1) * maxf(0.32, 1 - 0.5 * sAbs)
-	if inp.brake > 0.3 and absf(player.speed) > 15: turn *= 1 - 0.22 * inp.brake
-	player.hand = bool(inp.hand) and absf(player.speed) > 3
-	player.brk = inp.brake
+		var c := COAST * (0.7 + 0.9 * rpm * (1.2 - gi * 0.08))
+		ax = -MathX.sgn(v) * minf(c, av / dt)
+	ax -= (dragL + dragR) * 0.5 * MathX.sgn(v)
+	pl.hand = bool(inp.hand) and absf(pl.speed) > 3
+	pl.brk = inp.brake
+	if pl.hand: ax -= MathX.sgn(v) * 7
 	if state == "racing":
-		if player.speed > raceTopSpeed: raceTopSpeed = player.speed
-		if player.speed > 83.3: unlockAch("speed300")
-	if player.hand:
-		turn *= 1.55
-		player.speed -= MathX.sgn(player.speed) * 7 * dt
-		var k := -player.steer * absf(player.speed) * 0.32 * dt
-		player.slide.x += -cos(player.heading) * k
-		player.slide.y += sin(player.heading) * k
-	player.heading -= player.steer * turn * dt * (MathX.sgn(player.speed) if player.speed != 0 else 1.0)
-	if player.spin != 0:
-		var hx := sin(player.heading); var hz := cos(player.heading)
-		var vx := hx * player.speed + player.slide.x; var vz := hz * player.speed + player.slide.y
-		player.heading += player.spin * dt
-		var nx2 := sin(player.heading); var nz2 := cos(player.heading)
-		player.speed = vx * nx2 + vz * nz2
-		player.slide = Vector2(vx - nx2 * player.speed, vz - nz2 * player.speed)
-		player.spin *= exp(-dt * (6.0 if absf(player.spin) < 0.5 else 1.6))
-		if absf(player.spin) < 0.02: player.spin = 0
-	var fx := sin(player.heading); var fz := cos(player.heading)
-	player.pos.x += (fx * player.speed + player.slide.x) * dt
-	player.pos.z += (fz * player.speed + player.slide.y) * dt
-	player.slide *= exp(-dt * (1.6 if player.hand else 4.5))
+		if pl.speed > raceTopSpeed: raceTopSpeed = pl.speed
+		if pl.speed > 83.3: unlockAch("speed300")
+	# ---- grip: what each axle can hold sideways right now
+	pl.wt += (clamp_(ax * WT_K, -0.17, 0.1) - pl.wt) * minf(1, dt * 9)
+	var A := GRIP * gf * surf * pl.load * latGrip(av)
+	var Nf: float = H.wf - pl.wt
+	var capF: float = A * H.wf * pow(Nf / H.wf, TYRE_LS)
+	var capR: float = A * (1 - H.wf) * pow((1 - Nf) / (1 - H.wf), TYRE_LS) * H.kr
+	# brakes and power use up grip. When the rear starts to slide they let go of it again (as ABS and traction control
+	# do): hard braking in a corner turns the car in but does not spin it, power slides stay catchable
+	var useF := braking * BRAKE_USE_F
+	var useR := braking * BRAKE_USE_R * (1 - 0.85 * clamp_((pl.slipR - 0.8) / 0.6, 0, 1))
+	if aDrive > 0:
+		var Ax := A * POWER_GRIP
+		useF = minf(H.pw, aDrive * H.df / (Ax * Nf))
+		useR = minf(H.pw, aDrive * (1 - H.df) / (Ax * (1 - Nf))) * (1 - 0.7 * clamp_((pl.slipR - 1.8) / 1.5, 0, 1))
+	capF *= sqrt(1 - useF * useF)
+	capR *= sqrt(1 - useR * useR)
+	if pl.hand: capR *= HAND_GRIP
+	# ---- the front wheels: steering asks for a yaw rate; they turn as far as that takes in a steady corner
+	var wFull := 1.7 * GRIP * clamp_(av / 8, 0, 1) * maxf(0.32, 1 - 0.5 * sAbs)
+	# hard on the brakes the fronts have less to steer with: ask for less, as the game always did
+	var wc := pl.steer * wFull * STEER_OVER * (1 - 0.26 * braking * clamp_((av - 10) / 5, 0, 1))
+	# stability aid: the tail is sliding out and you still steer into the corner: the car opens the steering a little
+	# for you (counter-steering yourself, or the handbrake, switches it off)
+	if not pl.hand and pl.steer * pl.beta < 0:
+		wc *= 1 - STEER_AID * clamp_((pl.slipR - 1.1 - 0.8 * inp.gas) / 1.2, 0, 1)
+	var q := absf(wc) * av / (GRIP * gf * surf * latGrip(av))
+	var den := maxf(av, 3.0)
+	var delta: float = clamp_(MathX.sgn(wc) * (H.L * absf(wc) / maxf(av, 8.0) + AP_F * tyreInv(q) - AP_R * tyreInv(q / H.kr)), -0.6, 0.6)
+	pl.delta = delta
+	# ---- tyre forces (per unit of mass, to the right) from the slip angle of each axle
+	var aF := atan2(w + H.a * pl.yr, den) - delta
+	var aR := atan2(w - H.b * pl.yr, den)
+	var FF: float = -capF * tyre(aF / AP_F)
+	var FR: float = -capR * tyre(aR / AP_R)
+	# kd: 1 = the tyres decide, 0 = slow or reversing: the car follows its wheels
+	var kd := clamp_((u - 3.0) / 6.0, 0, 1)
+	var yawAcc: float = (H.a * FF - H.b * FR) / H.k2
+	# a wheel on the grass drags that side back
+	yawAcc += (dragR - dragL) * 0.03
+	var beta := atan2(w, den)
+	# a slide that gets too deep: the car helps to catch it (not while a hit is spinning it). On the gas you may
+	# hold a deeper slide (a power slide), the handbrake allows a deeper one still; lifting off brings the car back
+	var soft := BETA_HAND if pl.hand else lerpf(BETA_LIFT, BETA_GAS, clamp_(inp.gas, 0, 1))
+	var over := maxf(0, absf(beta) - soft) * (1 - clamp_(absf(pl.spin), 0, 1))
+	if over > 0:
+		# turn the nose back towards where the car is going, and brake any turning that makes the slide deeper
+		yawAcc += MathX.sgn(beta) * over * 16.0
+		if pl.yr * beta < 0: yawAcc -= pl.yr * minf(8.0, over * 16.0)
+	var latAcc := (FF + FR) * kd
+	pl.yr += yawAcc * kd * dt
+	var turn := 1.7 * GRIP * gf * clamp_(av / 8, 0, 1) * maxf(0.32, 1 - 0.5 * sAbs)
+	if inp.brake > 0.3 and av > 15: turn *= 1 - 0.22 * inp.brake
+	if pl.hand: turn *= 1.55
+	pl.yr += (pl.steer * turn * (MathX.sgn(u) if u != 0 else 1.0) - pl.yr) * (1 - kd) * minf(1, dt * 30)
+	# a slipping tyre costs speed; part of that is given back (SCRUB), less the deeper the slide
+	if latAcc * w < 0 and u > 5:
+		ax += (1 - SCRUB) * absf(latAcc * w) / sqrt(u * u + w * w) * clamp_(1 - (absf(beta) - 0.9) / 0.5, 0, 1)
+	u += ax * dt
+	w += latAcc * dt
+	u = clamp_(u, minf(REVMAX, v), MAXV)
+	# ---- turn the car; its velocity stays where it was (kd) or turns along (slow)
+	var phi := pl.yr * dt
+	pl.heading -= phi
+	var cp := cos(phi * kd); var sp := sin(phi * kd)
+	var u2 := u * cp + w * sp
+	w = -u * sp + w * cp
+	u = u2
+	w *= exp(-dt * (1 - kd) * 8)
+	# ---- a hit spins the car round its own momentum (as before)
+	if pl.spin != 0:
+		var ps := -pl.spin * dt
+		pl.heading += pl.spin * dt
+		var cs := cos(ps); var ss := sin(ps)
+		u2 = u * cs + w * ss
+		w = -u * ss + w * cs
+		u = u2
+		pl.spin *= exp(-dt * (6.0 if absf(pl.spin) < 0.5 else 1.6))
+		if absf(pl.spin) < 0.02: pl.spin = 0
+	pl.push *= exp(-dt * (1.6 if pl.hand else 4.5))
+	if pl.push.length_squared() < 1e-6: pl.push = Vector2.ZERO
+	# ---- back to speed along the nose + the rest, and move
+	fx = sin(pl.heading); fz = cos(pl.heading)
+	var nvx := fx * u - fz * w + pl.push.x
+	var nvz := fz * u + fx * w + pl.push.y
+	pl.speed = nvx * fx + nvz * fz
+	pl.slide = Vector2(nvx - fx * pl.speed, nvz - fz * pl.speed)
+	pl.slideOut = pl.slide
+	pl.pos.x += nvx * dt
+	pl.pos.z += nvz * dt
+	# ---- what the rest of the game shows and hears
+	pl.slipF = absf(aF) / AP_F * kd
+	pl.slipR = absf(aR) / AP_R * kd
+	pl.beta = beta * clamp_(av / 4.0, 0, 1) if u > 0 else 0.0
+	pl.ax += (ax - pl.ax) * minf(1, dt * 12)
+	pl.ay += (u * pl.yr - pl.ay) * minf(1, dt * 12)
 
 func botLatLimit() -> float:
 	return minf(Trk.TRK.edgeAt - 0.2, Trk.ROAD_HALF + 4) if Trk.TRK.edge == "wall" else Trk.ROAD_HALF + 1.6
@@ -713,6 +1009,9 @@ func spinStep(c: Mover, dt: float, rec: float) -> float:
 		c.yawOff = 0; c.spin = 0
 	return 1.0 if c.spun else absf(sin(y))
 
+const WALL_RUB := 0.4        ## share of the speed into a wall that the hit takes off the speed along it
+const WALL_BOUNCE := 0.12    ## share of the speed into a wall that comes back
+const WALL_SCRAPE := 5.0     ## m/s2 lost while scraping along a wall
 const POS_K := 0.4
 const REST := 0.1
 const SPIN_K := 0.8
@@ -902,16 +1201,46 @@ func botCollisions() -> void:
 			kickOther(Y, -im.FAx / B.m, -im.FAz / B.m, yawKick(im.sB, gripFactor()))
 			if im.j > 2 and absf(Trk.wrapD(X.s - player.s)) < 45: hitFx(im.j, false)
 
+## every other car on the road as [x, z] (bots, traffic, the other player, online players)
+func otherCars() -> Array:
+	var out := []
+	for c in traffic + bots:
+		if not c.out: out.append(Vector2(c.m.g.position.x, c.m.g.position.z))
+	if split and p2 != null and p2.car != null: out.append(Vector2(p2.pl.pos.x, p2.pl.pos.z))
+	if Net.net != null and Net.net.get("inRace", false):
+		for r in Net.net.remotes.values():
+			if r.car != null and r.car.g.visible: out.append(Vector2(r.car.g.position.x, r.car.g.position.z))
+	return out
+
+## where to put the car back on the road: the lane nearest to lat at sample i, or the next free spot behind it when
+## another car is there (never on top of someone). Returns [sample, lat].
+func safeSpot(i: int, lat: float) -> Array:
+	var lanes: Array = Trk.LANES.duplicate()
+	lanes.sort_custom(func(a, b): return absf(a - lat) < absf(b - lat))
+	var cars := otherCars()
+	var NS := Trk.NS
+	for back in 12:
+		var j := posmod(i - back * 4, NS)
+		for l in lanes:
+			var x: float = Trk.P[j].x + Trk.R[j].x * l
+			var z: float = Trk.P[j].z + Trk.R[j].z * l
+			var free := true
+			for c in cars:
+				var dx: float = c.x - x
+				var dz: float = c.y - z
+				# 7 m along the road, 2.6 m beside it
+				var along := dx * Trk.T[j].x + dz * Trk.T[j].z
+				var side := dx * Trk.R[j].x + dz * Trk.R[j].z
+				if absf(along) < 7.0 and absf(side) < 2.6:
+					free = false; break
+			if free: return [j, l]
+	return [i, lanes[0]]
+
 func resetToTrack() -> void:
 	if state != "racing" or clock - resetT < 2: return
 	resetT = clock
-	var i := player.idx
-	var best: float = Trk.LANES[0]
-	var bd := 1e9
-	for l in Trk.LANES:
-		if absf(l - player.lat) < bd:
-			bd = absf(l - player.lat); best = l
-	resetPlayer(i, best)
+	var spot := safeSpot(player.idx, player.lat)
+	resetPlayer(spot[0], spot[1])
 	snapCamera()
 	Hud.showMsg("Terug op de baan", "ok", 1.2)
 
@@ -921,7 +1250,8 @@ func edges(prevIdx: int, fx: float, fz: float, dt: float) -> bool:
 	if absf(player.lat) > Trk.EDGE[i]:
 		var sgn := MathX.sgn(player.lat)
 		if Trk.TRK.edge == "ditch":
-			resetPlayer(i, Trk.LANES[-1] if sgn > 0 else Trk.LANES[0])
+			var spot := safeSpot(i, Trk.LANES[-1] if sgn > 0 else Trk.LANES[0])
+			resetPlayer(spot[0], spot[1])
 			shake = 0.35
 			Hud.showMsg("In de sloot!", "bad", 1.5)
 			Sfx.noise(0.7, 0.5, 1800)
@@ -932,13 +1262,36 @@ func edges(prevIdx: int, fx: float, fz: float, dt: float) -> bool:
 		var th := Trk.heading_of(Trk.T[i])
 		var dirTh := th if cos(player.heading - th) >= 0 else th + PI
 		var into := absf(sin(player.heading - dirTh))
-		player.heading = MathX.lerp_angle_(player.heading, dirTh, 0.35)
-		var sn := (player.slide.x * Trk.R[i].x + player.slide.y * Trk.R[i].z) * sgn
-		if sn > 0:
-			player.slide.x -= Trk.R[i].x * sgn * sn
-			player.slide.y -= Trk.R[i].z * sgn * sn
-		if player.speed > 4 and clock - wallT > 0.35:
-			player.speed *= clamp_(0.95 - into * 0.9, 0.5, 0.95)
+		# the wall takes the speed that goes into it (a small bounce: the car never sticks) and rubs along the side:
+		# a glancing hit costs a little, a square one nearly everything
+		var hx := sin(player.heading); var hz := cos(player.heading)
+		var vx := hx * player.speed + player.slide.x
+		var vz := hz * player.speed + player.slide.y
+		var nx: float = Trk.R[i].x * sgn
+		var nz: float = Trk.R[i].z * sgn
+		var tx: float = Trk.T[i].x
+		var tz: float = Trk.T[i].z
+		var vn := vx * nx + vz * nz
+		var vt := vx * tx + vz * tz
+		var hit := vn > 0.3
+		var v0 := sqrt(vx * vx + vz * vz)
+		if vn > 0:
+			vt -= MathX.sgn(vt) * minf(absf(vt), vn * WALL_RUB)
+			vn = -vn * WALL_BOUNCE
+		# scraping along the wall keeps costing a little
+		vt -= MathX.sgn(vt) * minf(absf(vt), WALL_SCRAPE * dt)
+		vx = tx * vt + nx * vn
+		vz = tz * vt + nz * vn
+		# the nose is turned along the wall: at once by the hit, then gently while the car leans on it
+		var h0 := player.heading
+		player.heading = MathX.lerp_angle_(player.heading, dirTh, minf(0.95, 0.55 + 0.45 * into) if hit else minf(1, dt * 12))
+		# the body on screen swings round in a blink instead of jumping (syncCar lets wallYaw fade)
+		player.wallYaw = clamp_(player.wallYaw + fposmod(h0 - player.heading + PI, TAU) - PI, -1.4, 1.4)
+		if hit: player.yr *= 0.3
+		hx = sin(player.heading); hz = cos(player.heading)
+		player.speed = vx * hx + vz * hz
+		player.slide = Vector2(vx - hx * player.speed, vz - hz * player.speed)
+		if v0 > 4 and clock - wallT > 0.35:
 			wallT = clock
 			if fxOn(): shake = minf(0.22, 0.05 + into * 0.25)
 			Sfx.noise(0.22, 0.4, 650)
@@ -1004,24 +1357,74 @@ func updateWind(dt: float) -> void:
 	if Env.me != null: Env.me.wind_x = windX
 
 # ================================================================== camera & car pose
+## The body of a car rig leans while its wheels stay on the road: every wheel moves the other way inside the rig, as far
+## as its spring travels. The caller turns the rig itself: rotation.x = pitch (nose down is positive), rotation.z = -roll
+## (roll: leaning to the car's left is positive, as in a right-hand bend), position.y + heave. Works on any rig from
+## CarKit.buildCar (player, bots, remote cars); tiltRig(m, 0, 0, 0) puts the wheels back.
+static func tiltRig(m: Dictionary, pitch: float, roll: float, heave: float) -> void:
+	for w in m.wheels:
+		var pv: Node3D = w.pivot
+		if not w.has("y0"): w["y0"] = pv.position.y
+		var dy: float = heave - pitch * pv.position.z - roll * pv.position.x
+		pv.position.y = w.y0 - clamp_(dy, -0.09, 0.09)
+
+## a spring that follows a target with a little overshoot (the body settling after a bump or a corner)
+static func springStep(x: float, vel: float, target: float, k: float, c: float, dt: float) -> Vector2:
+	var n := maxi(1, int(ceil(dt / 0.012)))
+	var h := dt / n
+	for _i in n:
+		vel += (k * (target - x) - c * vel) * h
+		x += vel * h
+	return Vector2(x, vel)
+
 func syncCar(dt: float) -> void:
 	if car == null or Trk.NS <= 1: return
-	var sp := player.speed / MAXV
-	drift += ((player.steer * maxf(0, sp) * (0.4 if player.hand else 0.12) / GRIP) - drift) * minf(1, dt * (3.0 if player.hand else 5.0))
-	var i := player.idx
+	var pl := player
+	var H := handling(G.settings.car)
+	var live := state == "racing" or state == "finished" or state == "over"
+	# the tyres' slip already turns the car into the corner; the look gets a little more of it
+	drift += (clamp_(-pl.beta * 0.2, -0.08, 0.08) * (1.0 if live else 0.0) - drift) * minf(1, dt * 6)
+	var i := pl.idx % Trk.NS      # (a track with fewer samples may just have been loaded)
 	var slope := 0.0
-	if absf(player.lat) < Trk.SHOULDER:
-		slope = (Trk.HT[(i + 1) % Trk.NS] - Trk.HT[i]) / Trk.SPC * (sin(player.heading) * Trk.T[i].x + cos(player.heading) * Trk.T[i].z)
-	car.g.position = Vector3(player.pos.x, player.y, player.pos.z)
-	var pitch := -atan(slope) - ((0.012 if input().gas > 0.1 else 0.0) * (1 - sp) if state == "racing" else 0.0)
+	if absf(pl.lat) < Trk.SHOULDER:
+		slope = (Trk.HT[(i + 1) % Trk.NS] - Trk.HT[i]) / Trk.SPC * (sin(pl.heading) * Trk.T[i].x + cos(pl.heading) * Trk.T[i].z)
+	# ---- the body on its springs: leans out of the corner, dives under braking, squats on the gas, rides the bumps
+	var soft: float = H.roll
+	var tr := clamp_(pl.ay * 0.0011 * soft, -0.075, 0.075) if live else 0.0
+	var tp := clamp_(-pl.ax * 0.0014 * (0.6 + 0.4 * soft), -0.03, 0.045) if live else 0.0
+	var th := clamp_((pl.load - 1) * -0.09, -0.035, 0.04) if live else 0.0
+	var r2 := springStep(pl.roll, pl.rollV, tr, 150, 15, dt); pl.roll = r2.x; pl.rollV = r2.y
+	var p2s := springStep(pl.pitch, pl.pitchV, tp, 130, 14, dt); pl.pitch = p2s.x; pl.pitchV = p2s.y
+	var h2 := springStep(pl.heave, pl.heaveV, th, 110, 12, dt); pl.heave = h2.x; pl.heaveV = h2.y
+	# rough ground (grass, gravel, kerbs, bricks): a fine shake; the clock stands still in a pause, so does the car
+	var rb := pl.rumble if live else 0.0
+	var shakeY := (sin(clock * 67.0) + sin(clock * 41.3) * 0.6) * 0.007 * rb
+	var shakeR := sin(clock * 53.7) * 0.006 * rb
+	var shakeP := sin(clock * 47.1) * 0.004 * rb
+	var roll := pl.roll + shakeR
+	var pitch := pl.pitch + shakeP
+	var heave := pl.heave + shakeY
+	car.g.position = Vector3(pl.pos.x, pl.y + heave, pl.pos.z)
 	car.g.rotation_order = EULER_ORDER_YXZ
-	car.g.rotation = Vector3(pitch, player.heading - drift, -player.steer * maxf(0, sp) * 0.05)
+	pl.wallYaw *= exp(-dt * 16)
+	if absf(pl.wallYaw) < 1e-4: pl.wallYaw = 0.0
+	car.g.rotation = Vector3(-atan(slope) + pitch, pl.heading - drift + pl.wallYaw, -roll)
+	tiltRig(car, pitch, roll, heave)
+	# ---- wheels: the fronts point where the steering puts them, the rears stand still on the handbrake, driven
+	# wheels spin up on a hard launch
+	var launch: bool = pl.gear == 1 and pl.gasIn > 0.9 and absf(pl.speed) < 9 and Cars.CARS[G.settings.car].cls != "B" and (state == "racing" or state == "finished")
+	var sv := clamp_(pl.delta * 1.3 + pl.steer * 0.14, -0.5, 0.5) if live else pl.steer * 0.4
 	for k in 4:
 		var w: Dictionary = car.wheels[k]
-		w.spin.rotation.x += wheelSpin(player.speed, w.r, dt)
-		if k < 2: w.pivot.rotation.y = -player.steer * 0.4
+		var front := k < 2
+		var driven: bool = (H.drv == "a") or (H.drv == "f") == front
+		var wv := pl.speed
+		if launch and driven: wv = maxf(wv, 14.0)
+		if pl.hand and not front: wv = 0.0
+		w.spin.rotation.x += wheelSpin(wv, w.r, dt)
+		if front: w.pivot.rotation.y = -sv
 	if car.get("tail") != null:
-		var br := (state == "racing" or state == "finished") and (player.brk > 0.3 or player.hand) and absf(player.speed) > 0.5
+		var br := (state == "racing" or state == "finished") and (pl.brk > 0.3 or pl.hand) and absf(pl.speed) > 0.5
 		var base: Color = CarKit.tailMat.emission if CarKit.tailMat.emission_enabled else Color.BLACK
 		car.tail.emission_enabled = true
 		car.tail.emission = base * (2.2 if br else 1.0)
@@ -1041,6 +1444,7 @@ func camParams() -> Dictionary:
 
 func snapCamera() -> void:
 	camLift = 0
+	player.camSide = 0
 	camHeading = player.heading
 	camY = player.y
 	var c := camParams()
@@ -1051,8 +1455,10 @@ func snapCamera() -> void:
 
 func placeCam(c: Dictionary) -> void:
 	var fx := sin(camHeading); var fz := cos(camHeading)
-	camPos = Vector3(player.pos.x - fx * c.dist, camY + c.h, player.pos.z - fz * c.dist)
-	camLook = Vector3(player.pos.x + fx * 8, camY + 1.05, player.pos.z + fz * 8)
+	var dist: float = c.dist + player.camD
+	camPos = Vector3(player.pos.x - fx * dist, camY + c.h, player.pos.z - fz * dist)
+	# (camSide: a little into the corner, to the right of the nose when turning right)
+	camLook = Vector3(player.pos.x + fx * 8 - fz * player.camSide, camY + 1.05, player.pos.z + fz * 8 + fx * player.camSide)
 
 func lookHeld() -> bool:
 	return actHeld(activeP, "look") or padFor(activeP).look
@@ -1063,9 +1469,19 @@ func updateCamera(dt: float) -> void:
 	if Net.specCam(dt): return       # online: watching another player's car
 	if Menu.menuCamera(dt): return   # menus: podium, home fly-over, orbit round the car, garage (Menu.menuCamera)
 	var c := camParams()
-	var back := PI if player.speed < -1 else 0.0
-	camHeading = MathX.lerp_angle_(camHeading, player.heading - drift * 0.5 + back, 1 - exp(-dt * 7))
+	# reversing (holding the brake below walking pace) turns the camera round; rolling back off a wall does not
+	if player.speed < -1 and player.brk > 0.3: player.camBack = true
+	elif player.speed > -0.5 or player.gasIn > 0.3: player.camBack = false
+	var back := PI if player.camBack else 0.0
+	# in a slide the camera looks between the nose and where the car is going, so you see the car turned in its slide
+	var live := state == "racing" or state == "finished"
+	var slipLook := clamp_(player.beta, -0.9, 0.9) * 0.55 if live and player.speed > 3 else 0.0
+	camHeading = MathX.lerp_angle_(camHeading, player.heading - slipLook + back, 1 - exp(-dt * 7))
 	camY += (player.y - camY) * (1 - exp(-dt * 8))
+	# the car pulls away from the camera when it accelerates, the camera closes in under braking
+	player.camD += ((clamp_(player.ax * 0.03, -0.45, 0.3) if live else 0.0) - player.camD) * (1 - exp(-dt * 3))
+	# and looks a little into the corner the car is turning into
+	player.camSide += ((clamp_(player.yr * 0.9, -1.2, 1.2) if live and player.speed > 3 else 0.0) - player.camSide) * (1 - exp(-dt * 3))
 	placeCam(c)
 	var look := lookHeld() and state != "countdown"
 	var hood := int(G.prefs.cam) == 2 and not look
@@ -1089,6 +1505,8 @@ func updateCamera(dt: float) -> void:
 		var v := speedFx * 0.022
 		p.y += sin(clock * 53) * v + sin(clock * 31) * v * 0.6
 		p.x += sin(clock * 41) * v * 0.5
+		# rough ground shakes the picture a little
+		if player.rumble > 0.05 and (state == "racing" or state == "finished"): p.y += sin(clock * 61) * player.rumble * 0.012
 		if shake > 0:
 			p.x += (randf() - .5) * shake * 1.0
 			p.y += (randf() - .5) * shake * 0.6
@@ -1102,8 +1520,8 @@ func resetPlayer(i: int, lat: float) -> void:
 	player.idx = i
 	player.pos = Vector3(Trk.P[i].x + Trk.R[i].x * lat, 0, Trk.P[i].z + Trk.R[i].z * lat)
 	player.heading = Trk.heading_of(Trk.T[i])
-	player.speed = 0; player.steer = 0; player.gear = 1; player.shiftT = 0; player.spin = 0
-	player.slide = Vector2.ZERO
+	player.settle()
+	drift = 0
 	locatePlayer()
 
 func startRace() -> void:
@@ -1246,15 +1664,24 @@ func setPaused(p: bool) -> void:
 	Hud.setPaused(p)
 	clearKeys()
 
-## JS applyPrefs: picture quality (low: no shadows, lower 3D resolution; mid: smaller shadow map) and sound on/off.
-## The settings menu calls this after changing a preference.
+## JS applyPrefs: picture quality and sound on/off. The settings menu calls this after changing a preference.
+##   laag:   no shadows (a soft blob under each car), 75% 3D resolution, no anti-aliasing, a simpler sky, no smoke,
+##           no screen effects; the mirror looks 600 m back
+##   middel: shadows (2048, soft edge, 150 m), MSAA 2x, smoke/dust/spray, no full-screen passes (vignette, speed blur)
+##   hoog:   shadows (4096, softer, 220 m, blended splits), MSAA 4x, everything incl. vignette/colour cast and speed blur
+## Split screen and the mirror: MSAA 2x at most (they are small), none on laag. See Env.set_quality, Fx.set_quality.
 func applyPrefs() -> void:
 	var q: String = G.prefs.get("quality", "high")
-	if Env.me != null: Env.me.set_shadows(q != "low")
-	RenderingServer.directional_shadow_atlas_set_size(4096 if q == "high" else 2048, true)
+	if q != "low" and q != "mid": q = "high"
+	if Env.me != null: Env.me.set_quality(q)
+	if Fx.me != null: Fx.me.set_quality(q)
 	var vp := get_viewport()
 	vp.scaling_3d_scale = 0.75 if q == "low" else 1.0
-	vp.msaa_3d = Viewport.MSAA_DISABLED if q == "low" else Viewport.MSAA_2X
+	vp.msaa_3d = Viewport.MSAA_DISABLED if q == "low" else (Viewport.MSAA_2X if q == "mid" else Viewport.MSAA_4X)
+	if SplitView.me != null:
+		for v in [SplitView.me.vp1, SplitView.me.vp2]:
+			v.msaa_3d = Viewport.MSAA_DISABLED if q == "low" else Viewport.MSAA_2X
+			v.scaling_3d_scale = 0.75 if q == "low" else 1.0
 	Sfx.muted = not bool(G.prefs.get("sound", true))
 
 func bestKey(id: String, cls := "") -> String:
@@ -1618,6 +2045,15 @@ func _notification(what: int) -> void:
 		clearKeys()
 		setPaused(true)
 
+## stick to steering: nothing inside the dead zone, then from 0 (no jump at its edge) to full lock, finer round the centre
+static func stickCurve(ax: float) -> float:
+	var t := clamp_((absf(ax) - 0.12) / 0.84, 0, 1)
+	return MathX.sgn(ax) * t * (0.5 + 0.5 * t)
+
+## trigger to pedal: a small dead zone at the top, full just before the end of the travel
+static func triggerCurve(a: float) -> float:
+	return clamp_((a - 0.06) / 0.88, 0, 1)
+
 ## gamepad (JS readPad, standard mapping): Godot's joypad buttons/axes mapped onto the same roles
 func readPad() -> void:
 	pad = {"steer": 0.0, "gas": 0.0, "brake": 0.0, "hand": false, "look": false}
@@ -1625,12 +2061,12 @@ func readPad() -> void:
 	padStates = []
 	for dev in Input.get_connected_joypads():
 		var ax := Input.get_joy_axis(dev, JOY_AXIS_LEFT_X)
-		pad.steer = ax if absf(ax) > 0.14 else 0.0
+		pad.steer = stickCurve(ax)
 		var btn := func(b: int) -> bool: return Input.is_joy_button_pressed(dev, b)
 		if btn.call(JOY_BUTTON_DPAD_LEFT): pad.steer = -1.0
 		if btn.call(JOY_BUTTON_DPAD_RIGHT): pad.steer = 1.0
-		pad.gas = maxf(Input.get_joy_axis(dev, JOY_AXIS_TRIGGER_RIGHT), 1.0 if btn.call(JOY_BUTTON_A) else 0.0)
-		pad.brake = maxf(Input.get_joy_axis(dev, JOY_AXIS_TRIGGER_LEFT), 1.0 if btn.call(JOY_BUTTON_B) else 0.0)
+		pad.gas = maxf(triggerCurve(Input.get_joy_axis(dev, JOY_AXIS_TRIGGER_RIGHT)), 1.0 if btn.call(JOY_BUTTON_A) else 0.0)
+		pad.brake = maxf(triggerCurve(Input.get_joy_axis(dev, JOY_AXIS_TRIGGER_LEFT)), 1.0 if btn.call(JOY_BUTTON_B) else 0.0)
 		pad.hand = btn.call(JOY_BUTTON_X) or (G.prefs.gearbox != "manual" and btn.call(JOY_BUTTON_RIGHT_SHOULDER))
 		pad.look = btn.call(JOY_BUTTON_RIGHT_STICK)
 		var ay := Input.get_joy_axis(dev, JOY_AXIS_LEFT_Y)
