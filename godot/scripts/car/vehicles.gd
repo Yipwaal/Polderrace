@@ -161,6 +161,9 @@ static func makeTruck() -> Dictionary:
 		T.color(cDark).box(0.62, 0.5, 0.03, sx * 0.98, 0.5, -6.55)   # mud flaps
 		T.color(cFrame)
 	T.color(cDark).box(2.4, 0.12, 0.1, 0, 0.6, -6.8)
+	# the rear light bar the tail lamps sit on (they hung in the air beside the frame), with a bracket down to the bumper
+	T.box(2.36, 0.3, 0.08, 0, 0.87, -6.79)
+	T.box(0.1, 0.2, 0.06, 0, 0.66, -6.79)
 	T.color(sc(0xc8ccd0, 0.8))
 	for x in [-0.75, -0.25, 0.25, 0.75]:
 		T.box(0.04, 2.5, 0.04, x, 2.5, -6.82)
