@@ -95,4 +95,4 @@ met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 | Banen B | klaar en samengevoegd (veluwe, grachten, limburg, rotterdam, zeeland; kaarttests op alle tien banen) |
 | Beeld | klaar en samengevoegd (lucht-shader, licht per pixel, water, regen/nat wegdek, nacht, effecten, kwaliteitsniveaus) |
 | LAN | klaar en samengevoegd (lobby, klaar + aftellen, stand, meekijken, host-overname, opnieuw verbinden, looks online, PROTO 4) |
-| Bugjacht | wacht op ronde 1 en 2 |
+| Bugjacht | loopt: spel/banen/menu's en online; garage/looks na Aanpassen deel 2 |
