@@ -5,7 +5,13 @@ class_name Mats
 ##   map (Texture), repeat (Vector2: three texture.repeat), emissive (hex), emissiveMap (Texture), emissiveIntensity, transparent, opacity,
 ##   side ("double"/"back"), vertexColors, depthWrite, depthTest, fog (false = no fog), specular (hex), shininess,
 ##   flatShading, alphaTest, blending ("add" = THREE.AdditiveBlending),
-##   receiveShadow (true = shadows fall on it, three.js mesh.receiveShadow; default false like three.js, see O3.receive).
+##   receiveShadow (true = shadows fall on it, three.js mesh.receiveShadow; default false like three.js, see O3.receive),
+##   useLights (true = Godot's spot and omni lights reach it too: the podium, a light under a car),
+##   sway (metres the top moves in the wind: reeds 0.25, a tree crown 0.15; 0 = stands still), swayBase and swaySpan
+##   (model height of the part that stands still and the height over which the movement grows; default -0.5 and 1:
+##   a unit cone, box or cylinder standing on its base).
+## Water: Mats.water(colour) - ripples, mirrors the sky, sun glitter, drops in the rain. Mats.phong with a bluish
+## highlight and shininess 70 or more (how the tracks made their water so far) becomes water too.
 
 static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 	var m := LMat.new()
@@ -46,7 +52,13 @@ static func _base(kind: int, c: int, o: Dictionary) -> LMat:
 		m.flat_shading = true
 	if o.get("receiveShadow", false):
 		m.receive_shadow = true
-	if kind == LMat.Kind.PHONG:
+	if o.get("useLights", false):
+		m.use_lights = true
+	if float(o.get("sway", 0.0)) > 0.0:
+		m.sway_base = float(o.get("swayBase", -0.5))
+		m.sway_span = float(o.get("swaySpan", 1.0))
+		m.sway = float(o.sway)
+	if kind == LMat.Kind.PHONG or kind == LMat.Kind.WATER:
 		m.specular = MathX.col(o.get("specular", 0x111111))
 		m.shininess = float(o.get("shininess", 30.0))
 	m._building = false
@@ -65,7 +77,18 @@ static func PM(c: int, o: Dictionary = {}) -> LMat:
 
 ## new THREE.MeshPhongMaterial({...}) itself (three's defaults: specular 0x111111, shininess 30)
 static func phong(c: int, o: Dictionary = {}) -> LMat:
+	# the tracks' water was a phong with a bluish highlight (0x9fb4c8, 0x8fa6bb, ...) and shininess 70-80
+	var sp := MathX.col(o.get("specular", 0x111111))
+	# (vehicles pass receiveShadow false: their glass is never water)
+	if float(o.get("shininess", 30.0)) >= 70.0 and sp.b > sp.r + 0.08 and sp.b > 0.6 and o.get("receiveShadow", true):
+		return water(c, o)
 	return _base(LMat.Kind.PHONG, c, o)
+
+## water: ripples that drift, mirrors the sky (more at a glancing angle), sun glitter, drops in the rain
+static func water(c: int, o: Dictionary = {}) -> LMat:
+	var oo := {"specular": 0xbfd0e0}
+	oo.merge(o, true)
+	return _base(LMat.Kind.WATER, c, oo)
 
 ## three MeshBasicMaterial: unlit
 static func basic(c: int, o: Dictionary = {}) -> LMat:
