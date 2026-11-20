@@ -308,7 +308,7 @@ float headlight(vec4 hp, vec4 hd, vec3 wp, vec3 n) {
 	float d = length(l);
 	l /= max(d, 0.001);
 	float ca = dot(-l, hd.xyz);
-	float cone = smoothstep(0.80, 0.965, ca);
+	float cone = smoothstep(0.74, 0.955, ca);
 	float att = clamp(1.0 - d / hd.w, 0.0, 1.0);
 	float nl = dot(n, l);
 	return hp.w * cone * (0.55 + 0.45 * cone) * att * att * smoothstep(-0.05, 0.08, nl) * (0.3 + 0.7 * max(nl, 0.0));

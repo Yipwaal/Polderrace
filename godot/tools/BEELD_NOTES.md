@@ -53,9 +53,16 @@ Tijdelijk bestand van de Beeld-agent (fase 2). De hoofdagent mag het na het same
 - [x] regen (GPU-strepen), vogels (1 mesh per zwerm), gloed op lantaarns (via World.lampMats), lichtpoelen
 - [x] fx: rook/stof/vonken/uitlaatvlam als 1 MultiMesh, remsporen vervagen, CarFx per auto (gloed, natte streep, schaduwvlek)
 - [x] kwaliteit: Env.set_quality / Fx.set_quality / Game.applyPrefs (MSAA 4x op hoog)
-- [ ] fx_overlay: vignet/kleurtint, blur per kwaliteit
-- [ ] sway toepassen in dress.gd (riet, gras, bloemen, struiken, vlaggen)
-- [ ] tijdmeting unshaded vs shaded (exp_beeld), perf na, memory, alle banen bekijken (ook rev, split, laag/middel)
-- [ ] grachten/dorp/polder water bekijken; koplampkegel breder; regen iets dichter
-- [ ] merge main (f697bff of later), tests, eindverslag
+- [x] fx_overlay: vignet/kleurwas (gewone alfamenging; blend_mul gaf wit), blur 6/10 monsters (shaders vooraf maken:
+      de code van een shader in gebruik wisselen gaf een wit beeld)
+- [x] sway in dress.gd (riet, grassprieten, struiken). Bomen staan in de builders van Banen A/B: optie "sway" doorgeven.
+- [x] tijdmeting: 300 grote dozen onder de zon met schaduw: onbelicht 166-183 ms, belicht 214-222 ms per frame (llvmpipe)
+      -> de extra lichtpas bestaat en "unshaded" slaat hem over.
+- [x] merge main f697bff (aa9a3e0); headless flow 30/30, memory 13/13, perf 19/19, menus 93/93
+- [x] bekeken: polder, afsluitdijk, dorp, grachten, haven, rotterdam (dag/avond/nacht, droog/regen), garage, podium
+- [ ] perf_render na (`tests/.out/beeld/perf_after.json`), runner perf memory met renderer
+- [ ] nog bekijken: mist, laag/middel, split screen, rev, veluwe/limburg/zeeland/circuit; volledige na-set + contactvellen voor|na
+- [ ] alle tests na de laatste merge (track build laps cars flow audio menus rules memory perf, play, test_net), eindverslag
+- Niet gedaan (bewust): WorldEnvironment-glow (schermpassen; gloed-sprites doen het werk), druppels op de camera,
+  echte spiegeling op nat wegdek, podium-spots op onbelichte materialen (useLights bestaat als optie)
 - Buiten eigen bestanden gewijzigd: project.godot (shader_globals), game.gd (applyPrefs), tests/test_memory.gd (deeltjespool)

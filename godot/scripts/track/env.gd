@@ -49,7 +49,7 @@ var clock := 0.0
 var clouds: Array = []
 var stars: Node3D
 var sun_sprite: Node3D
-const RAIN_N := 2200
+const RAIN_N := 3000
 const RAIN_BOX := Vector3(46, 26, 46)
 
 func _init() -> void:
@@ -244,7 +244,7 @@ void vertex() {
 	vec3 to = p - cam;
 	float d = length(to);
 	vec3 side = normalize(cross(streak, to) + vec3(0.00001));
-	float w = 0.008 + d * 0.0011;
+	float w = 0.011 + d * 0.0013;
 	p += streak * UV.y + side * (UV.x * w);
 	VERTEX = (VIEW_MATRIX * vec4(p, 1.0)).xyz;
 	v_a = smoothstep(0.6, 2.5, d) * (1.0 - smoothstep(box.x * 0.36, box.x * 0.5, d)) * (0.55 + 0.45 * COLOR.r);
@@ -505,7 +505,7 @@ func apply(t: String, w: String, force := false) -> void:
 	sky_mat.set_shader_parameter("drift", Vector2(0.0075, 0.0028) if wet else Vector2(0.0032, 0.0012))
 	sky_mat.set_shader_parameter("stars", 1.0 if (t == "night" and w == "dry") else 0.0)
 	rain.visible = wet
-	rain_mat.set_shader_parameter("tint", Vector4(0.3, 0.34, 0.44, 0.55) if t == "night" else (Vector4(0.62, 0.6, 0.62, 0.5) if t == "dusk" else Vector4(0.78, 0.82, 0.88, 0.5)))
+	rain_mat.set_shader_parameter("tint", Vector4(0.34, 0.38, 0.48, 0.65) if t == "night" else (Vector4(0.66, 0.64, 0.66, 0.6) if t == "dusk" else Vector4(0.8, 0.84, 0.9, 0.62)))
 	CarKit.applyEnv(t, lamps_on)   # car lamp glass, tail lights, headlight pools (JS lampMat/tailMat/beamMat)
 	if Fx.me != null: Fx.me.applyEnv(t, lamps_on)   # the player's headlights and the glow of the car lights
 	for m in World.lampMats:
