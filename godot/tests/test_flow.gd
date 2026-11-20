@@ -125,6 +125,19 @@ func run(host: Node) -> TestReport:
 	env.wind_x = 20.0
 	Game.updateWind(0.1)
 	r.check(env.wind_x == 0.0, "na de race: geen zijwind meer in de regen", str(env.wind_x))
+	# in the ditch: the car is put back on the dike and the camera jumps along (it eased up from below: car off screen)
+	Game.state = "racing"
+	var hi := 0
+	for i in Trk.NS:
+		if Trk.HT[i] > Trk.HT[hi]: hi = i
+	Game.resetPlayer(hi, 0)
+	Game.camY = Game.player.y - 6
+	Game.player.pos += Vector3(Trk.R[hi].x, 0, Trk.R[hi].z) * (Trk.EDGE[hi] + 1.5)
+	Game.locatePlayer()
+	Game.edges(hi, sin(Game.player.heading), cos(Game.player.heading), 0.01)
+	r.check(Trk.TRK.edge == "ditch" and absf(Game.player.lat) < Trk.ROAD_HALF and absf(Game.camY - Game.player.y) < 0.01,
+		"in de sloot: camera springt mee naar de auto op de dijk", "lat %.1f, camY %.2f, auto %.2f" % [Game.player.lat, Game.camY, Game.player.y])
+	Game.toMenu(-1)
 	Game.set_process(true)
 	Game.set_process_input(true)
 	return r

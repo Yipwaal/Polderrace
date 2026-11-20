@@ -1246,6 +1246,9 @@ func edges(prevIdx: int, fx: float, fz: float, dt: float) -> bool:
 		if Trk.TRK.edge == "ditch":
 			var spot := safeSpot(i, Trk.LANES[-1] if sgn > 0 else Trk.LANES[0])
 			resetPlayer(spot[0], spot[1])
+			# the camera jumps along (as with R): easing up from the ditch onto the dike it looked at the car from metres
+			# below, so the car was off the top of the screen for a moment
+			if camera != null: snapCamera()
 			shake = 0.35
 			Hud.showMsg("In de sloot!", "bad", 1.5)
 			Sfx.noise(0.7, 0.5, 1800)

@@ -126,7 +126,8 @@ func look(_t: float) -> void:
 		var sp := cam.unproject_position(g.car.g.global_position + Vector3(0, 0.6, 0))
 		var behind := cam.is_position_behind(g.car.g.global_position)
 		if behind or sp.y > vp.y * 0.92 or sp.y < vp.y * 0.35 or sp.x < vp.x * 0.15 or sp.x > vp.x * 0.85:
-			vreemd("carOnScreen", "auto op het scherm op (%.0f, %.0f) van %s, achter %s, camLift %.2f" % [sp.x, sp.y, str(vp), str(behind), g.camLift])
+			vreemd("carOnScreen", "auto op het scherm op (%.0f, %.0f) van %s, achter %s, camLift %.2f, cam-auto %.1f m, camY %.2f auto y %.2f, v %.0f km/h, lat %.1f, melding '%s'" % [sp.x, sp.y, str(vp), str(behind), g.camLift,
+				cam.global_position.distance_to(g.car.g.global_position), g.camY, pl.y, pl.speed * 3.6, pl.lat, Hud.msg_label.text if Hud.msg.visible else ""])
 	# under the road / off the ground
 	var gy: float = pl.y
 	if g.car.g.global_position.y < gy - 0.3:
