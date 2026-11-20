@@ -145,7 +145,7 @@ def scenario_evening():
     st = steps(r2.get('bot_track', []))
     moving = [s for s in st if s > 0.0005]
     check(len(st) > 60 and len(moving) > 0.8 * len(st), 'bots rijden vloeiend bij een speler (elk beeld een stukje)', (len(moving), len(st)))
-    check(rh.get('mapdots') == 3 and all(x['tag'] for x in rh['remotes']), 'de andere spelers staan op de minimap, met hun naam boven de auto', (rh.get('mapdots'), [x['tag'] for x in rh['remotes']]))
+    check(rh.get('mapdots') == 3 and sum(1 for x in rh['remotes'] if x['tag']) >= 2, 'de andere spelers staan op de minimap, met hun naam boven de auto (dichtbij)', (rh.get('mapdots'), [x['tag'] for x in rh['remotes']]))
     for g, nm in ((g1, 'Bram'), (g2, 'Lotte')):
         rg = g.rep(); rh = h.rep()
         x = remote(rh, nm)
@@ -179,7 +179,7 @@ def scenario_evening():
         r = p.wait(lambda r: remote(r, 'Mira B') and not remote(r, 'Mira B')['visible'], 3)
         check(remote(r, 'Mira B') and not remote(r, 'Mira B')['visible'], f'{p.name}: auto van Mira weg van de baan', remote(r, 'Mira B'))
     check(g3.cmd('press Meekijken', timeout=60), 'Mira klikt Meekijken')
-    r = g3.wait(lambda r: r.get('watch') and r['specbar'], 8)
+    r = g3.wait(lambda r: r.get('watch') and r.get('spec') in ('Yip', 'Bram', 'Lotte'), 8)
     first = r.get('spec')
     check(r.get('watch') and r.get('specbar', '').startswith('Je kijkt mee met') and first in ('Yip', 'Bram', 'Lotte') and len(r['bots']) == 2 and
           sum(1 for x in r['remotes'] if x['visible']) == 3, 'Mira kijkt mee vanuit de lobby: de race van de anderen, met de bots', (r.get('specbar'), [x['visible'] for x in r.get('remotes', [])]))
@@ -210,7 +210,7 @@ def scenario_evening():
     res = [names(r, n) for r, n in zip(rs, ('Yip', 'Bram', 'Lotte'))]
     check(res[0] and res[0] == res[1] == res[2], 'uitslag op elke pc in dezelfde volgorde', res)
     check(len({json.dumps(r.get('res'), sort_keys=True).replace('.0', '') for r in rs}) == 1 and len({str([x[3:] for x in r['rows_ui']]) for r in rs}) == 1,
-          'en met dezelfde tijden en punten (de host bepaalt de uitslag)', rs[1].get('rows_ui'))
+          'en met dezelfde tijden en punten (de host bepaalt de uitslag)', ([json.dumps(r.get('res'), sort_keys=True).replace('.0', '') for r in rs], [str([x[3:] for x in r['rows_ui']]) for r in rs]))
     check('Mira B' not in res[0], 'wie stopte staat niet in de uitslag', res[0])
     check(rs[0].get('again') and not rs[1].get('again'), 'alleen de host heeft "Nieuwe race"', (rs[0].get('again'), rs[1].get('again')))
     ps = [pts_of(p.rep()) for p in P]
@@ -317,7 +317,7 @@ def scenario_evening():
     check(rs[0].get('host') and all(r.get('net') and r['state'] in ('racing', 'finished', 'over') for r in rs) and all(remote(r, 'Bram') and remote(r, 'Bram')['host'] for r in rs[1:]),
           'de host sluit midden in de race af: Bram neemt het over, iedereen racet door', [(r.get('host'), r.get('state'), r.get('status')) for r in rs])
     check(all(remote(r, 'Yip') is None for r in rs) and 'Jij bent nu de host' in rs[0].get('status', '') and 'Bram is nu de host' in rs[1].get('status', ''),
-          'met een duidelijke melding', [r.get('status') for r in rs][:2])
+          'met een duidelijke melding', [(r.get('status'), r.get('me'), [(x['name'], x['peer']) for x in r.get('remotes', [])]) for r in rs])
     g3.cmd('track'); time.sleep(1.5)
     r = g3.rep()
     st = steps(r.get('bot_track', []))

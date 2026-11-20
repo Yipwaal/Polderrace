@@ -187,7 +187,7 @@ func presence(patch: Dictionary) -> void:
 	else:
 		_raw(1, {"t": "p", "p": patch}, fast)
 	# a change (a race that starts, a new car) goes out now instead of at the next frame
-	if not fast and enet != null: enet.host.flush()
+	if not fast and _live(): enet.host.flush()
 	peers_changed.emit()
 
 ## [{peer, presence, sameTab, updatedAt}] like the claude.ai room
@@ -206,10 +206,14 @@ func close_now() -> void:
 		_closing_at = 0
 		if enet != null: enet.close()
 
+## the ENet connection is up (asking a closed one for its host or its packets is an error)
+func _live() -> bool:
+	return enet != null and enet.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
+
 func leave() -> void:
 	if _left:
 		return
-	if enet != null and _connected and not is_reconnecting():
+	if _live() and _connected and not is_reconnecting():
 		# say goodbye (on the wire right away, also when the window closes now) and keep the connection a moment,
 		# so the others get it before the disconnect
 		if host:
@@ -426,8 +430,8 @@ func _process(_dt: float) -> void:
 		return
 	var now := Time.get_ticks_msec()
 	if _closing_at > 0:
-		enet.poll()
-		if now >= _closing_at:
+		if _live(): enet.poll()
+		if now >= _closing_at or not _live():
 			_closing_at = 0
 			enet.close()
 		return
@@ -465,7 +469,7 @@ func _process(_dt: float) -> void:
 		_host_tick(now)
 	elif _connected and now - _last_tx > 1000:
 		_raw(1, {"t": "hb"}, true)
-	if now - _stat_at >= 1000 and enet.host != null:
+	if now - _stat_at >= 1000 and _live():
 		var secs := maxf(0.2, (now - _stat_at) / 1000.0)
 		_stat_at = now
 		up_bps = int(enet.host.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA) / secs)
@@ -512,7 +516,7 @@ func my_uid() -> String:
 
 ## guest: ping to the host in ms (-1 when not connected)
 func my_ping() -> int:
-	if host or enet == null or not _connected or is_reconnecting(): return -1
+	if host or not _live() or not _connected or is_reconnecting(): return -1
 	var pp := enet.get_peer(1)
 	return int(pp.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME)) if pp != null else -1
 
@@ -639,8 +643,9 @@ func _close(reason: String) -> void:
 	if _left:
 		return
 	_re_until = 0
-	leave()
+	# first tell, then leave: who listens may still need what this room knew (a host change takes the others' presence along)
 	closed.emit(reason)
+	leave()
 
 # ------------------------------------------------------------------ what may be in a presence
 ## Every value that comes off the wire is checked here before anything else sees it: the right type, a sensible size,

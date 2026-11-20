@@ -99,7 +99,9 @@ class Player:
         with self.cv:
             return [l for l in self.out if 'SCRIPT ERROR' in l or 'Parse Error' in l or
                     (l.startswith('ERROR') and 'leaked at exit' not in l and 'still in use at exit' not in l
-                     and 'ERR_CANT_OPEN' not in l)]      # (no sound card under xvfb)
+                     and 'ERR_CANT_OPEN' not in l      # (no sound card under xvfb)
+                     # taking over as host on the PC the old host ran on: the port is busy for a moment (tried again)
+                     and "Couldn't create an ENet host" not in l)]
 
     def kill(self):
         try:

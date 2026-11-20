@@ -225,8 +225,13 @@ func _onJoined(room: NetRoom) -> void:
 func _onClosed(room: NetRoom, reason: String) -> void:
 	if net == null or net.game != room: return
 	if net.mig != null:
-		# on the way to a new host: this one was not there (yet), try the next
-		_migNext()
+		# on the way to a new host: it is not there yet (it needs a moment to open the game): try again, then the next
+		var m: Dictionary = net.mig
+		if int(m.at) > 0 and Time.get_ticks_msec() - int(m.at) < 5000:
+			get_tree().create_timer(0.4, true, false, true).timeout.connect(func():
+				if net != null and net.mig == m and net.game == room: _migDial())
+		else:
+			_migNext()
 		return
 	if (reason == "end" or reason == "lost") and net.joinedOnce and _migStart(reason):
 		return
@@ -546,6 +551,12 @@ func setOpen(b: bool) -> void:
 	net.game.open = b
 	pushCfg()
 
+## ping and loss of every guest as the host measures them: {peer: [ping ms, loss %, seconds silent]}
+func _q() -> Dictionary:
+	if not net.host: return net.q
+	var q = net.game.presence_of(net.game.me).get("q")
+	return q if q is Dictionary else {}
+
 ## connection of a player as the lobby shows it: {ping (ms, -1 unknown), warn, text}
 func quality(peer: String) -> Dictionary:
 	if net == null: return {"ping": -1, "warn": false, "text": ""}
@@ -562,7 +573,7 @@ func quality(peer: String) -> Dictionary:
 		var r = net.remotes.get(peer)
 		if r != null and r.off: return {"ping": -1, "warn": true, "text": "verbinding kwijt"}
 		if r != null and r.host: return {"ping": 0, "warn": room.host_silence() > 3.0, "text": "host" if room.host_silence() <= 3.0 else "reageert niet"}
-		var q = net.q.get(peer)
+		var q = _q().get(peer)
 		if NetRoom._nums(q, 3, 3):
 			ping = int(q[0]); loss = float(q[1]); silent = float(q[2])
 	if ping < 0: return {"ping": -1, "warn": false, "text": ""}
@@ -865,7 +876,7 @@ func _age(r: Dictionary, st: Array, now: int) -> float:
 	var lat := 0.0
 	var room: NetRoom = net.game
 	if net.host:
-		var q = net.q.get(r.peer)
+		var q = _q().get(r.peer)
 		if NetRoom._nums(q, 3, 3) and float(q[0]) > 0: lat = float(q[0]) / 2.0
 	else:
 		lat = maxf(0.0, room.my_ping()) / 2.0
@@ -1323,6 +1334,7 @@ func specNext(d: int) -> void:
 	for k in ts.size():
 		if ts[k].key == net.spec.key: i = k
 	net.spec.key = ts[(i + d + ts.size()) % ts.size()].key
+	net.spec.auto = false
 	changed.emit()
 
 ## who is being followed ("" when nobody)
@@ -1341,7 +1353,10 @@ func specCam(dt: float) -> bool:
 	var found := false
 	for x in ts:
 		if x.key == net.spec.key: t = x; found = true
-	if not found: net.spec.key = t.key
+	# nobody picked yet (or that car is gone): the first player, or a bot until a player's car is there
+	if not found or (net.spec.get("auto", true) and t.bot and not ts[0].bot):
+		t = ts[0]
+		net.spec.key = t.key
 	var n: Node3D = t.node
 	var f := n.global_transform.basis.z
 	f.y = 0
@@ -1500,14 +1515,26 @@ func _migNext() -> void:
 		_leaveToList("De host is weggevallen en een nieuwe host vinden lukte niet. Maak een nieuwe game: de stand van vanavond telt door.", "De host is weggevallen.")
 		return
 	var c: Dictionary = m.cands[int(m.i)]
-	if old != null and is_instance_valid(old):
-		old.leave()
-		get_tree().create_timer(0.6, true, false, true).timeout.connect(old.queue_free)
 	if c.id == m.me:
+		if old != null and is_instance_valid(old):
+			old.leave()
+			get_tree().create_timer(0.6, true, false, true).timeout.connect(old.queue_free)
 		m.hostAt = Time.get_ticks_msec()
 		m.tries = 0
 		_migHost()
 		return
+	m.at = Time.get_ticks_msec()
+	_migDial()
+
+## one attempt to get into the game of the candidate whose turn it is
+func _migDial() -> void:
+	if net == null or net.mig == null: return
+	var m: Dictionary = net.mig
+	var c: Dictionary = m.cands[int(m.i)]
+	var old: NetRoom = net.game
+	if old != null and is_instance_valid(old):
+		old.leave()
+		get_tree().create_timer(0.6, true, false, true).timeout.connect(old.queue_free)
 	var room := NetRoom.new()
 	add_child(room)
 	net.game = room
@@ -1517,7 +1544,6 @@ func _migNext() -> void:
 		_migNext.call_deferred()
 		return
 	net.addr = str(c.ip)
-	m.at = Time.get_ticks_msec()
 
 ## I am the new host: open the game here (the port may still be closing on this PC: try for a few seconds)
 func _migHost() -> void:
