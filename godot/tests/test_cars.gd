@@ -175,6 +175,11 @@ static func faults(key: String, m: Dictionary, tuned: bool) -> String:
 		var okR := o.get_surface_override_material(0) == CarKit.revMat
 		CarKit.setLights(m, false, false)
 		if not (okB and okR and o.get_surface_override_material(0) == CarKit.tailMat): bad.append("remlicht/achteruitrijlicht schakelt niet")
+		# and there is a reversing lamp to switch: a cell with a white lamp in the reversing map
+		var cells := {}
+		for si in o.mesh.get_surface_count():
+			for uv in o.mesh.surface_get_arrays(si)[Mesh.ARRAY_TEX_UV]: cells[CarLamps.cellAt(uv)] = true
+		if not cells.keys().any(func(k): return k in CarLamps.REV_CELLS): bad.append("geen achteruitrijlicht (achterlichten: %s)" % str(cells.keys()))
 	var K = m.get("kit", null)
 	if K != null:
 		# the skin inside the hitbox, the hitbox on the skin (plan view; mirrors and spoilers left out)

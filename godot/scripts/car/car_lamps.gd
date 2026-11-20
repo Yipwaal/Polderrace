@@ -24,6 +24,9 @@ const CELLS := {
 	"t_slats3": [0, 7],
 }
 
+## tail-lamp cells that hold a reversing lamp (white only in the reversing map); every car needs one (tests/test_cars.gd)
+const REV_CELLS := ["t_block", "t_round", "t_wide", "t_van", "t_bar", "t_full", "t_slats3", "t_tri", "rev"]
+
 static var head: LMat = null
 static var tail: LMat = null
 static var brake: LMat = null
@@ -37,6 +40,13 @@ static func cell(name: String) -> Rect2:
 	var w := 1.0 / COLS
 	var h := 1.0 / ROWS
 	return Rect2((c[0] + 0.04) * w, (c[1] + 0.06) * h, w * 0.92, h * 0.88)
+
+## the atlas cell under a uv of a lamp mesh ("" = none)
+static func cellAt(uv: Vector2) -> String:
+	var c := Vector2i(int(floor(uv.x * COLS)), int(floor(uv.y * ROWS)))   # the mesh uv runs top-down like the canvas
+	for k in CELLS:
+		if CELLS[k][0] == c.x and CELLS[k][1] == c.y: return k
+	return ""
 
 static func ensure() -> void:
 	if head != null: return
@@ -195,7 +205,7 @@ static func _draw(c, layer: int) -> void:
 		_rect(c, layer, 0, 0, CW, CH, "#2a0808")
 		_rect(c, layer, 5, 5, 38, 54, RED, rg)
 		_rect(c, layer, 46, 5, 38, 54, "#d98a1c", "#2a1804", "#2a1804")
-		_rect(c, layer, 87, 5, 36, 54, RED, rg))
+		_rect(c, layer, 87, 5, 36, 54, "#dfe3e6", "#000000", "#ffffff"))   # red | amber | reversing lamp (lorry clusters)
 	cellf.call("red", func():
 		_rect(c, layer, 0, 0, CW, CH, RED, rg))
 	cellf.call("chmsl", func():

@@ -1145,7 +1145,7 @@ static func _dress_coupe(K: CarBody, D: Dictionary) -> void:
 	_dressExh(K, D, o)
 
 static func _dress_roadster(K: CarBody, D: Dictionary) -> void:
-	var o := {"hl": [{"x": [0.46, 0.8], "z": [1.9, 1.64], "kind": "h_round"}], "grille": [{"x": [-0.36, 0.36], "y": [0.4, 0.56]}], "plateF": 0.47,
+	var o := {"hl": [{"x": [0.46, 0.8], "z": [1.9, 1.64], "kind": "h_quad"}], "grille": [{"x": [-0.36, 0.36], "y": [0.4, 0.56]}], "plateF": 0.47,
 		"tl": [{"x": [0.46, 0.86], "y": [0.7, 0.84], "kind": "t_round"}], "rtrim": [{"x": [-0.8, 0.8], "y": [0.32, 0.42]}], "plateR": 0.57, "mz": 0.3, "my": 0.95, "handles": [-0.4], "hy": 0.78, "sill": [0.3, 0.37], "exh": [-0.5, 0.5]}
 	_dressStd(K, D, o)
 	# open cockpit (CarBody.interior): fairings behind the seats, windscreen in a frame
