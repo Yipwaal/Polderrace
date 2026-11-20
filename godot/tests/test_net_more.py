@@ -715,7 +715,7 @@ def scenario_lan():
             print(f'     goede verbinding (LAN), auto van de host bij een speler: mediaan {e3[0]:.2f} m, 95% {e3[1]:.2f} m, ergste {e3[2]:.2f} m; sprong {e3[3]:.2f} m', flush=True)
         check(e1 and e1[1] < 3.0 and e1[3] < 1.5 and e2 and e2[1] < 3.0 and e2[3] < 1.5, 'slechte verbinding: de auto rijdt vloeiend en vrijwel op zijn echte plek (95% binnen 3 m, geen sprongen)', (e1, e2))
         # (the car is drawn a few hundredths of a second behind, at 30 m/s that is a metre; more on a busy test machine)
-    check(e3 and e3[1] < 1.6 and e3[3] < 0.8, 'goede verbinding: vrijwel op de echte plek (95% binnen 1,6 m), geen sprongen', e3)
+        check(e3 and e3[1] < 1.6 and e3[3] < 0.8, 'goede verbinding: vrijwel op de echte plek (95% binnen 1,6 m), geen sprongen', e3)
         # the Wi-Fi drops for 5 s: nobody is thrown out, the car is back by itself
         ctl.write_text('block'); time.sleep(5); ctl.write_text('')
         r = h1.wait(lambda r: remote(r, 'Lotte') and remote(r, 'Lotte')['visible'], 6)
