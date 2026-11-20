@@ -112,6 +112,17 @@ func check() -> Dictionary:
 				if ra == rb: continue
 				if a.intersects(items[l[j]].box):
 					parent[rb] = ra
+	# ---- a parked vehicle (meta "vehicle" on its group) is one rigid thing: whether its parts touch is the model's business
+	var units := {}
+	for it in items:
+		var nd: Node = it.node
+		while nd != null and nd != World.root:
+			if nd.has_meta("vehicle"):
+				var key := nd.get_instance_id()
+				if units.has(key): parent[find(it.id)] = find(units[key])
+				else: units[key] = it.id
+				break
+			nd = nd.get_parent()
 	# ---- standing on a strip / plane of the track: a triangle of it passes through the part's box
 	for big in bigs:
 		for surf in scan.surfaces(big.mesh):

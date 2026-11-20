@@ -220,7 +220,7 @@ static func crates(n: int) -> void:
 	var pal := _cols(["#8a6a4a", "#6b4a2e", "#1d4f9e", "#c8302a"])
 	for _k in n:
 		var s = World.clearSpot(12)
-		if s == null: continue
+		if s == null or _kept(s[0], s[1]): continue
 		var h := 1 + int(floor(rnd() * 3))
 		for y in h:
 			m.append(World.mtx(s[0], 0.6 + y * 1.2, s[1], rnd() * 0.3, 1.2, 1.2, 1.2))
