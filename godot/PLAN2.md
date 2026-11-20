@@ -91,7 +91,7 @@ met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 | Rijgedrag | klaar en samengevoegd (bandenmodel, gewichtsverplaatsing, driften, bots, camera; test `handling`) |
 | Automodellen | loopt (Opus neemt over) |
 | Aanpassen | deel 1 klaar en samengevoegd (27 onderdelen, 203 opties); deel 2 wacht op Automodellen |
-| Banen A | gereedschap op main; banen loopt (Opus neemt over) |
+| Banen A | klaar en samengevoegd (gereedschap + polder, dorp, circuit, afsluitdijk, haven) |
 | Banen B | loopt (Opus neemt over) |
 | Beeld | klaar en samengevoegd (lucht-shader, licht per pixel, water, regen/nat wegdek, nacht, effecten, kwaliteitsniveaus) |
 | LAN | loopt (Opus neemt over) |
