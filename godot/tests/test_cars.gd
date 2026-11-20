@@ -14,6 +14,12 @@ const VARIANTS := {
 	"tune": {"wing": "gt", "exhaust": "sport", "rimStyle": "spoke", "rim": "gold", "stripe": "white"},
 	"duck": {"wing": "duck", "exhaust": "dual", "rimStyle": "dish", "rim": "black", "stripe": "none", "num": 12},
 	"center": {"exhaust": "center", "stripe": "yellow", "num": 3},
+	# the looks catalogue (CarLook): a full look, a design with halves and a roof number only, stripes in two colours
+	"look": {"paint": "#ff4f8b", "finish": "matte", "roof": "black", "stripe": "flames", "sc": "yellow", "sc2": "red", "rim": "gun", "cal": "yellow", "tw": "white", "tint": "blue",
+		"lamp": "yellow", "glow": "blue", "num": 46, "numStyle": "square", "numBg": "yellow", "numPos": "doors", "plate": "YIP-46", "plateStyle": "old", "d1": "polder", "d2": "tulp",
+		"ban": "POLDERRACE"},
+	"flag": {"stripe": "flag", "num": 9, "numPos": "roof", "numStyle": "ring", "wing": "duck", "rim": "#aa5500"},
+	"triple": {"stripe": "triple", "sc": "white", "sc2": "red", "finish": "chrome", "num": 12},
 }
 const TOL := 0.003
 ## what a car may cost: meshes drawn (stock / tuned) and triangles

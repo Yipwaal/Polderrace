@@ -35,6 +35,8 @@ const SETS := {
 	"tune": {"up": {"wing": "gt", "exhaust": "sport", "rimStyle": "spoke", "rim": "gold", "stripe": "white"}, "views": ["f34", "side", "r34", "rear", "wheel"]},
 	"duck": {"up": {"wing": "duck", "exhaust": "dual", "rimStyle": "dish", "rim": "black", "stripe": "none", "num": 12}, "views": ["f34", "side", "r34", "high", "wheel"]},
 	"center": {"up": {"exhaust": "center", "stripe": "yellow", "num": 3}, "views": ["r34", "rear", "high"]},
+	"look": {"up": {"tw": "letter", "cal": "blue", "rim": "#aa5500", "tint": "bronze", "lamp": "yellow", "roof": "white", "stripe": "flames", "d1": "polder",
+		"ban": "POLDERRACE", "plate": "YIP-01", "num": 7}, "views": ["f34", "side", "wheel", "front", "high"]},
 	"colors": {"colors": true, "views": ["f34"]},
 	"finishes": {"finishes": true, "views": ["f34", "r34"]},
 }

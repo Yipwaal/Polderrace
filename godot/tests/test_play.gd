@@ -465,12 +465,28 @@ func part_garage() -> void:
 	# looks
 	await D.click(Menu.garageUI.tabLook, "Uiterlijk")
 	r.check(Menu.garageUI.look.visible, "tab Uiterlijk")
-	await D.click(Menu.garageUI.paintRadio.find("#d62a2a"), "lak rood")
-	r.check(G.settings.color == "#d62a2a", "lakkleur", G.settings.color)
-	for seg in [["rimRadio", "gold", "rim"], ["rimStyleRadio", "spoke", "rimStyle"], ["wingRadio", "duck", "wing"], ["exhRadio", "dual", "exhaust"], ["stripeRadio", "white", "stripe"]]:
-		await D.click(Menu.garageUI.get(seg[0]).find(seg[1]), seg[2])
-		r.check(G.carUp("mini")[seg[2]] == seg[1], "uiterlijk: %s = %s" % [seg[2], seg[1]], str(G.carUp("mini")[seg[2]]))
+	var ui: GarageUI = Menu.garageUI
+	await D.click(ui.groupRadio.find("lak"), "groep Lak")
+	await D.click(ui.radio("paint").find("#d62a2a"), "lak rood")
+	r.check(G.settings.color == "#d62a2a" and G.carUp("mini").col == "#d62a2a", "lakkleur", G.settings.color)
+	for seg in [["wheel", "rim", "gold"], ["wheel", "rimStyle", "spoke"], ["parts", "wing", "duck"], ["parts", "exhaust", "dual"], ["stripe", "stripe", "twin"], ["stripe", "sc", "yellow"]]:
+		if ui.group != seg[0]: await D.click(ui.groupRadio.find(seg[0]), "groep " + seg[0])
+		await D.click(ui.radio(seg[1]).find(seg[2]), seg[1])
+		r.check(G.carUp("mini")[seg[1]] == seg[2], "uiterlijk: %s = %s" % [seg[1], seg[2]], str(G.carUp("mini").get(seg[1])))
+	r.check(not ui.fitBar.visible and Game.car.look.stripe == "twin" and Game.car.look.sc == "yellow", "wat gratis is, staat meteen op de auto; de paskamer blijft leeg")
+	# something that costs money: try it on, see it in the bar, buy it there
+	var c2: int = G.garage.credits
+	await D.click(ui.groupRadio.find("wheel"), "groep Wielen")
+	await D.click(ui.radio("cal").find("yellow"), "gele remklauwen")
+	r.check(ui.fitBar.visible and G.garage.credits == c2 and not G.carUp("mini").has("cal") and Game.car.look.cal == "yellow", "passen: op de auto, nog niet betaald")
+	await D.shot("garage_fit")
+	await D.click(ui.fitBuy, "Kopen in de paskamer")
+	r.check(G.garage.credits == c2 - 50 and G.carUp("mini").cal == "yellow" and not ui.fitBar.visible, "gekocht in de paskamer", "%d -> %d" % [c2, G.garage.credits])
+	await D.click(ui.radio("tw").find("white"), "witte banden passen")
+	await D.click(ui.fitUndo, "Terugzetten")
+	r.check(Game.car.look.tw == "std" and not ui.fitBar.visible, "Terugzetten: banden weer zwart")
 	# the start number: click the field, type; M is not the mute key while typing
+	await D.click(ui.groupRadio.find("num"), "groep Nummer")
 	var muted := Sfx.muted
 	await D.click(Menu.garageUI.numIn, "startnummer")
 	r.check(D.focused() == Menu.garageUI.numIn, "startnummer: veld heeft de focus")
@@ -486,7 +502,7 @@ func part_garage() -> void:
 	r.check(Canvas2D.pending_count() == 0, "startnummer meteen getekend (geen grijs vlak op de deur)", str(Canvas2D.pending_count()))
 	await D.shot("garage_look")
 	var sv = JSON.parse_string(str(G.store_get("polderrace3d-garage")))
-	r.check(sv is Dictionary and int(sv.cars.mini.num) == 42 and sv.cars.mini.rim == "gold" and sv.owned.has("mini"), "garage bewaard")
+	r.check(sv is Dictionary and int(sv.cars.mini.num) == 42 and sv.cars.mini.rim == "gold" and sv.owned.has("mini") and sv.looks.has("cal:yellow"), "garage bewaard")
 	# look at another car, leave: you sit in a car you own
 	await D.click(Menu.garageUI.tabPerf, "Prestaties")
 	await D.click(Menu.garageUI.carRadio.find("rally"), "Rallybeest")

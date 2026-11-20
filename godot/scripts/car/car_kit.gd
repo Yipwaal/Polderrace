@@ -44,7 +44,8 @@ static func _nr(o: Dictionary) -> Dictionary:
 ## everything on a car that is not paint, glass or a lamp: vertex colour, vertex alpha = shine
 static var detailMat: CarPaint = CarPaint.detail()
 ## see-through tinted glass (cabin, windscreens)
-static var carGlass: CarPaint = CarPaint.glass(0x10171e, 0.5)
+const GLASS_TINT := 0x10171e
+static var carGlass: CarPaint = CarPaint.glass(GLASS_TINT, 0.5)
 ## the lamps (CarLamps): front lamps and grilles; tail lamps off/on, braking, reversing
 static var lampMat: LMat = _lamps(0)
 static var tailMat: LMat = _lamps(1)
@@ -102,6 +103,7 @@ static func applyEnv(t: String, lamps: bool) -> void:
 		c.a = 0.7 if t == "night" else 0.35
 		beamMat.albedo_color = c
 	CarLamps.applyEnv(t, lamps)
+	CarLook.envChanged(1.0 if t == "night" else (0.6 if lamps else 0.3))   # tinted lamps and neon follow
 
 ## brake lights and reversing lamps of a car (any rig from buildCar or Vehicles): swaps the tail lamps' material
 static func setLights(m: Dictionary, brake: bool, reverse := false) -> void:
@@ -137,6 +139,65 @@ static func setGlass(m: Dictionary, color: int, opacity: float) -> void:
 	var key := "%06x/%.2f" % [color, opacity]
 	if not GLASS.has(key): GLASS[key] = CarPaint.glass(color, opacity)
 	o.set_surface_override_material(0, GLASS[key])
+
+## a two-tone roof: [the paint mesh without the cabin, the cabin's painted part (roof, pillars)] of a model, built once.
+## CarLook swaps the car's paint mesh for the first and lays the second in the roof colour
+static func roofSplit(K: CarBody):
+	if K.cab == null: return null
+	if not K.G.has("roofSplit"):
+		var b := Mb.new()
+		b.group(K.body, 0, Color(1, 1, 1, 1))
+		b.acc(K.G.paintAcc, Color(1, 1, 1, 0))
+		var c := Mb.new()
+		c.group(K.cab, 0, Color(1, 1, 1, 0))
+		K.G.roofSplit = [b.build(), c.build()]
+	return K.G.roofSplit
+
+## lettering / white wall on the tyres: a thin ring 2 mm proud of each tyre's outer sidewall in material mat (u round the
+## wheel, v = 0 at the tread to 0.29 at the bead, see CarDecal.tyre); null takes it off. One extra mesh per wheel
+static func setTyreWall(m: Dictionary, mat) -> void:
+	for wh in m.wheels:
+		var o = wh.get("wall", null)
+		if mat == null:
+			if o != null: o.queue_free() if o.is_inside_tree() else o.free()
+			wh.erase("wall")
+			continue
+		if o == null:
+			o = mesh(wh.spin, tyreWallGeo(wh.r, wh.w, wh.style), mat)
+			o.visibility_range_end = 45.0
+			wh["wall"] = o
+		else:
+			o.set_surface_override_material(0, mat)
+
+static func tyreWallGeo(r: float, w: float, style: String) -> Geo:
+	var key := "wall/%.3f/%.3f/%s" % [r, w, style]
+	if WGEO.has(key): return WGEO[key]
+	var hw := w / 2.0
+	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7))
+	# the outer sidewall of wheelGeos' tyre as (radius, x), from the tread shoulder to the bead
+	var prof := [Vector2(r - 0.008, hw - 0.04), Vector2(r - 0.03, hw - 0.012), Vector2(r - 0.075, hw), Vector2(rb + 0.012, hw - 0.004)]
+	var A := CarAcc.new()
+	var n := 36
+	# (accumulator uv run bottom-up like three.js; the mesh flips them to the canvas' top-down)
+	var vOf := func(rad: float) -> float: return 1.0 - 0.29 * clampf((r - 0.008 - rad) / (r - 0.02 - rb), 0.0, 1.0)
+	for i in n:
+		var a0 := float(i) / n * TAU
+		var a1 := float(i + 1) / n * TAU
+		for j in prof.size() - 1:
+			var p0: Vector2 = prof[j]
+			var p1: Vector2 = prof[j + 1]
+			var q := func(p: Vector2, a: float) -> Vector3: return Vector3(p.y + 0.002, cos(a) * p.x, sin(a) * p.x)
+			var A0: Vector3 = q.call(p0, a0); var B0: Vector3 = q.call(p0, a1); var A1: Vector3 = q.call(p1, a0); var B1: Vector3 = q.call(p1, a1)
+			var u0 := float(i) / n
+			var u1 := float(i + 1) / n
+			var v0: float = vOf.call(p0.x)
+			var v1: float = vOf.call(p1.x)
+			var nn := Vector3(1, 0, 0)
+			_face(A, A0, B0, B1, Vector2(u0, v0), Vector2(u1, v0), Vector2(u1, v1), nn, nn, nn)
+			_face(A, A0, B1, A1, Vector2(u0, v0), Vector2(u1, v1), Vector2(u0, v1), nn, nn, nn)
+	var g := A.build()
+	WGEO[key] = g
+	return g
 
 ## colour of the brake calipers (Color or hex int)
 static func setCalipers(m: Dictionary, color) -> void:
@@ -1390,6 +1451,7 @@ static func carKit(type: String) -> CarBody:
 	if K.cab != null: pm.group(K.cab, 0, Color(1, 1, 1, 0))
 	pm.acc(D.paint, Color(1, 1, 1, 0))
 	K.G.paint = pm.build()
+	K.G.paintAcc = D.paint   # kept for roofSplit (two-tone roof)
 	# detail: underside and wheel wells, window frames, belt moulding, the cabin seen from inside, trim, chrome, interior
 	var dm := Mb.new()
 	dm.group(K.body, 1, sc(LINER, 0.05))
@@ -1561,12 +1623,19 @@ static func _meshes_of(n: Node, out: Array) -> Array:
 		_meshes_of(c, out)
 	return out
 
-## paint finish, rims, stripes, race number, wing and exhaust of a built car from the garage (id) or an upgrades Dictionary
+## the looks of a built car from the garage (id) or a look Dictionary: CarLook checks the look and does everything of the
+## catalogue (paint, liveries, glass, plate, ...) around the standard parts below
 static func styleCar(m: Dictionary, id) -> void:
-	var u := carUp(id)
+	var u := CarLook.pre(m, carUp(id))
+	_styleStd(m, u)
+	CarLook.post(m)
+
+## paint finish, rims, stripes, race number, wing and exhaust (the HTML game's styleCar)
+static func _styleStd(m: Dictionary, u: Dictionary) -> void:
 	var pm = m.get("paint", null)
 	if pm is CarPaint:
 		pm.finish = str(u.get("finish", "gloss"))
+		pm.set_meta("finish", true)   # the car paint does the finish itself (CarLook.finish leaves it alone)
 	var rim := sc(Cars.RIMS[u.rim][1] if Cars.RIMS.has(u.rim) else RIM_SILVER, 0.72)
 	styleExtras(m, u, rim)
 	setRims(m, u.rimStyle if Cars.RIMSTYLES.has(u.rimStyle) else "std", rim)

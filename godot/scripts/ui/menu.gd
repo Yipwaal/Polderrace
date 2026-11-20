@@ -23,7 +23,7 @@ var careerSel = null
 ## while set, the next key press goes to the key binding UI
 var bindCapture := Callable()
 ## orbit round the car in the garage and the car step: drag to turn it, it turns slowly by itself when left alone
-var orb := {"a": 0.5, "h": 1.9, "vel": 0.0, "idle": 99.0, "drag": null}
+var orb := {"a": 0.5, "h": 1.9, "r": 7.4, "vel": 0.0, "idle": 99.0, "drag": null}
 var _viewOff := 0.0
 var _resumeGo := Callable()
 var _overMenu := false
@@ -307,6 +307,7 @@ func pickCar(v: String) -> void:
 		previewEdit()
 		refreshMenu()
 		return
+	G.carPicked(S.car, v)    # the paint colour belongs to the car
 	S.car = v
 	if Career.owns(v):
 		var lb: Dictionary = (S.get("lastByClass", {}) if S.get("lastByClass") is Dictionary else {}).duplicate()
@@ -906,7 +907,7 @@ func menuCamera(dt: float) -> bool:
 	elif car != null and (menuStep == 0 or menuStep < 0):
 		var p: Vector3 = car.g.position
 		_orbitStep(dt)
-		cam.position = Vector3(p.x + sin(orb.a) * 7.4, p.y + orb.h, p.z + cos(orb.a) * 7.4)
+		cam.position = Vector3(p.x + sin(orb.a) * orb.r, p.y + orb.h, p.z + cos(orb.a) * orb.r)   # (r: the garage zooms in on parts)
 		cam.look_at(Vector3(p.x, p.y + 0.6, p.z), Vector3.UP)
 	elif car != null:
 		var p: Vector3 = car.g.position
@@ -918,7 +919,12 @@ func menuCamera(dt: float) -> bool:
 
 func _wideOff() -> float:
 	var w := get_viewport().get_visible_rect().size.x
-	return -minf(w * 0.2, 260) if w > 760 else 0.0
+	if w <= 760: return 0.0
+	var off := -minf(w * 0.2, 260)
+	# the garage: the car in the middle of the room beside the panel (a narrow window leaves it little room)
+	if GarageRoom.inGarage and homeBoard != null and homeBoard.is_visible_in_tree():
+		off = minf(off, w / 2 - (homeBoard.get_global_rect().end.x + w) / 2)
+	return off
 
 ## three.js camera.setViewOffset(): the picture shifted sideways (the car beside the panel, not behind it). Godot has no
 ## view offset on a perspective camera, so the same frustum is set as an off-centre frustum.
@@ -1058,6 +1064,11 @@ func padNav(now: Dictionary, prev: Dictionary) -> bool:
 			else: menuNext()
 		elif edge.call("start"): menuNext()
 		if edge.call("b"): menuBack()
+		# left/right: the next option of the group the focus is in (the looks in the garage, the settings)
+		for lr in [["l", -1], ["r", 1]]:
+			if edge.call(lr[0]):
+				var f := get_viewport().gui_get_focus_owner()
+				if f is UiKit.Btn and f.radio != null and home.is_ancestor_of(f): f.radio.arrow(f, lr[1])
 		return true
 	if g.state == "menu":
 		if edge.call("up"): padFocus(-1)

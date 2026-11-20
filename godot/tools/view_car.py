@@ -3,7 +3,7 @@ with the lamps on, stock and tuned (the turntable of tools/view_car.gd).
 
 python godot/tools/view_car.py [cars] [sets] [--color=#d62a2a] [--out=dir] [--size=640x400] [--cols=5]
   cars  all (default), or ids separated by commas: gt,hatch,traffic:van (traffic:hatch|van|truck|tractor), or B / A / S / traffic
-  sets  day,night,tune,duck (default); also dusk, rain, num, center, colors, finishes (see SETS in view_car.gd)
+  sets  day,night,tune,duck (default); also dusk, rain, num, center, colors, finishes, look (see SETS in view_car.gd)
 Output: tests/.out/cars/<car>.png (one sheet per car: a row of tiles per set) and the loose tiles in tests/.out/cars/tiles/.
 Look at the sheets with the Read tool. Needs xvfb-run and PIL.
 """

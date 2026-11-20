@@ -218,6 +218,7 @@ static func enterPodium(entries: Array, title: String) -> void:
 			G.settings.color = sc
 		else:
 			m = CarKit.buildCar(r.carId, col)
+			if r.get("look") is Dictionary: CarKit.styleCar(m, r.look)    # a bot's own look (or another player's)
 		var st: Array = PODIUM_STEPS[k]
 		_scene().add_child(m.g)
 		m.g.position = Vector3(PPOS.x + st[0], PPOS.y + st[1] + 0.35, PPOS.z + 0.1)
@@ -261,6 +262,7 @@ static func podiumEntries(rows: Array, subOf: Callable) -> Array:
 		var r: Dictionary = rows[k]
 		var carId := "gt"
 		var color := "#ffffff"
+		var look = null
 		if r.get("me", false):
 			var inChamp: bool = Game.mode == "champ" and champ != null
 			carId = champ.car if inChamp else G.settings.car
@@ -268,13 +270,14 @@ static func podiumEntries(rows: Array, subOf: Callable) -> Array:
 		else:
 			var found = null
 			for b in Game.bots:
-				if b.name == r.name: found = {"type": b.type, "color": b.color}; break
+				if b.name == r.name: found = {"type": b.type, "color": b.color, "rival": b.rival}; break
 			if found == null and champ != null:
 				for b in champ.get("bots", []):
-					if b.name == r.name: found = {"type": b.type, "color": b.color}; break
+					if b.name == r.name: found = {"type": b.type, "color": b.color, "rival": b.get("rival", false)}; break
 			if found != null:
 				carId = found.type; color = found.color
-		out.append({"name": r.name, "sub": subOf.call(r), "carId": carId, "color": color, "me": r.get("me", false)})
+				look = CarLook.botLook(r.name, carId, color, found.rival)
+		out.append({"name": r.name, "sub": subOf.call(r), "carId": carId, "color": color, "me": r.get("me", false), "look": look})
 	return out
 
 ## per frame while the podium is shown: confetti, swaying spotlights and the camera
