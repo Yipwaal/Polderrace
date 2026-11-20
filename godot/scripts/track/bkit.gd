@@ -41,7 +41,11 @@ static func _append(g: Geo, s: Geo, c: Color, xf = null) -> void:
 		g.uv.append_array(s.uv)
 	else:
 		var u := PackedVector2Array(); u.resize(n); g.uv.append_array(u)
-	var cc := PackedColorArray(); cc.resize(n); cc.fill(c); g.col.append_array(cc)
+	var cc := PackedColorArray(); cc.resize(n); cc.fill(c)
+	if s.col.size() == n:
+		# a part that has its own vertex colours (a merged tree, a shaded dune) keeps them, tinted by c
+		for k in n: cc[k] = s.col[k] * c
+	g.col.append_array(cc)
 	if s.idx.is_empty():
 		for k in n: g.idx.append(off + k)
 	else:

@@ -6,6 +6,9 @@ extends Node3D
 ##   AnimB.shuttle(node, a, b, speed)   back and forth between two points, turning round at the ends (a boat)
 ##   AnimB.along(node, s0, s1, lat, y, speed)   along the track between two distances at a lateral offset (a tram)
 ##   AnimB.sway(node, amp_deg, period)   swings round its own y axis (a flag), and bobs `lift` m up and down (a kite, a buoy)
+##   AnimB.spin(node, rate)   turns round its own z axis, rate in radians per second (a wind turbine rotor, a lighthouse beam
+##                            when the node is turned so that its z points up)
+##   AnimB.bob(node, offset, period)   moves to and fro along `offset` (surf rolling up the beach)
 
 var kind := ""
 var a := Vector3.ZERO
@@ -38,6 +41,25 @@ static func along(n: Node3D, from_s: float, to_s: float, lateral: float, y: floa
 	m._place()
 	return m
 
+static func spin(n: Node3D, rate: float, phase := 0.0) -> AnimB:
+	var m := AnimB.new()
+	m.kind = "spin"; m.speed = rate; m.t = phase
+	m.transform = n.transform
+	m.base = n.transform
+	n.transform = Transform3D.IDENTITY
+	m.add_child(n)
+	m._process(0.0)
+	return m
+
+static func bob(n: Node3D, offset: Vector3, per: float, phase := 0.0) -> AnimB:
+	var m := AnimB.new()
+	m.kind = "bob"; m.a = offset; m.period = per; m.t = phase
+	m.transform = n.transform
+	m.base = n.transform
+	n.transform = Transform3D.IDENTITY
+	m.add_child(n)
+	return m
+
 static func sway(n: Node3D, amp_deg: float, per: float, lift_m := 0.0, phase := 0.0) -> AnimB:
 	var m := AnimB.new()
 	m.kind = "sway"; m.amp = deg_to_rad(amp_deg); m.period = per; m.lift = lift_m; m.t = phase
@@ -48,6 +70,14 @@ static func sway(n: Node3D, amp_deg: float, per: float, lift_m := 0.0, phase := 
 	return m
 
 func _process(dt: float) -> void:
+	if kind == "spin":
+		t += dt
+		transform = base * Transform3D(Basis(Vector3.BACK, t * speed), Vector3.ZERO)
+		return
+	if kind == "bob":
+		t += dt
+		transform = Transform3D(base.basis, base.origin + a * sin(TAU * t / period))
+		return
 	if kind == "sway":
 		t += dt
 		var w := TAU * t / period

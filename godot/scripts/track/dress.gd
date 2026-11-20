@@ -319,7 +319,7 @@ static func dressTrack(id: String) -> void:
 		"grachten": planters(16, 6.5); benches(40, 6.6)
 		"limburg": fences(6, 4); bushes(5, 4.4, 6.6, 0x3f6a2a); flowers(6, 1, 6)   # bushes are up to 2 m wide: clear of the rail at 10.8
 		"rotterdam": _dressRotterdam()
-		"zeeland": beachHuts(); flagPoles(120, 6); reeds(10, 6, 14)
+		"zeeland": flagPoles(120, 6); reeds(16, 6, 14)   # the beach huts are built by BuildZeeland.beach()
 
 static func _dressRotterdam() -> void:
 	var tr := []; var tk := []
