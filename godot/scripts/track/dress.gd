@@ -24,7 +24,8 @@ static func alongSides(every: float, latFn: Callable, fn: Callable) -> void:
 			var lat = latFn.call(i, s)
 			if lat != null:
 				var xz := Trk.onTrack(i, s * lat)
-				if not (Trk.distToTrack(xz[0], xz[1]) < (12.0 if Trk.TRK.get("terrain", false) else Trk.ROAD_HALF + 1)):
+				# (World.pavTaken: spots a builder keeps for a building or a stand)
+				if not (Trk.distToTrack(xz[0], xz[1]) < (12.0 if Trk.TRK.get("terrain", false) else Trk.ROAD_HALF + 1)) and not World.pavBusy(xz[0], xz[1], 1.5):
 					fn.call(xz[0], xz[1], i, s)
 		d += every * (0.7 + rnd() * 0.6)
 

@@ -176,45 +176,75 @@ static func planeXZ(size: float, seg: int) -> PackedVector3Array:
 			k += 1
 	return pos
 
-## JS: geo.setAttribute('color',...); geo.computeVertexNormals(); new THREE.Mesh(geo, new THREE.MeshLambertMaterial(
-## {vertexColors:true,polygonOffset...})) at (cx, 0, cz), receiveShadow (the polygon offset does nothing in the JS,
-## its logarithmic depth buffer ignores it). pos = planeXZ(size, seg) with the heights filled in.
-## Built straight into Godot arrays (Geo.to_mesh is too slow for 74k vertices): the triangles of the three.js plane
-## (a,b,d) (b,c,d), front faces turned clockwise for Godot, normals summed per vertex as three computeVertexNormals does.
-static func groundMesh(pos: PackedVector3Array, cols: PackedColorArray, seg: int, cx: float, cz: float) -> MeshInstance3D:
+## The hilly ground as vertex-coloured meshes at (cx, 0, cz); pos = planeXZ(size, seg) with the heights filled in.
+## Normals are summed per vertex over the whole plane (three computeVertexNormals: triangles (a,b,d) (b,c,d)), then the
+## plane is cut into chunks x chunks meshes, so the renderer only draws the part of the hills in view (one mesh of
+## 148k triangles was drawn whole in the picture, the mirror and the shadow pass).
+## tex: an optional detail texture (grey around white: the vertex colours keep their hue), repeated every `tile` m.
+static func groundMesh(pos: PackedVector3Array, cols: PackedColorArray, seg: int, cx: float, cz: float, tex: Texture2D = null, tile := 24.0, chunks := 6) -> Array:
 	var w := seg + 1
 	var nrm := PackedVector3Array()
 	nrm.resize(pos.size())
-	var I := PackedInt32Array()
-	I.resize(seg * seg * 6)
-	var n := 0
 	for iy in seg:
 		for ix in seg:
 			var a := ix + w * iy
 			var b := ix + w * (iy + 1)
 			var c := (ix + 1) + w * (iy + 1)
 			var dd := (ix + 1) + w * iy
-			var pa := pos[a]
 			var pb := pos[b]
 			var pc := pos[c]
 			var pd := pos[dd]
-			var n1 := (pd - pb).cross(pa - pb)
+			var n1 := (pd - pb).cross(pos[a] - pb)
 			var n2 := (pd - pc).cross(pb - pc)
 			nrm[a] += n1; nrm[b] += n1 + n2; nrm[dd] += n1 + n2; nrm[c] += n2
-			I[n] = a; I[n + 1] = dd; I[n + 2] = b
-			I[n + 3] = b; I[n + 4] = dd; I[n + 5] = c
-			n += 6
 	for k in nrm.size():
 		nrm[k] = nrm[k].normalized()
-	var arr := []
-	arr.resize(Mesh.ARRAY_MAX)
-	arr[Mesh.ARRAY_VERTEX] = pos
-	arr[Mesh.ARRAY_NORMAL] = nrm
-	arr[Mesh.ARRAY_COLOR] = cols
-	arr[Mesh.ARRAY_INDEX] = I
-	var m := ArrayMesh.new()
-	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	m.surface_set_material(0, Mats.M(0xffffff, {"vertexColors": true, "receiveShadow": true}))
-	var mi := O3.mesh(m, null, cx, 0, cz)
-	World.add(mi)
-	return mi
+	var o := {"vertexColors": true, "receiveShadow": true}
+	if tex != null: o["map"] = tex
+	var mat := Mats.M(0xffffff, o)
+	var out := []
+	for cy in chunks:
+		var y0 := seg * cy / chunks
+		var y1 := seg * (cy + 1) / chunks
+		for cxi in chunks:
+			var x0 := seg * cxi / chunks
+			var x1 := seg * (cxi + 1) / chunks
+			var cw := x1 - x0 + 1
+			var n := cw * (y1 - y0 + 1)
+			var P := PackedVector3Array(); P.resize(n)
+			var N := PackedVector3Array(); N.resize(n)
+			var C := PackedColorArray(); C.resize(n)
+			var U := PackedVector2Array(); U.resize(n)
+			var k := 0
+			for iy in range(y0, y1 + 1):
+				for ix in range(x0, x1 + 1):
+					var g := ix + w * iy
+					P[k] = pos[g]; N[k] = nrm[g]; C[k] = cols[g]
+					U[k] = Vector2((pos[g].x + cx) / tile, (pos[g].z + cz) / tile)
+					k += 1
+			var I := PackedInt32Array()
+			I.resize((x1 - x0) * (y1 - y0) * 6)
+			var q := 0
+			for iy in y1 - y0:
+				for ix in x1 - x0:
+					var a := ix + cw * iy
+					var b := ix + cw * (iy + 1)
+					var c := (ix + 1) + cw * (iy + 1)
+					var dd := (ix + 1) + cw * iy
+					I[q] = a; I[q + 1] = dd; I[q + 2] = b
+					I[q + 3] = b; I[q + 4] = dd; I[q + 5] = c
+					q += 6
+			var arr := []
+			arr.resize(Mesh.ARRAY_MAX)
+			arr[Mesh.ARRAY_VERTEX] = P
+			arr[Mesh.ARRAY_NORMAL] = N
+			arr[Mesh.ARRAY_COLOR] = C
+			if tex != null: arr[Mesh.ARRAY_TEX_UV] = U
+			arr[Mesh.ARRAY_INDEX] = I
+			var m := ArrayMesh.new()
+			m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+			m.surface_set_material(0, mat)
+			var mi := O3.mesh(m, null, cx, 0, cz)
+			World.add(mi)
+			out.append(mi)
+	return out
