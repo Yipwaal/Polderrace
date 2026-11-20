@@ -33,17 +33,23 @@ Werknotities van de Aanpassen-agent (fase 2, zie `PLAN2.md`). Wordt bijgehouden 
 - **Bots**: `CarLook.botLook(naam, type, kleur, rival)` — vast per naam/auto (iedereen online ziet hetzelfde);
   carrière-rivalen hebben een eigen look (`RIVAL_LOOKS`).
 
-## Nog te doen (deel 1)
+## Stand (deel 1)
 
-- [ ] haakjes in `car_kit.gd` (styleCar-wrapper, applyEnv) — minimale wijziging, melden
-- [ ] `globals.gd`: carUp-migratie, lookOf, styleUp, fit, bezit/prijzen/kopen, carPicked
-- [ ] `garage_ui.gd` tabblad Uiterlijk (categorieën, swatches, prijzen, paskamerbalk, Willekeurig, Standaard)
-- [ ] `garage_room.gd`: camera per onderdeel, licht uit (neon bekijken)
-- [ ] kleine wijzigingen elders: `menu.gd` (pickCar → carPicked, orb-straal, gamepad links/rechts), `game.gd` setupBots,
-      `podium.gd` (botlook)
-- [ ] tests: `tests/test_looks.gd`, varianten in `test_cars.gd`, `test_menus.gd`/`test_play.gd` bijwerken, workflow
-- [ ] screenshots bekijken (`tools/shot_looks.gd`), dag en nacht
-- [ ] perf (tekenaanroepen) onder xvfb
+- [x] haakjes in `car_kit.gd` (styleCar = `CarLook.pre` + `_styleStd` (de oude code) + `CarLook.post`; `applyEnv` →
+      `CarLook.envChanged`)
+- [x] `globals.gd`: carUp-migratie, lookOf, styleUp, fit, lookNeeds/lookPick/fitCost/fitBuy/fitClear, carPicked
+- [x] `garage_ui.gd` tabblad Uiterlijk uit de catalogus (groepen, swatches, chips met prijs/slot, paskamerbalk,
+      Willekeurig, Standaard, Licht uit)
+- [x] `garage_room.gd`: camera per onderdeel (`aim(view)`), licht uit (`setDark`)
+- [x] kleine wijzigingen elders: `menu.gd` (pickCar → `G.carPicked`, orb-straal `orb.r`, gamepad links/rechts in
+      de panelen), `game.gd` setupBots (botlook), `podium.gd` (botlook op het podium)
+- [x] tests: `tests/test_looks.gd` (106 controles), varianten look/flag/triple in `test_cars.gd` (golden: 54 nieuwe
+      sleutels, 94 ongewijzigd), `test_menus.gd`/`test_play.gd` bijgewerkt, workflow
+- [x] screenshots: `tools/shot_looks.tscn` (groepen, looks, alle 18 auto's; contactbladen `sheet_*.png`)
+- [ ] perf (tekenaanroepen) onder xvfb, volledige tests na merge van main
+
+Gereedschap: `xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl3 --resolution 1280x720
+res://tools/shot_looks.tscn -- out=/map [only=groups,looks,cars] [car=gt]`.
 
 ## Wacht op deel 2
 
