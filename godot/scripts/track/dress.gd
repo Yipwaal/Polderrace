@@ -24,10 +24,16 @@ static func alongSides(every: float, latFn: Callable, fn: Callable) -> void:
 			var lat = latFn.call(i, s)
 			if lat != null:
 				var xz := Trk.onTrack(i, s * lat)
-				# (World.pavTaken: spots a builder keeps for a building or a stand)
-				if not (Trk.distToTrack(xz[0], xz[1]) < (12.0 if Trk.TRK.get("terrain", false) else Trk.ROAD_HALF + 1)) and not World.pavBusy(xz[0], xz[1], 1.5):
+				# (World.pavTaken: spots a builder keeps for a building or a stand; World.noDress: areas without dressing)
+				if not (Trk.distToTrack(xz[0], xz[1]) < (12.0 if Trk.TRK.get("terrain", false) else Trk.ROAD_HALF + 1)) and not World.pavBusy(xz[0], xz[1], 1.5) and not _kept(xz[0], xz[1]):
 					fn.call(xz[0], xz[1], i, s)
 		d += every * (0.7 + rnd() * 0.6)
+
+## inside one of World.noDress (a few metres of margin: the tufts and reeds spread around their spot)
+static func _kept(x: float, z: float) -> bool:
+	for q in World.noDress:
+		if x > q[0] - 3 and x < q[2] + 3 and z > q[1] - 3 and z < q[3] + 3: return true
+	return false
 
 static func edgeLat(i: int, extra: float) -> float:
 	return Trk.SHOULDER + Trk.EMB[i] + extra
@@ -73,6 +79,8 @@ static func fences(every: float, lat: float) -> void:
 			var xz := Trk.onTrack(i, s * l)
 			var x: float = xz[0]; var z: float = xz[1]
 			if Trk.distToTrack(x, z) < Trk.ROAD_HALF + 2: continue
+			# along a dike (polder): not where a tight bend puts the fence on the slope of the road further on
+			if Trk.TRK.edge == "ditch" and Trk.distToTrack(x, z) < Trk.SHOULDER + lat - 4: continue
 			var y := groundY(x, z)
 			p.append(World.mtx(x, y + 0.6, z))
 			var j := int(round(minf(d + every, Trk.TRACK_LEN) / Trk.SPC)) % Trk.NS
@@ -164,7 +172,9 @@ static func parkedCars(n: int, lat: float, filter = null) -> void:
 		World.add(g)
 		placed += 1
 
-static func adBoards(every: float, lat: float) -> void:
+## yc: height of the middle of a board above the road; along = true: the boards run along the track (on top of the
+## circuit's tyre wall, facing the road) instead of standing square to it, where the cars drove through them
+static func adBoards(every: float, lat: float, yc := 0.75, along := false) -> void:
 	var texts := ["POLDERRACE", "DIJKBANDEN", "STROOPWAFEL", "KLOMPEN", "MOLENOLIE", "TULPENBOL"]
 	var cols := ["#1d4f9e", "#c8302a", "#f2c200", "#2e5d3e", "#f36f21"]
 	var mats := []
@@ -182,14 +192,16 @@ static func adBoards(every: float, lat: float) -> void:
 	while d < Trk.TRACK_LEN:
 		var i := int(round(d / Trk.SPC)) % Trk.NS
 		for s in [-1, 1]:
+			# along a wall: not in a tight bend, where a straight board would leave the wall (the bend boards stand there)
+			if along and Trk.CURV[i] > 0.012: continue
 			var xz := Trk.onTrack(i, s * lat)
-			per[n % mats.size()].append(World.mtx(xz[0], Trk.HT[i] + 0.75, xz[1], Trk.heading_of(Trk.T[i]) + PI / 2, 0.12, 1.1, 5.4))
+			per[n % mats.size()].append(World.mtx(xz[0], Trk.hAt(i, lat) + yc, xz[1], Trk.heading_of(Trk.T[i]) + (0.0 if along else PI / 2), 0.12, 1.1, 5.4))
 			n += 1
 		d += every
 	for k in per.size():
 		World.inst(Geo.box(1, 1, 1), mats[k], per[k], null, false)
 
-static func tyreStacks() -> void:
+static func tyreStacks(lat := 17.5) -> void:
 	var m := []
 	var NS := Trk.NS
 	var T := Trk.T
@@ -199,7 +211,7 @@ static func tyreStacks() -> void:
 		var b := T[(i + 3) % NS]
 		var sg := MathX.sgn(a.z * b.x - a.x * b.z)
 		if sg == 0: sg = 1
-		var xz := Trk.onTrack(i, sg * 17.5)
+		var xz := Trk.onTrack(i, sg * lat)
 		for k in 3:
 			m.append(World.mtx(xz[0] + (k - 1) * 0.9 * T[i].x, Trk.HT[i] + 0.15 + 0.3 * (k % 2), xz[1] + (k - 1) * 0.9 * T[i].z, 0, 0.42, 0.3, 0.42))
 	World.inst(Geo.cylinder(1, 1, 1, 12), M(0x1b1b1b), m, null, true)
@@ -209,7 +221,7 @@ static func crates(n: int) -> void:
 	var pal := _cols(["#8a6a4a", "#6b4a2e", "#1d4f9e", "#c8302a"])
 	for _k in n:
 		var s = World.clearSpot(12)
-		if s == null: continue
+		if s == null or _kept(s[0], s[1]): continue
 		var h := 1 + int(floor(rnd() * 3))
 		for y in h:
 			m.append(World.mtx(s[0], 0.6 + y * 1.2, s[1], rnd() * 0.3, 1.2, 1.2, 1.2))
@@ -245,16 +257,20 @@ static func flagPoles(every: float, lat: float) -> void:
 	World.inst(Geo.cylinder(0.05, 0.07, 8, 6), M(0xe8e4dc), p, null, false)
 	World.inst(Geo.box(1, 1, 1), M(0xffffff), f, c, false)
 
-static func horizonHills() -> void:
+## the far horizon: two rings of hills. low = true: flat land (polder, village): a low, darker line of distant woods instead
+static func horizonHills(low := false) -> void:
 	var cx := (Trk.BX0 + Trk.BX1) / 2
 	var cz := (Trk.BZ0 + Trk.BZ1) / 2
-	for spec in [[1500.0, 0x3f5a3a, 0.62, 1.0, 1.3], [1180.0, 0x4a6a3f, 0.48, 0.62, 4.1]]:
+	var specs := [[1500.0, 0x3f5a3a, 0.62, 1.0, 1.3], [1180.0, 0x4a6a3f, 0.48, 0.62, 4.1]]
+	if low: specs = [[1500.0, 0x3a5638, 0.6, 0.24, 1.3], [1180.0, 0x40603a, 0.44, 0.2, 4.1]]
+	for spec in specs:
 		var R0: float = spec[0]; var base: int = spec[1]; var k: float = spec[2]; var amp: float = spec[3]; var seed: float = spec[4]
 		var n := 160
 		var g := Geo.new()
 		for i in n + 1:
 			var a := float(i) / n * PI * 2
 			var h := amp * (45 + 60 * absf(sin(a * 3.3 + seed)) + 38 * absf(sin(a * 7.1 + seed * 2)) + 18 * sin(a * 13 + seed))
+			if low: h += 5.0 + 4.0 * sin(a * 67 + seed) + 3.0 * sin(a * 101 + seed * 3)   # the ragged top of distant trees
 			var x := cx + cos(a) * R0
 			var z := cz + sin(a) * R0
 			g.pos.append(Vector3(x, -6, z)); g.pos.append(Vector3(x, h, z))
@@ -284,7 +300,8 @@ static func grimeTex() -> ImageTexture:
 static func roadGrime() -> void:
 	var m := M(0xffffff, {"map": grimeTex(), "transparent": true, "depthWrite": false, "opacity": 0.75})
 	for sd in [-1, 1]:
-		World.ribbon(sd * (Trk.ROAD_HALF - 0.55), sd * (Trk.ROAD_HALF + 0.55), m, 6, 0.085)
+		# 13 cm: 2 cm above the kerbs (11 cm) and 4 cm above the start line (9 cm); at 10.5 cm it flickered on both
+		World.ribbon(sd * (Trk.ROAD_HALF - 0.55), sd * (Trk.ROAD_HALF + 0.55), m, 6, 0.13)
 
 static func grassTufts(every: float, near: float, far: float) -> void:
 	var m := []; var c := []
@@ -300,13 +317,14 @@ static func grassTufts(every: float, near: float, far: float) -> void:
 
 static func dressTrack(id: String) -> void:
 	roadGrime()
-	if not id in ["afsluitdijk", "zeeland", "haven"]: horizonHills()
+	if not id in ["afsluitdijk", "zeeland", "haven"]: horizonHills(id in ["polder", "dorp"])
 	if id == "polder": grassTufts(6, 0.2, 1.2)
 	elif id in ["afsluitdijk", "circuit", "veluwe", "limburg", "zeeland"]: grassTufts(6, 0.4, 4)
 	match id:
 		"polder": reeds(9, 2, 5); flowers(7, 1, 8); fences(6, 14)
 		"dorp": planters(18, 7.5); benches(55, 7.7)
-		"circuit": adBoards(26, 19.6); tyreStacks(); flowers(12, 4, 12, ["#f2c200", "#e8e4dc"])
+		# boards on top of the tyre wall and the extra tyres against it: at 19.6 / 17.5 m the cars drove through them
+		"circuit": adBoards(26, 20.72, 1.77, true); tyreStacks(20.62); flowers(12, 4, 12, ["#f2c200", "#e8e4dc"])
 		"afsluitdijk": reeds(8, 4, 10); bushes(40, 6, 16, 0x5f7f3a)
 		"haven": crates(40)
 		"veluwe":
