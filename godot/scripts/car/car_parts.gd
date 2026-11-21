@@ -90,13 +90,20 @@ static func comboKey(L: Dictionary) -> String:
 			parts.append(k + "=" + v)
 	return ",".join(parts)
 
+## how many part combinations a model keeps built (a live car keeps its own meshes either way)
+const COMBO_MAX := 24
 const PART_KEYS := ["wing", "splitter", "canard", "skirt", "diffuser", "arch", "flap", "scoop", "roofx", "tow", "exhaust"]
 
 ## [detail Geo, paint Geo] of all parts of a look on a model (built once per model and combination)
 static func combo(K: CarBody, L: Dictionary) -> Array:
 	var key := comboKey(L)
 	var c: Dictionary = K.get_meta("partCombos", {})
-	if c.has(key): return c[key]
+	if c.has(key):
+		# most recently used last (trying parts in the garage makes many combinations: the oldest are forgotten)
+		var hit: Array = c[key]
+		c.erase(key)
+		c[key] = hit
+		return hit
 	var dm := CarKit.Mb.new()
 	var pm := CarKit.Mb.new()
 	for kv in key.split(","):
@@ -106,6 +113,7 @@ static func combo(K: CarBody, L: Dictionary) -> Array:
 		pm.acc(P.p, Color(1, 1, 1, 0))
 	var out := [dm.build(), pm.build()]
 	c[key] = out
+	while c.size() > COMBO_MAX: c.erase(c.keys()[0])
 	K.set_meta("partCombos", c)
 	return out
 
@@ -565,6 +573,8 @@ static func hoodSplit(K: CarBody, roof: bool, v: String) -> Array:
 			for k in ids:
 				var q: Vector3 = g.pos[k]
 				if q.z < zA or q.z > zCut or absf(q.x) > K.shoulderX(q.z) + 0.005 or g.nrm[k].y < 0.2: on = false; break
+				# (not the fender humps that rise beside the bonnet of the supercars: they stay in the paint)
+				if q.y > K.topY(q.z, 0.0) + 0.03: on = false; break
 			var M: Geo = hg if on else rg
 			for k in ids:
 				M.pos.append(g.pos[k]); M.nrm.append(g.nrm[k]); M.uv.append(Vector2.ZERO)
