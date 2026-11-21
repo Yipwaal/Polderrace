@@ -425,7 +425,9 @@ func homePanel(v: String) -> void:
 	# browsing the garage can show cars you have not bought: leaving it puts you back in a car you own
 	if v == "garage" and from != "garage": garageCar = S.car
 	if from == "garage" and v != "garage" and not Career.owns(S.car):
-		S.car = garageCar if garageCar != null and Career.owns(garageCar) else Career.ownedCar(S.car)
+		var own: String = garageCar if garageCar != null and Career.owns(garageCar) else Career.ownedCar(S.car)
+		G.carPicked(S.car, own)    # (your car gets its own paint back, not the colour of the car you were looking at)
+		S.car = own
 		G.saveSettings()
 		if Game.car != null and v != "main": Game.rebuildPlayerCar()
 	if v == "main" and Game.car != null: Game.rebuildPlayerCar()

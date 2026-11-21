@@ -607,6 +607,31 @@ func part_garage() -> void:
 	r.check(not GarageRoom.inGarage and G.fit.look.is_empty() and Game.car.look.finish == "matte" and Game.car.look.stripe == "std", "garage uit: niets onbetaalds op de auto", str(CarLook.compact(Game.car.look)))
 	r.check(not saved("polderrace3d-garage").looks.has("finish:chrome") and G.garage.credits == 4500, "niets betaald, niets gekregen")
 	r.check(Game.car.driver.visible, "garage uit: de coureur zit er weer in")
+	# browsing a car you do not own (that has a colour of its own) and leaving: your own car keeps its colour
+	var colBefore: String = G.settings.color
+	G.garage.cars["super"] = {"col": "#00ff00"}
+	Menu.homePanel("garage")
+	ui.tabPerf.press()
+	ui.classRadio.find("S").press()
+	ui.carRadio.find("super").press()
+	var browsing: bool = G.settings.car == "super" and G.settings.color == "#00ff00"
+	Menu.homeBack()
+	r.check(browsing and G.settings.car == "hatch" and G.settings.color == colBefore and G.lookOf("hatch").paint == colBefore, "andere auto bekeken die je niet hebt: je eigen auto houdt zijn kleur", "%s %s (was %s)" % [G.settings.car, G.settings.color, colBefore])
+	Menu.homePanel("garage")
+	ui.tabLook.press()
+	Menu.homeBack()
+	# the career screen's car cards: your other car gets its own colour (it took the colour of the car you sat in)
+	G.garage.owned["rally"] = true
+	G.carUp("rally").col = "#00aa00"
+	Menu.homePanel("career")
+	var card = null
+	for b in Menu.careerUI.cars.get_children():
+		for l in b.find_children("*", "Label", true, false):
+			if l.text == Cars.CARS.rally.name: card = b
+	if card != null: card.press()
+	r.check(card != null and G.settings.car == "rally" and G.settings.color == "#00aa00" and G.carUp("hatch").col == colBefore, "carrière: andere eigen auto kiezen geeft zijn eigen kleur (de hatch houdt de zijne)", "%s %s" % [G.settings.car, G.settings.color])
+	Menu.homePanel("main")
+	Menu.pickCar("hatch")
 	Menu.homePanel("garage")
 	r.check(ui.tab == "look" and not ui.fitBar.visible, "garage weer open op Uiterlijk, paskamer leeg")
 	ui.lookGroup("lak")

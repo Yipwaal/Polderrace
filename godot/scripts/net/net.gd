@@ -357,7 +357,9 @@ func cycleCar(d: int) -> void:
 	var ids: Array = Cars.CARS.keys().filter(func(id): return Career.owns(id))
 	if ids.is_empty(): return
 	var i := ids.find(G.settings.car)
-	G.settings.car = ids[(i + d + ids.size()) % ids.size()]
+	var nc: String = ids[(i + d + ids.size()) % ids.size()]
+	G.carPicked(G.settings.car, nc)    # the paint colour belongs to the car
+	G.settings.car = nc
 	G.saveSettings()
 	Game.rebuildPlayerCar()
 	_sendCar()
