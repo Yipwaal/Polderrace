@@ -12,6 +12,8 @@ var D
 var a := {"track": "polder", "dir": "fwd", "mode": "race", "bots": "5", "car": "gt", "laps": "1", "time": "day", "weather": "dry",
 	"quality": "high", "style": "brake", "secs": "60", "shots": "", "out": "/tmp", "cam": "0", "size": "1280x720", "scale": "2"}
 var odd := 0
+var sloot := 0
+var _msgPrev := ""
 var ys: Array = []
 var worstY := 0.0
 var worstMsg := ""
@@ -41,12 +43,24 @@ func _ready() -> void:
 	var secs := float(a.secs)
 	Engine.time_scale = float(a.scale)
 	var c0: float = Game.clock
-	var lastRoll := 0.0
+	# qswitch=low@10,high@20: change the picture quality mid-race (as the pause settings do)
+	var qs: Array = Array(a.get("qswitch", "").split(",", false)).map(func(x): return x.split("@"))
 	while Game.clock - c0 < secs and Game.state != "over" and Game.state != "menu":
 		await drive()
 		await get_tree().process_frame
 		var t: float = Game.clock - c0
 		look(t)
+		var mt: String = Hud.msg_label.text if Hud.msg.visible else ""
+		if mt != _msgPrev and mt == "In de sloot!": sloot += 1
+		_msgPrev = mt
+		if a.get("trace", "") == "1" and int(t * 2) != int((t - get_process_delta_time() * Engine.time_scale) * 2):
+			var pl: PlayerState = Game.player
+			print("  t %.1f i %d lat %.1f v %.0f gear %d beta %.2f off %.2f y %.2f keys %s" % [t, pl.idx, pl.lat, pl.speed * 3.6, pl.gear, pl.beta, pl.offroad, pl.y, str(Game.keysDown.keys())])
+		if not qs.is_empty() and t >= float(qs[0][1]):
+			G.prefs.quality = qs[0][0]
+			Menu.applyPrefs()
+			print("     kwaliteit nu ", qs[0][0])
+			qs.pop_front()
 		if not shots.is_empty() and t >= shots[0]:
 			await shot("t%d" % int(shots[0]))
 			if a.get("look", "") == "1":
@@ -57,7 +71,17 @@ func _ready() -> void:
 			shots.pop_front()
 		D.check_errors("rijden")
 	Engine.time_scale = 1.0
-	print("KLAAR %s %s %s %s %s: state %s ronde %d plaats %d finish %.1f, %d keer R, %d vreemd, tijd %.1f" % [a.track, a.dir, a.mode, a.car, a.style, Game.state, Game.player.lap, Game.playerPosition(), Game.raceFinishTime, D.resets, odd, Game.clock - c0])
+	# replay=1: open the replay at the results and take pictures of it (each camera)
+	if a.get("replay", "") == "1" and Game.state == "over":
+		await D.until(func(): return Game.overReady, 3)
+		Rep.replayOpen()
+		for k in 3:
+			Rep.rp.camMode = k; Rep.rp.camT = 0.0; Rep.rp.anchor = null
+			Rep.rp.t = 20.0 + k * 9
+			await D.frames(20)
+			await shot("replay_cam%d" % k)
+		D.check_errors("replay")
+	print("KLAAR %s %s %s %s %s: state %s ronde %d plaats %d finish %.1f, %d keer R, %d keer sloot, %d vreemd, tijd %.1f" % [a.track, a.dir, a.mode, a.car, a.style, Game.state, Game.player.lap, Game.playerPosition(), Game.raceFinishTime, D.resets, sloot, odd, Game.clock - c0])
 	ys.sort()
 	if not ys.is_empty():
 		print("SCHERM %s %s: auto op het scherm (hoogte/venster) mediaan %.2f, 99%% %.2f, max %.2f, %d frames > 0,8; ergste: %s" % [a.track, a.dir, ys[ys.size() / 2], ys[int(ys.size() * 0.99)], ys[-1], ys.filter(func(y): return y > 0.8).size(), worstMsg])

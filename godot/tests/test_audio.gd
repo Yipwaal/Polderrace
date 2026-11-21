@@ -18,6 +18,7 @@ var outDir := ""
 var drive := {}          ## the throttle scenario's input (null: nobody drives)
 var sub := 0.0           ## real time left over for the 120 Hz drive steps
 var fdt := 0.0           ## real time of the last frame
+var driven := 0.0        ## seconds of driving simulated by _drive (a busy machine loses frames longer than 0.1 s)
 var _last := 0
 
 func run(h: Node) -> TestReport:
@@ -121,6 +122,7 @@ func _drive() -> void:
 	sub += fdt
 	while sub >= 1.0 / 120:
 		sub -= 1.0 / 120
+		driven += 1.0 / 120
 		g.drive(1.0 / 120, drive)
 
 func save(name: String, x: PackedFloat32Array) -> void:
@@ -559,7 +561,10 @@ func wav_scenarios() -> void:
 		await settle(0.4)
 		sub = 0
 		drive = {"gas": 1.0, "brake": 0.0, "steer": 0.0, "analog": false, "hand": false}
+		driven = 0.0
 		x = await record(5.0)
+		# (on a busy machine frames longer than 0.1 s are cut short: drive on until 5 s of driving were simulated)
+		while driven < 5.0: g.drive(1.0 / 120, drive); driven += 1.0 / 120
 		drive = {}
 		r.check(g.player.gear >= 3, "vol gas %s: schakelt op (versnelling %d, %.0f km/u)" % [cls, g.player.gear, g.player.speed * 3.6])
 		save("vol_gas_" + cls, x)
