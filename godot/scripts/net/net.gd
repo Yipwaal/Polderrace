@@ -25,6 +25,9 @@ const START_SECS := 3.0                           ## the countdown everyone sees
 const EMOTES := ["Hoi!", "Klaar?", "Even wachten…", "Succes!", "Goeie race!", "Haha!", "Toet toet!"]
 const NEXT_MODES := [["host", "Host kiest"], ["rot", "Om de beurt"], ["rand", "Willekeurig"], ["vote", "Stemmen"]]
 const GRID_MODES := [["rev", "Leider achteraan"], ["pts", "Leider vooraan"], ["rand", "Willekeurig"], ["join", "Vaste volgorde"]]
+const BOT_SNAP_S := 30.0          ## a guest takes a host bot's position over at once from this far along the track (m)
+const BOT_SNAP_LAT := 8.0          ## ... or this far sideways (m); anything less is smoothed out
+const BOT_FIX_V := 40.0            ## the smoothing moves a bot at most this fast on top of its own driving (m/s): no jumps
 const TAG_LAYER := 2               ## Fx.PLAYER_LAYER: the rear-view mirror leaves it out (name tags would read mirrored)
 
 var net = null                     ## Dictionary while in a game (JS `net`), null otherwise
@@ -1041,12 +1044,13 @@ func netTick(dt: float) -> void:
 				var bot: Mover = Game.bots[i]
 				# where the bot is by now: the host's position plus what it drove since (finished bots too: they roll out)
 				var qs := fposmod(float(q[0]) + float(q[2]) * age, L)
-				# a small difference with where the bot rolled on to here is smoothed out over a few frames (the host's
-				# frames are not evenly spaced either); a big one (a crash, a reset) is taken over at once
+				# a difference with where the bot rolled on to here is smoothed out over a few frames (the host's frames
+				# are not evenly spaced either, and after my own push on a bot the host's outcome differs by a few metres);
+				# only a big one (a reset, a lap of difference) is taken over at once
 				var es := Trk.wrapD(qs - bot.s)
 				var el: float = float(q[1]) - bot.lat
 				var lap := int(q[3])
-				if absf(es) < 8 and absf(el) < 3:
+				if absf(es) < BOT_SNAP_S and absf(el) < BOT_SNAP_LAT:
 					net.botErr[i] = Vector2(es, el)
 					# the lap that goes with the bot's own position (it may still be just before or after the line)
 					var rq := fposmod(float(q[0]) - Trk.S_START, L)
@@ -1087,11 +1091,12 @@ func netTick(dt: float) -> void:
 		return
 	if not net.host and botsFresh() and not net.watch:
 		# the rest of the difference with the host's bot positions: a part every frame (gone in about 0.1 s)
-		var k := minf(1.0, get_process_delta_time() * 12)
+		var fdt := get_process_delta_time()
+		var k := minf(1.0, fdt * 12)
 		for i in mini(Game.bots.size(), 16):
 			var e: Vector2 = net.botErr.get(i, Vector2.ZERO)
 			if e == Vector2.ZERO: continue
-			var c := e * k
+			var c := (e * k).limit_length(maxf(0.05, BOT_FIX_V * fdt))
 			var bot: Mover = Game.bots[i]
 			var rel := fposmod(bot.s - Trk.S_START, Trk.TRACK_LEN)
 			bot.s = fposmod(bot.s + c.x, Trk.TRACK_LEN)
@@ -1576,7 +1581,7 @@ func _watchTick(dt: float, now: int) -> void:
 		if fresh: bot.s = fposmod(bot.s + float(w[0]) * dt, Trk.TRACK_LEN)
 		var e: Vector2 = net.botErr.get(i, Vector2.ZERO)
 		if e != Vector2.ZERO:
-			var c := e * k
+			var c := (e * k).limit_length(maxf(0.05, BOT_FIX_V * dt))
 			bot.s = fposmod(bot.s + c.x, Trk.TRACK_LEN)
 			bot.lat += c.y
 			net.botErr[i] = e - c if (e - c).length() > 0.01 else Vector2.ZERO
