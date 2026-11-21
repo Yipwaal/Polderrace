@@ -187,7 +187,8 @@ def scenario_evening():
     # pause online: the world goes on (the host drives the bots for everyone)
     h.cmd('ex get_node("/root/Game").setPaused(true)')
     b0 = g2.rep()['bot_s']; time.sleep(1.0); b1 = g2.rep()['bot_s']; rh = h.rep()
-    check(rh['paused'] and abs(b1[0] - b0[0]) > 5, 'de host pauzeert: de bots rijden bij de anderen gewoon door', (rh['paused'], b0, b1))
+    # (bot 0 is the one Bram just rammed: it may still be spinning, so any bot that drives on counts)
+    check(rh['paused'] and max(abs(y - x) for x, y in zip(b0, b1)) > 5, 'de host pauzeert: de bots rijden bij de anderen gewoon door', (rh['paused'], b0, b1))
     h.cmd('ex get_node("/root/Game").setPaused(false)')
     # Mira stops (pause, Naar lobby): her car goes, she stays in the game and can watch the race from the lobby
     check(g3.cmd('quitrace'), 'Mira stopt met de race (pauze, Naar lobby)')
@@ -245,7 +246,7 @@ def scenario_evening():
     # ---- race 2 (Nieuwe race): the next track of the rotation, the leader of the standings starts last
     # Bram's game is busy for 4.5 s just as the host starts (a slow laptop that loads the next track takes longer than
     # the countdown): the host waits for him, so he still gets the start lights with the others
-    stall = threading.Thread(target=g1.cmd, args=('ex OS.delay_msec(4500)', 20), daemon=True)
+    stall = threading.Thread(target=g1.cmd, args=('stall 4500', 20), daemon=True)
     stall.start()
     time.sleep(0.2)
     check(h.cmd('again'), 'host klikt Nieuwe race')
@@ -266,7 +267,8 @@ def scenario_evening():
     gos = [r.get('go_at', 0) for r in rs]
     check(max(gos) - min(gos) < 0.25, 'ook op een andere baan tegelijk groen (de baan was al geladen tijdens het aftellen)', (round(max(gos) - min(gos), 3), gos))
     gi = rs[P.index(g1)].get('go_info', {})
-    check(gi.get('cd_at', 0) > 2.0, 'wie de baan langzaam laadde, kreeg toch de hele startprocedure (de host wachtte op hem)', gi)
+    hb = h.rep().get('banners', [])
+    check(gi.get('cd_at', 0) > 2.0 and any('geladen' in t for t in hb), 'wie de baan langzaam laadde, kreeg toch de hele startprocedure (de host wachtte op hem)', (gi, hb[-4:]))
     # Teun comes in during the race: he waits for the next one
     g4.cmd('open')
     r = g4.wait(lambda r: len(r['lobbies']) >= 1 and r['lobbies'][0].get('race'), 10)

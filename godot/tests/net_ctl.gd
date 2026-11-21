@@ -343,6 +343,10 @@ func _run(line: String) -> void:
 		"ts":
 			ts = float(rest)
 			say(seq, ts)
+		"stall":
+			# the game is busy for a while (a slow laptop loading a track): nothing runs, nothing is sent or received
+			OS.delay_msec(int(rest))
+			say(seq, true)
 		"ex":
 			# look into the game (debugging a scenario): one GDScript expression
 			var e := Expression.new()

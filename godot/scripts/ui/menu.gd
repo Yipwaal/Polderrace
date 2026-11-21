@@ -717,7 +717,9 @@ func buildResults() -> void:
 		var r: Dictionary = rows[k]
 		var tm: String
 		if g.mode == "elim": tm = "eruit" if r.out else ("winnaar" if k == 0 and not g.playerOut else "rijdt nog")
-		elif r.finished: tm = G.fmtLap(r.ft) if r == winner else "+" + G.toFixed(r.ft - winner.ft, 1).replace(".", ",") + " s"
+		# (the gap from times in whole hundredths: online every PC gets the same text, whether its times came from the
+		# host's packet or were rounded here)
+		elif r.finished: tm = G.fmtLap(r.ft) if r == winner else "+" + G.toFixed((roundi(r.ft * 100.0) - roundi(winner.ft * 100.0)) / 100.0, 1).replace(".", ",") + " s"
 		else: tm = r.get("dnf", "rijdt nog")
 		r.tm = tm
 		O.results.add_child(O.row(r.get("me", false), "%d." % (k + 1), r.name, r.car, tm, ("+%d" % (Champ.CHAMP_PTS[k] if k < Champ.CHAMP_PTS.size() else 0)) if g.mode == "champ" else r.get("pt")))
