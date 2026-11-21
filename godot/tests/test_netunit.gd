@@ -9,7 +9,65 @@ var r: TestReport
 func run(_host: Node) -> TestReport:
 	r = TestReport.new("online zonder netwerk (firewall-knop, controles)")
 	_firewall()
+	_looks()
+	_build(_host)
 	return r
+
+## the biggest look a player can have (every item, its longest value, mixed colours, full texts, the whole body kit) goes
+## over the wire whole: under NetRoom.LOOK_MAX and nothing cut off by clean_look's limit on the number of keys
+var looks := {}
+
+func _looks() -> void:
+	var worst := 0
+	var lost := []
+	looks = {}
+	for car in Cars.CARS:
+		var u := {}
+		for it in CarLook.ITEMS:
+			var k: String = it.k
+			match it.type:
+				"color": u[k] = "#a1b2c3" if it.get("mix", false) else str(it.opts[-1][0])
+				"num": u[k] = 88
+				"text": u[k] = "W".repeat(int(it.max))
+				_:
+					var best := ""
+					for o in it.opts:
+						if CarLook.optFits(car, k, o[0]) and str(o[0]).length() >= best.length() and o[0] != it.def: best = str(o[0])
+					u[k] = best if best != "" else it.def
+		var L := CarLook.compact(CarLook.clean(u, car))
+		L["paint"] = "#a1b2c3"
+		var sent := NetRoom.clean_look(L)
+		looks[car] = sent
+		worst = maxi(worst, JSON.stringify(sent).length())
+		if sent.size() != L.size(): lost.append("%s: %d van %d" % [car, sent.size(), L.size()])
+	r.check(lost.is_empty(), "een volledig aangepaste auto gaat helemaal over de lijn (geen onderdelen afgekapt)", str(lost))
+	r.check(worst > 0 and worst < NetRoom.LOOK_MAX, "en blijft onder de grens van %d tekens" % NetRoom.LOOK_MAX, "grootste: %d" % worst)
+
+## building the car of a player who comes in (also during a race: every racer's game builds it then)
+func _build(host: Node) -> void:
+	var times := {}
+	var slow := 0.0
+	for pass_ in 2:     # (the first pass fills the caches of shared materials and meshes)
+		for car in looks:
+			var t0 := Time.get_ticks_usec()
+			var m := CarKit.buildCar(car, Color("#a1b2c3"))
+			CarKit.styleCar(m, Net.safeLook(looks[car], car))
+			host.add_child(m.g)
+			if Canvas2D.pending_count() > 0: Canvas2D.flush(host)
+			var ms := (Time.get_ticks_usec() - t0) / 1000.0
+			if pass_ == 1 and car == "gt":
+				var plain := CarKit.buildCar(car, Color("#a1b2c3"))
+				CarKit.styleCar(plain, {})
+				var n0: int = plain.g.find_children("*", "MeshInstance3D", true, false).size()
+				var n1: int = m.g.find_children("*", "MeshInstance3D", true, false).size()
+				r.check(n1 > n0, "de gemeten auto heeft echt alles erop (meer onderdelen dan af fabriek)", "%d tegen %d" % [n1, n0])
+				plain.g.free()
+			m.g.queue_free()
+			if pass_ == 1:
+				times[car] = snappedf(ms, 0.1)
+				slow = maxf(slow, ms)
+	print("     bouwtijd auto met alles erop (ms): ", times)
+	r.check(slow < 60.0, "een volledig aangepaste auto van een andere speler bouwen duurt kort (geen hapering in de race)", "traagste %.1f ms" % slow)
 
 ## UTF-16LE bytes back to text (as PowerShell reads -EncodedCommand)
 static func _utf16(b: PackedByteArray) -> String:

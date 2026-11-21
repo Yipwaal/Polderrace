@@ -26,6 +26,8 @@ var rem_track := []                ## per frame: wall clock, x, z of the car of 
 var rem_name := ""
 var tracking := false
 var said := []                     ## chat lines heard
+var frame_us := 0                  ## wall clock of the last frame (usec)
+var max_frame := 0.0               ## the longest frame since the last "frames" command (ms, wall clock)
 
 func say(seq: String, v) -> void:
 	print("NET %s %s" % [seq, JSON.stringify(v)])
@@ -64,6 +66,9 @@ func _ready() -> void:
 	say("0", "ready")
 
 func _process(dt: float) -> void:
+	var now_us := Time.get_ticks_usec()
+	if frame_us > 0: max_frame = maxf(max_frame, (now_us - frame_us) / 1000.0)
+	frame_us = now_us
 	# first what happened this frame (a report must not see "racing" before go_at is set), then the next command
 	_watch(dt)
 	_drive()
@@ -256,6 +261,10 @@ func _run(line: String) -> void:
 			rem_track = []
 			tracking = rest != "off"
 			say(seq, true)
+		"frames":
+			# the longest frame since the last time this was asked (a hitch shows here), then start again
+			say(seq, snappedf(max_frame, 0.1))
+			max_frame = 0.0
 		"tracks":
 			say(seq, {"me": me_track, "rem": rem_track})
 		"shot":

@@ -716,7 +716,7 @@ static func clean_look(v: Dictionary) -> Dictionary:
 		elif (x is String or x is StringName) and str(x).length() <= 40: out[k] = _text(str(x), 40)
 		else: continue
 		n += 1
-		if n >= 40: break
+		if n >= 64: break     # (the catalogue has 40 items now; LOOK_MAX keeps it small anyway)
 	if JSON.stringify(out).length() > LOOK_MAX: return {}
 	return out
 
