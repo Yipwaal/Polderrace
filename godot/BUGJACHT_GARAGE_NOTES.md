@@ -34,8 +34,8 @@ Werknotities van de bugjager voor de garage, het uiterlijk van auto's en de body
 - Online-auto met volle kit, eerste keer dat model+combinatie gebouwd wordt: ±50-110 ms voor het model plus ±45-70 ms voor de kit
   (onderdelen ±22 ms, carbon kap ±13 ms, rest samenvoegen en meshes). Gebeurt bij binnenkomst/wijziging van de presence (lobby), daarna
   uit de cache (±2 ms). Niet aangepakt (LAN-gebied; kan met voorbouwen in de lobby).
-- Lampgloed van Fx (koplampen 's nachts) is altijd warm wit, ook bij groene/paarse/blauwe lampen; de lampkleur verandert niet tijdens een
-  race (een nieuwe look = nieuwe auto = opnieuw gescand), dus de "scant één keer"-hint is geen bug.
+- De lampkleur verandert niet tijdens een race (een nieuwe look = nieuwe auto = opnieuw gescand door Fx), dus de "scant één keer"-hint
+  is geen bug. Wel was de gloed altijd warm wit: nu in de kleur van het lampglas (`fx.gd`, opgelost, geen aparte test).
 - Getinte koplampen kleuren ook de grille en de knipperlichten in de lampen-atlas een beetje mee (lampMat-kloon met albedo-tint).
 - Bandopdruk "OTTO" is spiegelsymmetrisch: of de rechterwielen goed lezen is niet te zien (flip in `tyreWallGeo` klopt in de code).
 - Proto: deurontwerp zakt onder de witte fabrieksstreep (bekend).
