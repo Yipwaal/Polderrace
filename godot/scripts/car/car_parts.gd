@@ -412,15 +412,51 @@ static func _diffuser(K: CarBody, d: CarAcc) -> void:
 	var zb := K.zR + 0.05
 	var yf := 0.095
 	var yb := maxf(yf + 0.04, K.bot(zb + 0.02) - 0.015)
+	var wd := minf(1.36, 2.0 * K.W - 0.5)
+	# every exhaust this model can wear runs over the ramp: the ramp stays under the lowest pipe, the fins stop under the
+	# pipes in their way (they reach up to the body only in front of them)
+	var tips := exhaustTips(K)
+	var ymin := INF
+	var zfront := -INF
+	for t in tips:
+		if absf(t[0]) < wd / 2 + t[2]:
+			ymin = minf(ymin, t[1] - t[2])
+			zfront = maxf(zfront, t[3] + 0.19)
+	if ymin < INF: yb = maxf(yf + 0.04, minf(yb, ymin - 0.03))
 	var dz := zf - zb
 	var dy := yb - yf
-	var wd := minf(1.36, 2.0 * K.W - 0.5)
 	d.color(sc(C_CARBON, 0.5))
 	d.box(wd, 0.02, sqrt(dz * dz + dy * dy), 0, (yf + yb) / 2, (zf + zb) / 2, atan2(dy, dz))
+	var yBot := func(z: float) -> float: return lerpf(yb - 0.06, yf - 0.005, (z - zb) / dz)
+	var zc := clampf(zfront, zb + 0.04, zf - 0.06)
 	var x := -wd / 2 + 0.08
 	while x <= wd / 2 - 0.07:
-		CarKit.finPlate(d, [[zf, K.bot(zf) + 0.03], [zf, yf - 0.005], [zb, yb - 0.06], [zb, K.bot(zb) + 0.03]], x, 0.03)
+		var lim := INF
+		for t in tips:
+			if absf(t[0] - x) < t[2] + 0.03: lim = minf(lim, t[1] - t[2] - 0.012)
+		if lim == INF:
+			CarKit.finPlate(d, [[zf, K.bot(zf) + 0.03], [zf, yf - 0.005], [zb, yb - 0.06], [zb, K.bot(zb) + 0.03]], x, 0.03)
+		else:
+			CarKit.finPlate(d, [[zf, K.bot(zf) + 0.03], [zf, yf - 0.005], [zc, yBot.call(zc)], [zc, K.bot(zc) + 0.03]], x, 0.03)
+			if lim > yBot.call(zc) + 0.03 and lim > yb - 0.03:
+				CarKit.finPlate(d, [[zc, lim], [zc, yBot.call(zc)], [zb, yb - 0.06], [zb, lim]], x, 0.03)
 		x += (wd - 0.16) / 4.0
+
+## every exhaust tip a model can wear: the stock ones, sport, dual, centre (CarKit.tuneParts) and the kanon (_bigExhaust),
+## as [x, y, r, z of the tip] (the pipe runs about 0.18 forward of it)
+static func exhaustTips(K: CarBody) -> Array:
+	var S := K.S
+	var ex: Array = S.get("exh", [0.5])
+	var side: float = minf(maxf(0.45, absf(ex[0])), K.W - 0.3)
+	var xr := []
+	for x in K.dress.get("exh", []): xr.append([float(x), float(K.dress.get("exR", 0.045))])
+	xr += [[side, 0.058], [-side, 0.058], [side + 0.065, 0.042], [side - 0.065, 0.042], [-side + 0.065, 0.042], [-side - 0.065, 0.042], [0.075, 0.05], [-0.075, 0.05],
+		[side * signf(ex[0] if ex[0] != 0 else 1.0), 0.072]]
+	var out := []
+	for q in xr:
+		var y := CarKit.exhaustY(K, q[1], q[0])
+		out.append([q[0], y, q[1], CarKit.exhaustZ(K, q[0], y, q[1])])
+	return out
 
 static func _bigExhaust(K: CarBody, d: CarAcc) -> void:
 	var S := K.S
@@ -545,6 +581,21 @@ static func _hood(m: Dictionary, K: CarBody, L: Dictionary) -> void:
 	CarKit.set_geo(body, sp[0])
 	CarKit.mesh(m.get("shell", m.g), sp[1], CarKit.detailMat, true).set_meta("hood", true)
 
+## how far the deck rises beside the middle of the bonnet at z (the fender humps of the supercars), memo by centimetre
+static func _hump(K: CarBody, z: float, memo: Dictionary) -> float:
+	var key := roundi(z * 100.0)
+	if not memo.has(key):
+		var zz := key / 100.0
+		var y0 := K.topY(zz, 0.0)
+		var hi := y0
+		var x := 0.0
+		var sx := K.shoulderX(zz)
+		while x <= sx:
+			hi = maxf(hi, K.topY(zz, x))
+			x += 0.02
+		memo[key] = hi - y0
+	return memo[key]
+
 ## the paint of a model split at the bonnet: [paint Geo without the bonnet (and without the cabin when the roof has its own
 ## colour, see CarLook's two-tone roof), the bonnet in the detail colours of `v`]; built once per model. The bonnet: the
 ## skin's upward faces between the windscreen and the nose, inside the shoulders
@@ -565,6 +616,7 @@ static func hoodSplit(K: CarBody, roof: bool, v: String) -> Array:
 		var t = K.on_top(0.0, zCut + 0.02)
 		if t == null or t[1].y < 0.6: break
 		zCut += 0.02
+	var humps := {}
 	for gr in g.groups:
 		if gr[2] != 0: continue
 		for i in range(gr[0], gr[0] + gr[1], 3):
@@ -573,8 +625,9 @@ static func hoodSplit(K: CarBody, roof: bool, v: String) -> Array:
 			for k in ids:
 				var q: Vector3 = g.pos[k]
 				if q.z < zA or q.z > zCut or absf(q.x) > K.shoulderX(q.z) + 0.005 or g.nrm[k].y < 0.2: on = false; break
-				# (not the fender humps that rise beside the bonnet of the supercars: they stay in the paint)
-				if q.y > K.topY(q.z, 0.0) + 0.03: on = false; break
+				# (not the fender humps that rise beside the bonnet of the supercars: they stay in the paint; a bonnet that
+				# only curves up a little towards the wings is all bonnet)
+				if q.y > K.topY(q.z, 0.0) + 0.03 and _hump(K, q.z, humps) >= 0.1: on = false; break
 			var M: Geo = hg if on else rg
 			for k in ids:
 				M.pos.append(g.pos[k]); M.nrm.append(g.nrm[k]); M.uv.append(Vector2.ZERO)

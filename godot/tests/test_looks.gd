@@ -350,6 +350,27 @@ func part_kits() -> void:
 		if lo.shell.position.y > -0.015: flat.append("%s %.3f" % [id, lo.shell.position.y])
 		drop(lo)
 	r.check(flat.is_empty(), "Verlaagd: elke auto zakt minstens 1,5 cm (en nooit tot op de weg)", ", ".join(flat))
+	# the diffuser stays clear of every exhaust the model can wear (stock, sport, dual, centre, kanon)
+	var hitEx := []
+	for id in Cars.CARS:
+		if not CarLook.fits(id, "diffuser"): continue
+		var K := CarKit.carKit(id)
+		var P := CarParts.part(K, "diffuser", "on")
+		if P.d == null: continue
+		var tri: PackedVector3Array = P.d.P
+		for t in CarParts.exhaustTips(K):
+			var hit := false
+			for i in range(0, tri.size() - 2, 3):
+				if hit: break
+				for ia in 31:
+					if hit: break
+					for ib in 31 - ia:
+						var q: Vector3 = tri[i] + (tri[i + 1] - tri[i]) * (ia / 30.0) + (tri[i + 2] - tri[i]) * (ib / 30.0)
+						if q.z > t[3] - 0.03 and q.z < t[3] + 0.17 and Vector2(q.x - t[0], q.y - t[1]).length() < t[2] - 0.004:
+							hit = true
+							break
+			if hit: hitEx.append("%s: uitlaat x %.2f r %.3f" % [id, t[0], t[2]])
+	r.check(hitEx.is_empty(), "diffuser: geen uitlaat (af fabriek, sport, dubbel, centraal, kanon) door de vinnen of de plaat", ", ".join(hitEx.slice(0, 6)))
 	# carbon / matt black bonnet: the bonnet only, never the fender humps beside it (super, hyper, proto, ...)
 	var hoodBad := []
 	var hooded := 0
@@ -359,9 +380,18 @@ func part_kits() -> void:
 		if sp.is_empty(): continue
 		hooded += 1
 		var hump := 0
+		var memo := {}
+		var maxRise := 0.0
+		var zA: float = (K.C.z0 + 0.02) if K.C != null else float(K.S.wz[0]) - 0.75
+		var wideBack := 0.0      ## how wide the bonnet is just in front of the windscreen
 		for p in (sp[1] as Geo).pos:
-			if p.y > K.topY(p.z, 0.0) + 0.035: hump += 1
+			var rise := CarParts._hump(K, p.z, memo)
+			maxRise = maxf(maxRise, rise)
+			if p.y > K.topY(p.z, 0.0) + 0.035 and rise >= 0.1: hump += 1
+			if p.z < zA + 0.25: wideBack = maxf(wideBack, absf(p.x))
 		if hump > 0: hoodBad.append("%s: %d punten op de spatborden" % [id, hump])
+		# a bonnet without humps stays whole (the evo's curves up towards the wings: all of it, up to the windscreen)
+		if maxRise < 0.1 and wideBack < 0.5: hoodBad.append("%s: kap bij de voorruit maar %.2f m breed" % [id, wideBack * 2])
 	r.check(hoodBad.is_empty() and hooded >= 14, "carbon motorkap: alleen de kap, niet de spatborden ernaast", ", ".join(hoodBad.slice(0, 4)) if not hoodBad.is_empty() else "%d auto's" % hooded)
 	# a spoiler from the kit replaces the factory one; the kanon replaces the factory exhaust
 	var w := car("gt", {"wing": "swan", "exhaust": "big"})
