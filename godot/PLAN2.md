@@ -104,6 +104,8 @@ met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Slechte verbinding (150 ms ping, 5 % verlies): de auto van een andere speler springt soms meters (scenario 4 van
   `test_net_more.py`, alleen als root, niet in CI; faalt ongeveer 2 van de 3 keer, ook vóór de laatste wijzigingen).
   Op een gewoon LAN is dit zelden te zien. Een reset op de baan telt in die check nog als sprong.
+- Start met 8 spelers op CI: twee keer liepen de groene lichten tot 2,6 s uiteen (zonder haperende processen); lokaal,
+  ook zwaar belast, altijd binnen 0,06 s. De test toont bij een fout nu per spel racestart, hostklok en aftellen.
 - Muscle car en V12 belanden met toetsenbord vaak in de sloot bij vol gas door de bocht (powerslide is bewust).
 - Haven zit dicht bij het driehoekenbudget (±277k van 280k).
 - Audiotest "motor A stationair" wijkt soms 5–10 % af na andere tests in hetzelfde proces (spel zelf niet geraakt).
