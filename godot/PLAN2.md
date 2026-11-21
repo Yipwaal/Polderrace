@@ -95,4 +95,13 @@ met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 | Banen B | klaar en samengevoegd (veluwe, grachten, limburg, rotterdam, zeeland; kaarttests op alle tien banen) |
 | Beeld | klaar en samengevoegd (lucht-shader, licht per pixel, water, regen/nat wegdek, nacht, effecten, kwaliteitsniveaus) |
 | LAN | klaar en samengevoegd (lobby, klaar + aftellen, stand, meekijken, host-overname, opnieuw verbinden, looks online, PROTO 4) |
-| Bugjacht | loopt: spel/banen/menu's, online, garage/looks |
+| Bugjacht | klaar en samengevoegd: spel/banen/menu's (14 bugs, `tools/hunt`), online (11), garage/looks (12); notities in `BUGJACHT_*_NOTES.md` |
+
+## Nog open (gemeld, niet opgelost)
+
+- Overname na een gecrashte host duurt 25–28 s; firewallknop en UPnP zijn niet getest op echte Windows/router.
+- Gasten kunnen binnen de toleranties valsspelen (de host controleert grof).
+- Muscle car en V12 belanden met toetsenbord vaak in de sloot bij vol gas door de bocht (powerslide is bewust).
+- Haven zit dicht bij het driehoekenbudget (±277k van 280k).
+- Audiotest "motor A stationair" wijkt soms 5–10 % af na andere tests in hetzelfde proces (spel zelf niet geraakt).
+- Erasmusbrug heeft nog geen nachtverlichting; geen claxon; op de proto past geen deursticker.
