@@ -94,7 +94,61 @@ res://tools/shot_looks.tscn -- out=/map [only=groups,looks,cars] [car=gt]`.
   `carPlate` (worden per auto vervangen). Band-uv: draaiing rond het wiel = u, dwars = v (buitenwand = bovenste 29 %).
 - **Rijgedrag**: één regel in `setupBots` (bots krijgen `CarLook.botLook`).
 
-## Wacht op deel 2
+## Deel 2: bodykit (`scripts/car/car_parts.gd`, CarParts)
 
-Bodykit-onderdelen op de nieuwe carrosserieën, meer velgmodellen, tweekleurige motorkap/spiegels, deurontwerpen
-voorbij de wielkasten, toeter (er is nog geen toetertoets in het spel).
+- Elk onderdeel wordt per model uit de carrosserie berekend (`CarBody`-queries: `on_top/on_side/on_front/on_rear/on_cab`,
+  `endZ`, `shoulderX`, `bot`, `cabY`, `TUNE_FIT`), één keer per model en onderdeel gebouwd (`K.meta parts`), en alle
+  onderdelen van een look samen in **twee meshes** (detailkleuren + lak), gecachet per model en combinatie
+  (`K.meta partCombos`). Een volle kit kost dus 2 tekenaanroepen extra (carbon motorkap: 1).
+- Past het niet op een model (bijv. kieuwen op de hyper/longtail/proto, met een holle kap), dan bouwt het niets en staat
+  de optie niet in de garage: `CarLook.optFits(car, k, v)` (= `CarParts.builds`); `clean()` zet zo'n waarde terug.
+- Velgmaat: `wh.big` (rim r·(0,7+big)) wordt in `CarLook.pre` op de wielen gezet, CarKit bouwt de velg en de band
+  (lagere wang), remklauwen en bandopdruk volgen. Spoor: wielnaven naar buiten, nooit buiten de hitbox. Rijhoogte: de
+  `shell` zakt of rijst (wielen blijven op de weg); verlaagd nooit lager dan 6,5 cm boven de weg (`CarParts.lowY`).
+- Spoilers `lip/rally/swan` en uitlaat `big` zijn van CarParts (fabrieksspoiler en -uitlaat verborgen); `duck/gt` en
+  `sport/dual/center` blijven CarKit's `tuneParts` (gratis, zoals altijd).
+- Carbon/mat zwarte motorkap: de lak-mesh wordt per model gesplitst (`CarParts.hoodSplit`, hele vlakken van de huid
+  tussen voorruit en neus, binnen de schouders) — geen extra laag, dus geen flikkeren; strepen blijven erop.
+- Bots: soms een lichte kit (lip, sideskirts, voorspoiler, velgmaat, verlaagd); rivalen een eigen kit (Daan rally:
+  rallyvleugel, rode spatlappen, sleepogen, hoog; Ingrid: lip, sideskirts in lak, raceneus met canards; De Baron:
+  zwanenhals, brede wielkasten in lak, grote velgen, verlaagd, breed spoor).
+- Tests: `test_looks` part_kits (elk onderdeel op elke auto waar het te koop is, binnen de hitbox, boven de weg, vast
+  aan de huid, volle kit = gezonde auto via `test_cars.faults`, ≤ 2 meshes, hitbox gelijk, velgmaat/spoor/rijhoogte,
+  Verlaagd zakt overal ≥ 1,5 cm); `test_cars` varianten `kit`, `kit2`, `kit3` (54 nieuwe golden-sleutels, de oude
+  ongewijzigd). Schermafdrukken: `shot_looks only=kits [cars=gt,hatch]` (drie kits, vijf/zeven standpunten).
+
+| Groep | Item (sleutel) | Opties en prijs |
+|---|---|---|
+| Lak | Motorkap (`hood`) | in lakkleur 0, carbon 800, mat zwart 400 |
+| Wielen | Velgmaat (`wsize`) | standaard, groot 400, extra groot 700 |
+| | Spoorbreedte (`track`) | standaard, breder 300, extra breed 500 |
+| | Rijhoogte (`ride`) | standaard, verlaagd 500, rally-hoog 400 |
+| Bodykit | Spoiler (`wing`) | af fabriek, lip 300, ducktail 0, GT-vleugel 0, rallyvleugel 900, zwanenhals 1.400 |
+| | Voorspoiler (`splitter`) | lip 450, race met schotjes 750 |
+| | Canards (`canard`) | 350 |
+| | Sideskirts (`skirt`) | zwart 500, in lakkleur 650 |
+| | Brede wielkasten (`arch`) | zwart kunststof 1.200, in lakkleur 1.500 |
+| | Diffuser (`diffuser`) | 600 (auto's zonder diffuser af fabriek) |
+| | Spatlappen (`flap`) | zwart 200, rood met wit 250 (klasse B en A) |
+| Onderdelen | Op de motorkap (`scoop`) | luchthapper 400, kieuwen 350 |
+| | Op het dak (`roofx`) | dakrek 400, lichtbalk 650, dakhapper 300 (klasse B en A met dak) |
+| | Sleepogen (`tow`) | 80 |
+| | Uitlaat (`exhaust`) | + kanon 500 (klasse B en A) |
+
+Catalogus nu: 40 items, 244 opties (deel 1: 27 items, 203 opties). Bezit blijft account-breed (`garage.looks`).
+
+## Meldingen van de LAN-agent (opgelost / nagekeken)
+
+- `G.lookOf`: `paint` is een gewone String-sleutel (was een StringName door `L.paint = ...`).
+- `G.carUp` vult elk ontbrekend veld uit `Cars.default_up()` aan (een entry met `num` maar zonder `rimStyle` liet de
+  auto crashen); garage-entries die geen woordenboek zijn, vallen bij het laden weg.
+- "Parameter material is null" bij hatch + dubbele streep: na de merge van Automodellen en LAN niet meer na te spelen
+  (ook niet streng, met de foutmeldingen van de dummy-renderer en gewoon vrijgeven); `test_looks` part_repros faalt
+  bij elke engine-fout daarbij, en de hele uiterlijk-test faalt bij elke engine-fout.
+- `lookOf` met alles (volle look + volle bodykit) blijft onder de 600 tekens (test), ruim onder de 1000 van `NetRoom`.
+
+## Nog open
+
+- Spiegelkappen in een tweede kleur, deurontwerpen voorbij de wielkasten, toeter (geen toetertoets in het spel).
+- Proto: flank te laag voor deurstickers (bekend, test staat het toe).
+- Bandopdruk "OTTO" is symmetrisch; de u-richting is nu op beide kanten gelijk (`tyreWallGeo(..., flip)`).

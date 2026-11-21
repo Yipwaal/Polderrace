@@ -469,7 +469,7 @@ func part_garage() -> void:
 	await D.click(ui.groupRadio.find("lak"), "groep Lak")
 	await D.click(ui.radio("paint").find("#d62a2a"), "lak rood")
 	r.check(G.settings.color == "#d62a2a" and G.carUp("mini").col == "#d62a2a", "lakkleur", G.settings.color)
-	for seg in [["wheel", "rim", "gold"], ["wheel", "rimStyle", "spoke"], ["parts", "wing", "duck"], ["parts", "exhaust", "dual"], ["stripe", "stripe", "twin"], ["stripe", "sc", "yellow"]]:
+	for seg in [["wheel", "rim", "gold"], ["wheel", "rimStyle", "spoke"], ["body", "wing", "duck"], ["parts", "exhaust", "dual"], ["stripe", "stripe", "twin"], ["stripe", "sc", "yellow"]]:
 		if ui.group != seg[0]: await D.click(ui.groupRadio.find(seg[0]), "groep " + seg[0])
 		await D.click(ui.radio(seg[1]).find(seg[2]), seg[1])
 		r.check(G.carUp("mini")[seg[1]] == seg[2], "uiterlijk: %s = %s" % [seg[1], seg[2]], str(G.carUp("mini").get(seg[1])))

@@ -20,6 +20,11 @@ const VARIANTS := {
 		"ban": "POLDERRACE"},
 	"flag": {"stripe": "flag", "num": 9, "numPos": "roof", "numStyle": "ring", "wing": "duck", "rim": "#aa5500"},
 	"triple": {"stripe": "triple", "sc": "white", "sc2": "red", "finish": "chrome", "num": 12},
+	# body kits (CarParts): two full kits and the light one
+	"kit": {"wing": "rally", "splitter": "race", "canard": "on", "skirt": "black", "arch": "black", "diffuser": "on", "flap": "red", "scoop": "scoop", "roofx": "bar", "tow": "on",
+		"exhaust": "big", "wsize": "l", "track": "l", "ride": "low"},
+	"kit2": {"wing": "swan", "splitter": "street", "skirt": "paint", "arch": "paint", "scoop": "vents", "roofx": "rack", "wsize": "m", "track": "m", "ride": "high", "flap": "black", "tw": "letter"},
+	"kit3": {"wing": "lip", "roofx": "scoop", "exhaust": "big", "ride": "low"},
 }
 const TOL := 0.003
 ## what a car may cost: meshes drawn (stock / tuned) and triangles
@@ -138,6 +143,7 @@ static func faults(key: String, m: Dictionary, tuned: bool) -> String:
 	var wheelMeshes := {}
 	for w in m.wheels:
 		wheelMeshes[w.mesh] = w
+		if w.get("wall") != null: skip.append(w.wall)   # (the lettered ring on the tyre: part of the wheel)
 		if absf(w.pivot.position.y - w.r) > 1e-3: bad.append("wielas op %.3f, straal %.3f" % [w.pivot.position.y, w.r])
 	var drawn := 0
 	var tris := 0
@@ -296,7 +302,7 @@ func run(host: Node) -> TestReport:
 			var bad := compare(dump(m), gold[key])
 			r.check(bad == "", key, bad if bad != "" else "%d meshes (%d ms)" % [gold[key].meshes.size(), ms])
 		var tuned: bool = not (key.ends_with("/base") or key.begins_with("traffic/"))
-		if key.ends_with("/base") or key.ends_with("/tune") or key.ends_with("/duck") or key.begins_with("traffic/"):
+		if key.ends_with("/base") or key.ends_with("/tune") or key.ends_with("/duck") or key.contains("/kit") or key.begins_with("traffic/"):
 			var fl := faults(key, m, tuned)
 			r.check(fl == "", key + ": klopt", fl)
 		# a finish from the garage ends up on the paint
