@@ -121,6 +121,16 @@ func run(host: Node) -> TestReport:
 	Game.toMenu(-1)
 	Game.updateCamera(1.0 / 60)
 	r.check(fxRace > 0.3 and Game.speedFx == 0, "stoppen tijdens de race: geen snelheidseffect in het menu", "race %.2f, menu %.2f" % [fxRace, Game.speedFx])
+	# the far hills (no fog of their own) fade into the fog instead of standing sharp above the fog bank
+	var hm := Mats.basic(0x3f5a3a, {"fog": false})
+	hm.set_meta("base", MathX.col(0x3f5a3a)); hm.set_meta("k", 0.62)
+	World.hillMats.append(hm)
+	env.apply("day", "fog", true)
+	var dFog: float = Vector3(hm.albedo_color.r - env.fog_color.r, hm.albedo_color.g - env.fog_color.g, hm.albedo_color.b - env.fog_color.b).length()
+	env.apply("day", "dry", true)
+	var dDry: float = Vector3(hm.albedo_color.r - env.fog_color.r, hm.albedo_color.g - env.fog_color.g, hm.albedo_color.b - env.fog_color.b).length()
+	World.hillMats.erase(hm)
+	r.check(dFog < 0.06 and dDry > 0.15, "verre heuvels verdwijnen in de mist", "verschil met de mistkleur: mist %.3f, droog %.3f" % [dFog, dDry])
 	# a gust that was blowing when the race ended: the rain does not keep streaming sideways in the menu / next race
 	env.wind_x = 20.0
 	Game.updateWind(0.1)

@@ -529,7 +529,10 @@ func apply(t: String, w: String, force := false) -> void:
 		m.emission = MathX.col(0xff7a00)
 	for m in World.hillMats:
 		var base: Color = m.get_meta("base", m.albedo_color)
-		m.albedo_color = base.lerp(fogc, float(m.get_meta("k", 0.0)))
+		# (the far hills ignore the fog: in fog and rain they fade further into it, or they stood sharp above the fog bank)
+		var hk: float = float(m.get_meta("k", 0.0))
+		hk += (1.0 - hk) * (0.9 if fog else (0.45 if wet else 0.0))
+		m.albedo_color = base.lerp(fogc, hk)
 	birds.visible = t != "night" and not fog
 	if not Trk.TRK.is_empty():
 		for f in birds.get_children():
