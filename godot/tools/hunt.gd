@@ -39,6 +39,7 @@ func _ready() -> void:
 		await get_tree().current_scene.load_track(a.track)
 	Game.rebuildPlayerCar()
 	Game.startRace()
+	if a.get("p2cam", "") != "" and Game.split and Game.p2 != null: Game.p2.cam = int(a.p2cam)
 	var shots: Array = Array(a.shots.split(",", false)).map(func(x): return float(x))
 	var secs := float(a.secs)
 	Engine.time_scale = float(a.scale)
