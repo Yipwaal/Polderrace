@@ -135,6 +135,7 @@ func netCreate() -> void:
 	var listed := lan.serve(_lobby_info)
 	netEnter(room, true)
 	fw_msg = ""
+	if _mapped == null and _upnp == null: upnp_status = ""     # (what the router said about an earlier game)
 	firewall_check()
 	# an evening goes on: the standings of a game this player was in less than three hours ago
 	var o := onl()
