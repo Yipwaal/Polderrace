@@ -1649,6 +1649,8 @@ func resultOrder() -> Array:
 	return rows
 
 func showResults() -> void:
+	# online the race goes on behind the pause screen: the results take its place (it stayed open over them)
+	if paused: setPaused(false)
 	state = "over"
 	Menu.showResults()      # menus: results board, credits, championship points, career result, achievements, podium
 	overReady = false

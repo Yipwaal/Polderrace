@@ -163,6 +163,11 @@ func run(host: Node) -> TestReport:
 	tm.g.queue_free()
 	for _i in 120: Game.updateCamera(1.0 / 60)
 	r.check(Game.player.camDodge < 0.05, "en zakt daarna weer terug", "%.2f m" % Game.player.camDodge)
+	# the results come up while the pause screen is open (online the race goes on behind it): the pause screen goes
+	Game.setPaused(true)
+	Game.state = "finished"
+	Game.showResults()
+	r.check(not Game.paused and not Menu.pauseOv.visible and Menu.overOv.visible, "uitslag sluit het pauzescherm", "pauze %s" % str(Game.paused))
 	Game.toMenu(-1)
 	Game.set_process(true)
 	Game.set_process_input(true)
