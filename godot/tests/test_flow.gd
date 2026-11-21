@@ -105,6 +105,17 @@ func run(host: Node) -> TestReport:
 		"zichtbaar %s, camera 1 %x, camera 2 %x" % [str(vis), sv.cam1.cull_mask, sv.cam2.cull_mask])
 	Game.p2.cam = 0
 	sv.tick(1.0 / 60)
+	# a gust on a windy track pushes player 2 too
+	var trk0: Dictionary = Trk.TRK
+	Trk.TRK = trk0.duplicate()
+	Trk.TRK["wind"] = true
+	Game.gustPhase = 1.2; Game.gustT = 0.0; Game.gustDir = 1.0
+	var sl0: Vector2 = Game.p2.pl.slide
+	Game.updateWind(0.1)
+	var pushed: float = (Game.p2.pl.slide - sl0).length()
+	Trk.TRK = trk0
+	Game.gustPhase = 0.0
+	r.check(pushed > 0.1, "2 spelers: een windvlaag duwt ook speler 2 opzij", "%.2f m/s" % pushed)
 	# player 2 switches camera (Numpad1): player 1's saved camera preference stays as it was
 	var camBefore = JSON.parse_string(str(G.store_get("polderrace3d-prefs", "{}"))).get("cam", 0)
 	G.prefs.cam = 2

@@ -1347,9 +1347,11 @@ func updateWind(dt: float) -> void:
 		gustPhase -= dt
 		var f := sin((1 - gustPhase / GUST_LEN) * PI) * 8 * gustDir
 		var i := player.idx
-		var ex := clamp_(0.35 + player.y / 5, 0.35, 1.1) * clamp_(absf(player.speed) / 22, 0.2, 1)
-		player.slide.x += Trk.R[i].x * f * ex * dt
-		player.slide.y += Trk.R[i].z * f * ex * dt
+		# both players in split screen feel the gust (player 2 drove on as if there was no wind)
+		for pl in ([player, p2.pl] if split and p2 != null else [player]):
+			var ex := clamp_(0.35 + pl.y / 5, 0.35, 1.1) * clamp_(absf(pl.speed) / 22, 0.2, 1)
+			pl.slide.x += Trk.R[pl.idx].x * f * ex * dt
+			pl.slide.y += Trk.R[pl.idx].z * f * ex * dt
 		for b in bots:
 			if not b.out: b.lp += f * 0.45 * dt
 		for c in traffic: c.lp += f * 0.25 * dt
