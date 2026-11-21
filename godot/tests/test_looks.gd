@@ -756,4 +756,15 @@ func part_picker(host: Node) -> void:
 	r.check(not ui.pickerOpen() and G.fit.look.is_empty(), "garage uit met de kleurenkiezer open: de kiezer gaat dicht, niets in de paskamer")
 	ui.picker.color_changed.emit(Color(0.2, 0.9, 0.3))
 	r.check(G.fit.look.is_empty() and G.lookShown("gt", "rim") == "silver", "een kleur uit een oude kiezer komt niet op de auto (en niet in een race)", str(G.fit.look))
+	# typing a plate (not owned) and leaving with Terug while the field still has the focus: the field commits when it is
+	# hidden, after the fitting room was emptied; that must not put the plate in the fitting room outside the garage
+	Menu.homePanel("garage")
+	ui.tabLook.press()
+	ui.lookGroup("num")
+	var pf: LineEdit = ui.texts.plate
+	pf.grab_focus()
+	pf.text = "SNEL-1"
+	Menu.homeBack()
+	await host.get_tree().process_frame
+	r.check(G.fit.look.is_empty() and str(G.lookShown("gt", "plate")) == "", "kenteken getypt, garage uit met de focus in het veld: niets in de paskamer", str(G.fit.look))
 	Menu.homePanel("main")

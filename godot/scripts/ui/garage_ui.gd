@@ -581,6 +581,9 @@ func padPicker(now: Dictionary, prev: Dictionary) -> bool:
 
 ## a choice in the look tab: on the car at once; saved when it is yours, else in the fitting room
 func pick(k: String, v) -> void:
+	# (only in the garage: a text field that commits as it is hidden, after the garage was left, must not fill the fitting
+	# room the race car is styled from)
+	if not GarageRoom.inGarage: return
 	var car: String = G.settings.car
 	G.lookPick(car, k, v)
 	if k == "stripe":

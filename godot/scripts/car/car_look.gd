@@ -683,6 +683,8 @@ static func _glow(m: Dictionary, L: Dictionary) -> void:
 	var mat := _cached("glow" + c.to_html(false), func():
 		var mt := Mats.basic(0xffffff, {"map": glowTex(), "transparent": true, "depthWrite": false, "blending": "add", "opacity": 1.0})
 		mt.albedo_color = Color(c.r, c.g, c.b, _glowLevel)
+		# after the car's contact shadow (Fx, sorted by distance otherwise: the shadow darkened the neon from some angles)
+		mt.render_priority = 1
 		_glows.append(weakref(mt))
 		return mt)
 	if _glowGeo == null:
