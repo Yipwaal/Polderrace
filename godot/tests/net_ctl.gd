@@ -27,6 +27,7 @@ var rem_name := ""
 var tracking := false
 var said := []                     ## chat lines heard
 var frame_us := 0                  ## wall clock of the last frame (usec)
+var banners := []                  ## the track names of the countdown banners seen, in order
 var max_frame := 0.0               ## the longest frame since the last "frames" command (ms, wall clock)
 
 func say(seq: String, v) -> void:
@@ -97,6 +98,9 @@ func _watch(_dt: float) -> void:
 			bot_track = []
 		if st == "racing": go_at = Time.get_unix_time_from_system()
 		last_state = st
+	# every countdown banner text seen (the host may start the countdown again, e.g. with another track)
+	if NetUi.banner.visible and NetUi.banner_sub.text != "" and (banners.is_empty() or banners[-1] != NetUi.banner_sub.text) and banners.size() < 40:
+		banners.append(NetUi.banner_sub.text)
 	# how bot 0 moves on screen, frame by frame (a guest's bots come from the host's snapshots)
 	if st == "racing" and not Game.bots.is_empty() and bot_track.size() < 600:
 		bot_track.append(snappedf(Game.bots[0].m.g.position.x, 0.001))
@@ -405,7 +409,7 @@ func report() -> Dictionary:
 		"mapdots": Net.mapDots().size(), "raceTime": snappedf(g.raceTime, 0.01), "speed": snappedf(g.player.speed, 0.1), "mode": g.mode,
 		"cards": NetUi.list.get_children().map(func(c): return c.find_children("*", "Label", true, false).map(func(x): return x.text)),
 		"focus": str(get_viewport().gui_get_focus_owner().get_path()) if get_viewport().gui_get_focus_owner() != null else "",
-		"list_n": NetUi.list.get_child_count(), "bot_track": bot_track}
+		"list_n": NetUi.list.get_child_count(), "bot_track": bot_track, "banners": banners}
 	if Net.net != null:
 		var nn: Dictionary = Net.net
 		r.me = nn.game.me

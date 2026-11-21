@@ -647,6 +647,15 @@ func _myCfg() -> Dictionary:
 func pushCfg() -> void:
 	if net == null or not net.host: return
 	net.game.presence({"cfg": _myCfg()})
+	var S := G.settings
+	if int(net.cdAt) > 0 and net.cd is Dictionary and (str(net.cd.track) != str(S.track) or str(net.cd.dir) != str(S.dir)):
+		# another track during the countdown: the countdown starts again with it (the others see the right track in the
+		# banner and load it in time, instead of loading the old one and then the new one at the start)
+		net.cdN = int(net.cdN) + 1
+		net.cdAt = Time.get_ticks_msec() + int(START_SECS * 1000)
+		net.cd = {"until": net.cdAt, "track": S.track, "dir": S.dir}
+		net.game.presence({"cd": {"n": net.cdN, "s": START_SECS, "track": S.track, "dir": S.dir}})
+		_preload.call_deferred(S.track, S.dir)
 	changed.emit()
 
 func setNextMode(m: String) -> void:

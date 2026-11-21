@@ -782,15 +782,23 @@ def scenario_host_out():
     time.sleep(2.5)
     f = h.cmd('ex [get_viewport().gui_get_focus_owner().get_parent().get_meta("nick", ""), get_viewport().gui_get_focus_owner().text]')
     check(f == '["Bram", "Eruit"]', 'de focus blijft op de knop Eruit van Bram terwijl de lijst ververst', f)
-    # race 1: the host stops at once (pause, Naar lobby); the others race on
+    # race 1: the host changes the track during the countdown (the countdown starts again with the new one); then he
+    # stops at once (pause, Naar lobby) and the others race on
     h.cmd('start')
+    g1.wait(lambda r: r.get('countdown', 0) > 0, 4)
+    h.cmd('ex get_node("/root/NetUi").cyc.track.get_parent().get_child(3).pressed.emit()')
+    newt = h.rep().get('settings', {}).get('track')
+    nm = h.cmd('ex get_node("/root/Net").trackName("%s", "fwd")' % newt)
+    r = g1.wait(lambda r: nm in r.get('banners', []), 8)
+    check(newt != 'dorp' and nm in r.get('banners', []), 'de host kiest een andere baan tijdens het aftellen: het aftellen begint opnieuw met die baan', (newt, r.get('banners')))
     rs = [p.wait(lambda r: r['state'] == 'racing', 25) for p in P]
     check(all(r.get('state') == 'racing' for r in rs), 'iedereen in de race', [r.get('state') for r in rs])
+    check(all(r.get('track') == newt for r in rs), 'op de nieuwe baan', [r.get('track') for r in rs])
     time.sleep(1.5)
     check(h.cmd('quitrace'), 'de host stopt met de race (pauze, Naar lobby)')
     time.sleep(3)
     b0 = g1.rep().get('bot_s', []); time.sleep(1.0); b1 = g1.rep().get('bot_s', [])
-    check(len(b0) == 2 and all(abs(a - b) > 5 for a, b in zip(b0, b1)), 'de bots blijven rijden bij de anderen (ze staan niet stil op de weg)', (b0, b1))
+    check(len(b0) == 2 and all(abs(a - b) > 0.5 for a, b in zip(b0, b1)) and max(abs(a - b) for a, b in zip(b0, b1)) > 20, 'de bots blijven rijden bij de anderen (ze staan niet stil op de weg)', (b0, b1))
     rs = [p.wait(lambda r: r['state'] == 'over' and final(r), 90) for p in (g1, g2)]
     check(all(final(r) for r in rs), 'de race krijgt een officiele uitslag, ook al staat de host in de lobby', [(r.get('state'), r.get('res')) for r in rs])
     time.sleep(1)
