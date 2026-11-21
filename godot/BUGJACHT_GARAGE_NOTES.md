@@ -14,6 +14,7 @@ Werknotities van de bugjager voor de garage, het uiterlijk van auto's en de body
 | 7 | Mat zwarte motorkap op de evo was half (de kap loopt licht op naar de spatborden): de bultregel geldt nu alleen waar echt een bult staat (≥ 10 cm) | `car_parts.gd` hoodSplit | screenshot `evo__kitc__top.png` (na fix 4) | |
 | 8 | Neon onder de auto werd in de race (van sommige hoeken) door de contactschaduw van Fx gedimd: volgorde hing af van de afstand | `car_look.gd` _glow (render_priority 1) | code lezen (Fx-schaduw op 0,1 m, neon op 0,105 m, beide doorzichtig) | |
 | 9 | Een keuze die binnenkomt nadat de garage dicht is (tekstveld dat bij verbergen nog bevestigt, oude kleurenkiezer) kon de paskamer vullen waar de raceauto uit gestyled wordt: `pick` doet nu niets buiten de garage | `garage_ui.gd` pick | code lezen; test "kenteken getypt, garage uit met de focus in het veld" (via Terug was de volgorde al goed) | |
+| 10 | Paskamer liet je betalen voor wat niet te zien is: een eigen tweede kleur bleef staan na een ontwerp met één kleur (ook nummerkleuren zonder nummer, bandkleur zonder band) en vroeg de kleurenmenger | `garage_ui.gd` syncLook | code lezen; test "tweede kleur van een ontwerp met één kleur" | |
 | 2 | Onbeperkte voorraad: elke kleur uit de kleurenkiezer (velgen, remklauwen) bouwde een nieuwe wielvorm die nooit wegging; elke bodykit-combinatie bleef per model bewaard | `car_kit.gd` WGEO, `car_parts.gd` combo | code lezen; `test_memory` past nu in de garage (30 kits, 40 kleuren per ronde) | |
 
 ## Bekeken (screenshots)

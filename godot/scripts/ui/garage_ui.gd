@@ -604,6 +604,13 @@ func syncLook() -> void:
 	var hasNum: bool = int(val.num) > 0
 	var show := {"sc": n >= 1, "sc2": n >= 2, "numStyle": hasNum, "numFg": hasNum, "numFont": hasNum, "numPos": hasNum,
 		"numBg": hasNum and val.numStyle != "plain", "banCol": val.ban != ""}
+	# a row that no longer applies (a second colour of a one-colour design, the colours of no start number, ...) shows
+	# nothing on the car: what hangs in the fitting room for it would be paid for without being seen
+	if G.fit.car == car:
+		for k in show:
+			if not show[k] and G.fit.look.has(k):
+				G.fit.look.erase(k)
+				val[k] = G.lookShown(car, k)
 	for k in rows:
 		var r: Dictionary = rows[k]
 		var it: Dictionary = r.item

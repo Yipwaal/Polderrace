@@ -637,6 +637,16 @@ func part_garage() -> void:
 	ui.resetLook()
 	var L := G.lookOf("gt")
 	r.check(L.size() == 1 and L.paint == col, "Standaard: fabriekslook, de lakkleur blijft", str(L))
+	# a colour in the fitting room for a row that no longer applies is not paid for (sc2 of a one-colour design)
+	G.garage.credits = 5000
+	ui.lookGroup("stripe")
+	ui.pick("stripe", "triple")
+	ui.pick("sc2", "#123456")
+	var had: bool = G.fit.look.has("sc2") and G.fitCost().total == 250 + CarLook.MIX_PRICE
+	ui.pick("stripe", "twin")
+	r.check(had and not G.fit.look.has("sc2") and G.fitCost().total == 0 and not ui.fitBar.visible, "tweede kleur van een ontwerp met één kleur: niet meer in de paskamer, niets te betalen", str(G.fit.look))
+	ui.fitUndo.press()
+	ui.resetLook()
 	# the start number: stepper and field
 	ui.lookGroup("num")
 	rows_press(ui, "num", 1)
