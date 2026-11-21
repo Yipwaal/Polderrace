@@ -12,6 +12,9 @@ var D
 var a := {"track": "polder", "dir": "fwd", "mode": "race", "bots": "5", "car": "gt", "laps": "1", "time": "day", "weather": "dry",
 	"quality": "high", "style": "brake", "secs": "60", "shots": "", "out": "/tmp", "cam": "0", "size": "1280x720", "scale": "2"}
 var odd := 0
+var ys: Array = []
+var worstY := 0.0
+var worstMsg := ""
 
 func _ready() -> void:
 	for s in OS.get_cmdline_user_args():
@@ -50,18 +53,26 @@ func _ready() -> void:
 		D.check_errors("rijden")
 	Engine.time_scale = 1.0
 	print("KLAAR %s %s %s %s %s: state %s ronde %d plaats %d finish %.1f, %d keer R, %d vreemd, tijd %.1f" % [a.track, a.dir, a.mode, a.car, a.style, Game.state, Game.player.lap, Game.playerPosition(), Game.raceFinishTime, D.resets, odd, Game.clock - c0])
+	ys.sort()
+	if not ys.is_empty():
+		print("SCHERM %s %s: auto op het scherm (hoogte/venster) mediaan %.2f, 99%% %.2f, max %.2f, %d frames > 0,8; ergste: %s" % [a.track, a.dir, ys[ys.size() / 2], ys[int(ys.size() * 0.99)], ys[-1], ys.filter(func(y): return y > 0.8).size(), worstMsg])
 	D.check_errors("einde")
 	D.done()
 	get_tree().quit()
 
-var _wrong := 0.0
+var _wrong := [0.0, 0.0]
 ## a player-like driver: aims at the racing line a bit ahead, brakes for what is coming (style brake) or never (flat)
 func drive() -> void:
 	var g := Game
 	if g.state != "racing" and g.state != "countdown":
-		D.hold(KEY_A, false); D.hold(KEY_D, false); D.hold(KEY_W, false); D.hold(KEY_S, false)
+		for k in [KEY_A, KEY_D, KEY_W, KEY_S, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]: D.hold(k, false)
 		return
-	var pl: PlayerState = g.player
+	await drive_one(g.player, g.GRIP, [KEY_W, KEY_S, KEY_A, KEY_D, KEY_R], 0)
+	if g.split and g.p2 != null:
+		await drive_one(g.p2.pl, g.p2.GRIP, [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_KP_0], 1)
+
+func drive_one(pl: PlayerState, grip: float, keys: Array, n: int) -> void:
+	var g := Game
 	var NS := Trk.NS
 	var ahead := int(clampf(pl.speed * 0.5 / Trk.SPC, 3, 30))
 	var j := (pl.idx + ahead) % NS
@@ -71,8 +82,8 @@ func drive() -> void:
 	var want := atan2(tx - pl.pos.x, tz - pl.pos.z)
 	var df := fposmod(want - pl.heading + PI, TAU) - PI
 	var st := clampf(-df * 2.5, -1, 1)
-	D.hold(KEY_D, st > 0.1)
-	D.hold(KEY_A, st < -0.1)
+	D.hold(keys[3], st > 0.1)
+	D.hold(keys[2], st < -0.1)
 	var gas := true
 	var brk := false
 	if a.style == "brake":
@@ -82,20 +93,20 @@ func drive() -> void:
 			var i := int(floor(fposmod(pl.s + d, Trk.TRACK_LEN) / Trk.SPC)) % NS
 			var c: float = Trk.CURV[i]
 			if c > 2e-4:
-				var vl := 1.7 * g.GRIP * g.gripFactor() / (c + 1.7 * 0.5 / 69.4) * 0.92
+				var vl := 1.7 * grip * g.gripFactor() / (c + 1.7 * 0.5 / 69.4) * 0.92
 				target = minf(target, sqrt(vl * vl + 2 * 20.0 * d))
 			d += 6
 		if pl.speed > target + 2: brk = true; gas = false
 		elif pl.speed > target - 1: gas = false
-	D.hold(KEY_W, gas)
-	D.hold(KEY_S, brk)
+	D.hold(keys[0], gas)
+	D.hold(keys[1], brk)
 	var th := Trk.heading_of(Trk.T[pl.idx])
 	var dw := fposmod(th - pl.heading + PI, TAU) - PI
-	_wrong = _wrong + 1.0 / 60 if absf(dw) > 2.1 and g.state == "racing" else 0.0
-	if _wrong > 1.5:
-		_wrong = 0
+	_wrong[n] = _wrong[n] + 1.0 / 60 if absf(dw) > 2.1 and g.state == "racing" else 0.0
+	if _wrong[n] > 1.5:
+		_wrong[n] = 0
 		D.resets += 1
-		await D.tap(KEY_R)
+		await D.tap(keys[4])
 
 var _lastOdd := {}
 func vreemd(key: String, msg: String) -> void:
@@ -125,9 +136,14 @@ func look(_t: float) -> void:
 		var vp := get_viewport().get_visible_rect().size
 		var sp := cam.unproject_position(g.car.g.global_position + Vector3(0, 0.6, 0))
 		var behind := cam.is_position_behind(g.car.g.global_position)
+		var fy: float = sp.y / vp.y
+		ys.append(fy)
+		if fy > 0.8 and fy > worstY:
+			worstY = fy
+			worstMsg = "t=%.1f i %d lat %.1f v %.0f camY-y %.2f camLift %.2f" % [g.raceTime, pl.idx, pl.lat, pl.speed * 3.6, g.camY - pl.y, g.camLift]
 		if behind or sp.y > vp.y * 0.92 or sp.y < vp.y * 0.35 or sp.x < vp.x * 0.15 or sp.x > vp.x * 0.85:
-			vreemd("carOnScreen", "auto op het scherm op (%.0f, %.0f) van %s, achter %s, camLift %.2f, cam-auto %.1f m, camY %.2f auto y %.2f, v %.0f km/h, lat %.1f, melding '%s'" % [sp.x, sp.y, str(vp), str(behind), g.camLift,
-				cam.global_position.distance_to(g.car.g.global_position), g.camY, pl.y, pl.speed * 3.6, pl.lat, Hud.msg_label.text if Hud.msg.visible else ""])
+			vreemd("carOnScreen", "auto op het scherm op (%.0f, %.0f) van %s, achter %s, camLift %.2f, cam-auto %.1f m, camY %.2f auto y %.2f, v %.0f km/h, lat %.1f (rand %.1f, i %d), melding '%s'" % [sp.x, sp.y, str(vp), str(behind), g.camLift,
+				cam.global_position.distance_to(g.car.g.global_position), g.camY, pl.y, pl.speed * 3.6, pl.lat, Trk.EDGE[pl.idx], pl.idx, Hud.msg_label.text if Hud.msg.visible else ""])
 	# under the road / off the ground
 	var gy: float = pl.y
 	if g.car.g.global_position.y < gy - 0.3:
