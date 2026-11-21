@@ -97,12 +97,16 @@ static func buildGarageRoom() -> void:
 	for x in [-2.4, 2.4]:
 		_box(0.35, 3.6, 0.35, Mats.M(0xf2c200), x, 1.8, -7.5, g); _box(0.9, 0.1, 1.4, Mats.M(0x3a3e45), x, 0.05, -7.5, g)
 	_box(1.2, 0.9, 0.7, Mats.M(0x5a5f66), -10.2, 0.45, 5, g)
-	var hose := O3.mesh(Geo.torus(0.5, 0.06, 6, 18), Mats.M(0x1b1b1b), -12.8, 3, 5, g)
+	var hose := O3.mesh(Geo.torus(0.5, 0.06, 6, 18), Mats.M(0x1b1b1b), -12.8, 1.35, 5, g)
 	O3.rot(hose, 0, PI / 2, 0)
-	# (a black ring alone read as something floating in the air: it hangs on a bracket, its end and nozzle hang down)
-	_box(0.14, 0.12, 0.16, Mats.M(0x8a8d92), -12.79, 3.5, 5, g)
-	_box(0.06, 1.4, 0.06, Mats.M(0x1b1b1b), -12.78, 2.3, 5.5, g)
-	_box(0.07, 0.2, 0.07, Mats.M(0xf2c200), -12.78, 1.5, 5.5, g)
+	# (a black ring alone read as something floating in the air: it is wound on a red reel, its end and nozzle hang down)
+	# (it hung at 3 m, right above the car in the garage views)
+	var reel := O3.mesh(Geo.cylinder(0.43, 0.43, 0.08, 20), Mats.M(0xc8302a), -12.8, 1.35, 5, g)
+	O3.rot(reel, 0, 0, PI / 2)
+	var hub := O3.mesh(Geo.cylinder(0.09, 0.09, 0.16, 12), Mats.M(0x8a8d92), -12.78, 1.35, 5, g)
+	O3.rot(hub, 0, 0, PI / 2)
+	_box(0.06, 0.5, 0.06, Mats.M(0x1b1b1b), -12.78, 0.6, 5, g)
+	_box(0.07, 0.2, 0.07, Mats.M(0xf2c200), -12.78, 0.3, 5, g)
 	var flag := Canvas2D.tex(96, 64, func(c, _w, _h):
 		var cols := ["#ae1c28", "#ffffff", "#21468b"]
 		for k in 3:
