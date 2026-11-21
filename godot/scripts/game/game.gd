@@ -1490,6 +1490,11 @@ func updateCamera(dt: float) -> void:
 	elif hood:
 		camPos = Vector3(player.pos.x + fx * 0.9, player.y + 1.12, player.pos.z + fz * 0.9)
 		camLook = Vector3(player.pos.x + fx * 30, player.y + 0.9, player.pos.z + fz * 30)
+	# keep the chase camera out of a vehicle right behind the car (a van or a lorry that pulls up behind you): it rises
+	# over its roof and eases back down once it is clear
+	var dodge := 0.0 if hood or look else camClear(camPos)
+	player.camDodge += (dodge - player.camDodge) * (1 - exp(-dt * (14.0 if dodge > player.camDodge else 2.5)))
+	camPos.y += player.camDodge
 	# keep the chase camera out of the hills on the rolling tracks: lift it over the ground and ease back down afterwards
 	if not hood and Trk.terrain_fn.is_valid():
 		var need := maxf(0, Dress.groundY(camPos.x, camPos.z) + 1.7 - camPos.y)
@@ -1511,6 +1516,32 @@ func updateCamera(dt: float) -> void:
 	camera.look_at(camLook, Vector3.UP)
 	if absf(camera.fov - c.fov) > 0.02:
 		camera.fov += (c.fov - camera.fov) * minf(1, dt * 4)
+
+## how far the camera at p has to rise to clear the roof of another vehicle it is in (or nearly in); 0 when free
+func camClear(p: Vector3) -> float:
+	var need := 0.0
+	for c in traffic + bots:
+		if c.out: continue
+		var g: Node3D = c.m.g
+		if not g.visible or (g.global_position - p).length_squared() > 400.0: continue
+		var lp: Vector3 = g.global_transform.affine_inverse() * p
+		var h := carHeight(c.m)
+		if absf(lp.x) < c.m.wid * 0.5 + 0.6 and absf(lp.z - float(c.m.get("off", 0.0))) < c.m.len * 0.5 + 1.0 and lp.y < h + 0.5:
+			need = maxf(need, h + 0.5 - lp.y)
+	return need
+
+## height of a vehicle rig above the road (from its meshes, measured once)
+static func carHeight(m: Dictionary) -> float:
+	if m.has("h"): return m.h
+	var g: Node3D = m.g
+	var inv := g.global_transform.affine_inverse()
+	var top := 1.2
+	for mi in g.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null or mi.name == "CarFx": continue
+		var bb: AABB = (inv * mi.global_transform) * mi.mesh.get_aabb()
+		top = maxf(top, bb.end.y)
+	m["h"] = minf(top, 5.0)
+	return m.h
 
 # ================================================================== game flow
 func resetPlayer(i: int, lat: float) -> void:

@@ -49,6 +49,11 @@ func _ready() -> void:
 		look(t)
 		if not shots.is_empty() and t >= shots[0]:
 			await shot("t%d" % int(shots[0]))
+			if a.get("look", "") == "1":
+				D.hold(KEY_C, true)
+				await D.frames(3)
+				await shot("t%d_achter" % int(shots[0]))
+				D.hold(KEY_C, false)
 			shots.pop_front()
 		D.check_errors("rijden")
 	Engine.time_scale = 1.0
@@ -98,6 +103,9 @@ func drive_one(pl: PlayerState, grip: float, keys: Array, n: int) -> void:
 			d += 6
 		if pl.speed > target + 2: brk = true; gas = false
 		elif pl.speed > target - 1: gas = false
+	if a.style == "stop":
+		gas = g.state == "racing" and g.raceTime < 3.0
+		brk = not gas
 	D.hold(keys[0], gas)
 	D.hold(keys[1], brk)
 	var th := Trk.heading_of(Trk.T[pl.idx])
@@ -129,7 +137,8 @@ func look(_t: float) -> void:
 	for b in g.bots + g.traffic:
 		var bp: Vector3 = b.m.g.global_position
 		var lp: Vector3 = b.m.g.global_transform.affine_inverse() * cam.global_position
-		if absf(lp.x) < b.m.wid * 0.5 + 0.1 and absf(lp.z - float(b.m.get("off", 0.0))) < b.m.len * 0.5 + 0.1 and lp.y < 1.6 and lp.y > -0.3:
+		var hh: float = 3.9 if b.m.len > 10 else (2.6 if b.m.len > 5 else 1.6)
+		if absf(lp.x) < b.m.wid * 0.5 + 0.1 and absf(lp.z - float(b.m.get("off", 0.0))) < b.m.len * 0.5 + 0.1 and lp.y < hh and lp.y > -0.3:
 			vreemd("camInCar", "camera in %s (%.1f m)" % [b.get("name") if b.is_bot else "verkeer", cam.global_position.distance_to(bp)])
 	# the chase camera: the car round the lower middle of the screen
 	if int(G.prefs.cam) != 2 and not g.lookHeld() and g.car.g.visible:

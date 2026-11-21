@@ -49,10 +49,11 @@ var camD := 0.0              ## the chase camera drops back when you accelerate 
 var wallYaw := 0.0           ## a wall hit turns the car at once; the body follows in a blink instead of a jump (rad)
 var camBack := false         ## the chase camera looks backwards: only while you reverse on purpose (not after a bounce)
 var camSide := 0.0           ## the chase camera looks a little into the corner (m to the right of the car's nose)
+var camDodge := 0.0          ## the chase camera rises over a tall vehicle right behind the car (m)
 
 ## a car at rest: no slide, no lean (reset to the track, start of a race)
 func settle() -> void:
 	speed = 0; steer = 0; gear = 1; shiftT = 0; spin = 0
 	slide = Vector2.ZERO; push = Vector2.ZERO; slideOut = Vector2.ZERO
 	yr = 0; wt = 0; load = 1; slipF = 0; slipR = 0; beta = 0; delta = 0; ax = 0; ay = 0; rumble = 0; offroad = 0; spinV = 0
-	roll = 0; rollV = 0; pitch = 0; pitchV = 0; heave = 0; heaveV = 0; camD = 0; camSide = 0; wallYaw = 0; camBack = false
+	roll = 0; rollV = 0; pitch = 0; pitchV = 0; heave = 0; heaveV = 0; camD = 0; camSide = 0; camDodge = 0; wallYaw = 0; camBack = false
