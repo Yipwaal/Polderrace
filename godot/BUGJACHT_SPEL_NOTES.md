@@ -20,6 +20,7 @@ auto onder de weg; schermafdrukken met `shots=`). Zie de kop van `tools/hunt.gd`
 | 10 | 2 spelers: beeldhoek van speler 2 begon elk frame bij die van speler 1 (zoomde mee met speler 1's snelheid) | `split.gd` (`fov2`) | code lezen | test `flow` |
 | 11 | 2 spelers: bumpercamera verborg de auto in beide helften (de ander zag je niet meer) | `game.gd` updateCamera, `split.gd` (cull masks, `P2_LAYER`) | code lezen + screenshot | test `flow` |
 | 12 | 2 spelers: camerawissel van speler 2 werd als voorkeur van speler 1 opgeslagen | `game.gd` cycleCam | code lezen | test `flow` |
+| 13 | 2 spelers: windvlagen (Afsluitdijk, Zeeland) duwden alleen speler 1 | `game.gd` updateWind | code lezen | test `flow` |
 
 ## Open / gemeld
 
