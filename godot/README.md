@@ -39,14 +39,17 @@ De toetsen zijn in te stellen bij Instellingen.
 
 ## Online spelen (LAN-party of thuis)
 
-**Host (één pc):** Online spelen → *Nieuwe game maken*. Je ziet de lobby: links de race (baan, richting, ronden, bots,
-niveau, tijd, weer, startvolgorde, volgende baan), rechts de spelers met auto, ping en *klaar*, en de chat.
+**Host (één pc):** Online spelen → *Nieuwe game maken*. Je ziet de lobby: links de spelers met auto, ping en *klaar*, en de
+chat; rechts de race (baan, richting, ronden, bots, niveau, tijd, weer) en onder de chat startvolgorde en volgende baan.
 Alles wat je instelt zien de anderen meteen. Het spel onthoudt je instellingen voor de volgende keer.
 - *Start race* telt 3 seconden af bij iedereen (nog een keer klikken = annuleren). Is iemand nog niet klaar, dan staat er
   *Start toch (… niet klaar)*: klikken mag, hij rijdt gewoon mee.
 - *Eruit* (twee keer klikken) zet een speler uit de game; *Nieuwe spelers: gesloten* laat niemand meer binnen.
 - Na de race: uitslag met punten (10-8-6-5-4-3-2-1) en de *Stand van de avond*. *Nieuwe race* start de volgende,
-  op de baan die bij *Volgende baan* hoort (zelf kiezen, om de beurt, willekeurig of stemmen).
+  op de baan die bij *Volgende baan* hoort (zelf kiezen, om de beurt, willekeurig of stemmen). Rijdt er nog iemand,
+  dan telt de race meteen mee met de plek die hij op dat moment heeft.
+- Ga je als host terug naar de lobby terwijl de anderen nog rijden, dan rijden zij (en de bots) gewoon door en krijgt de
+  race toch een uitslag en punten.
 - Stopt de host (of valt zijn pc uit), dan neemt een andere speler de game vanzelf over: de race en de stand gaan door.
 
 **Meedoen:** Online spelen → de game van de host staat vanzelf in de lijst *Games op dit netwerk* → *Meedoen*. Geen codes.
@@ -72,10 +75,10 @@ weer dicht) of zet zelf UDP-poort **47810** open in de router. De anderen doen m
 Tot 8 spelers per game, plus bots. Eén host per pc (de poort is dan bezet); meedoen kan wel met meerdere spellen op één pc.
 Iedereen moet dezelfde versie hebben: anders zegt de lijst "andere versie".
 
-Poorten: 47810/UDP (het spel), 47811/UDP (games vinden op het netwerk).
+Poorten: 47810/UDP (het spel), 47811/UDP en 47812/UDP (games vinden op het netwerk).
 
 ## Voor ontwikkelaars
 
 Zie [PLAN.md](PLAN.md): opzet, portregels (de Godot-versie is een getrouwe port van `../polderrace-3d.html`) en tests.
 Tests: `python godot/tests/run.py track build laps cars flow audio menus rules memory perf play` en `python godot/tests/test_net.py`
-(meer online-scenario's, tot 9 spelers: `python godot/tests/test_net_more.py`, ±6 min).
+(meer online-scenario's, tot 9 spelers: `python godot/tests/test_net_more.py`, ±8 min).
