@@ -1,4 +1,6 @@
-**Polderrace 3D voor pc**: dezelfde 10 banen, 18 auto's, carrière en kampioenschap als de browserversie, met online racen op je eigen netwerk zonder codes.
+**Polderrace 3D voor pc**: 10 banen, 18 auto's, carrière en kampioenschap, met online racen op je eigen netwerk zonder codes.
+Beter dan de browserversie: nieuwe automodellen, echter rijgedrag, mooiere banen, lucht, water, regen en nacht, een garage met
+ruim 240 opties om je auto aan te passen (ook online zichtbaar) en een LAN-lobby voor 8 spelers met stand over de avond.
 
 ### Installeren (Windows)
 1. Download **Polderrace-Setup.exe** hieronder en start het.
