@@ -34,7 +34,7 @@ const MAX_GUESTS := 7
 const PROTO := 4
 const LOOK_MAX := 1000            ## the most characters of JSON a car's look may take (G.lookOf is < 600)
 ## what a guest may set in its own presence (JS P2P_GUEST_KEYS): everything else is the host's alone
-const GUEST_KEYS := ["nick", "car", "color", "look", "rdy", "vote", "e", "st", "k"]
+const GUEST_KEYS := ["nick", "car", "color", "look", "rdy", "vote", "e", "st", "k", "pre"]
 const FAST_KEYS := ["st", "b", "k", "q"]
 ## ENet drops a peer that has not answered for this long (ms). A game does not answer while it builds a track (seconds
 ## on a slow laptop); should that take longer than this, the guest is back in its seat by itself a moment later
@@ -673,6 +673,8 @@ static func clean(patch: Dictionary, guest: bool) -> Dictionary:
 				if v is String and v.length() <= 9 and Color.html_is_valid(v): out[k] = v
 			"rdy", "host", "off":
 				if v is bool: out[k] = v
+			"pre":
+				if _num(v): out[k] = int(v)
 			"st":
 				if v == null or _nums(v, 11, 16): out[k] = v
 			"b":

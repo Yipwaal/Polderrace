@@ -22,6 +22,8 @@ const ON_KEY := "polderrace3d-online"
 const PTS := [10, 8, 6, 5, 4, 3, 2, 1]             ## points per race, by place among the players
 const FINISH_WAIT := 45.0                         ## seconds the others get after the first player finished
 const START_SECS := 3.0                           ## the countdown everyone sees before the host's race starts
+const START_WAIT := 8000                          ## after it, the host waits at most this long (ms) for games that are
+                                                  ## still loading the track (a slow laptop), so they get the lights too
 const EMOTES := ["Hoi!", "Klaar?", "Even wachten…", "Succes!", "Goeie race!", "Haha!", "Toet toet!"]
 const NEXT_MODES := [["host", "Host kiest"], ["rot", "Om de beurt"], ["rand", "Willekeurig"], ["vote", "Stemmen"]]
 const GRID_MODES := [["rev", "Leider achteraan"], ["pts", "Leider vooraan"], ["rand", "Willekeurig"], ["join", "Vaste volgorde"]]
@@ -504,7 +506,7 @@ func _hostState(pr: Dictionary) -> bool:
 			net.cdSeen = int(cd.n)
 			net.cd = {"until": Time.get_ticks_msec() + int(clampf(float(cd.s), 0, 30) * 1000), "track": str(cd.get("track", "")), "dir": str(cd.get("dir", "fwd"))}
 			news = true
-			_preload.call_deferred(str(cd.get("track", "")), str(cd.get("dir", "fwd")))
+			_preloadReady.call_deferred(str(cd.get("track", "")), str(cd.get("dir", "fwd")), int(cd.n))
 	elif net.cd != null:
 		net.cd = null; net.cdSeen = -1; news = true
 	var res = pr.get("res")
@@ -760,6 +762,25 @@ func countdown() -> float:
 
 ## during the countdown: the track of the race is loaded already, so the start itself is instant for everyone
 ## (only from the menus and the results; who is still driving loads when the race starts)
+## guest: load the countdown's track, then tell the host this game is ready for the start (presence "pre" = countdown)
+func _preloadReady(track: String, dir: String, n: int) -> void:
+	_preload(track, dir)
+	if net != null and not net.host and int(net.cdSeen) == n: net.game.presence({"pre": n})
+
+## host: every player who will be on the grid has loaded the countdown's track (an older version never says so: the
+## host then waits START_WAIT)
+func _allPreloaded() -> bool:
+	var room: NetRoom = net.game
+	for id in net.remotes:
+		if net.remotes[id].off: continue
+		var pre = room.presence_of(id).get("pre")
+		if not NetRoom._num(pre) or int(pre) != int(net.cdN): return false
+	return true
+
+## the countdown ran out and the host still waits for players who load the track
+func waitingStart() -> bool:
+	return net != null and net.cd != null and countdown() <= 0.0
+
 func _preload(track: String, dir: String) -> void:
 	if net == null or net.cd == null or not TrackLoader.ported().has(track): return
 	if not (Game.state == "menu" or Game.state == "over") or Rep.rp != null or net.watch: return
@@ -1074,8 +1095,8 @@ func netTick(dt: float) -> void:
 					Game.kickOther(Game.bots[bi], clampf(float(kq.x), -25, 25), clampf(float(kq.z), -25, 25), clampf(float(kq.s), -8, 8))
 			net.seen[p.peer] = last
 	if net == null: return
-	# host: the countdown ran out
-	if net.host and int(net.cdAt) > 0 and now >= int(net.cdAt):
+	# host: the countdown ran out (and everyone has the track, or a slow game took too long)
+	if net.host and int(net.cdAt) > 0 and now >= int(net.cdAt) and (now >= int(net.cdAt) + START_WAIT or _allPreloaded()):
 		_hostGo()
 	# in the lobby: the garage may have changed my car's looks
 	if not net.inRace and now - int(net.lookAt) > 1000:

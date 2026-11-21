@@ -14,7 +14,7 @@
   5. de host stapt uit de race (Naar lobby) terwijl de anderen nog rijden: de bots rijden door, de race krijgt toch een
      uitslag en punten; de host start een nieuwe race voor iedereen binnen is: de lopende race telt mee.
 usage: python godot/tests/test_net_more.py [1] [2] [3] [4] [5]   (about 8 minutes: 1 ±2, 2 ±1-3, 3 ±0,5, 4 ±4, 5 ±1; 4 only as root on Linux)"""
-import sys, os, time, math, itertools, shutil, subprocess, pathlib, json, socket, random, statistics
+import sys, os, time, math, itertools, shutil, subprocess, pathlib, json, socket, random, statistics, threading
 import net_players
 net_players.isolate()
 from net_players import Player, kill_all, TMP
@@ -243,9 +243,16 @@ def scenario_evening():
     leader = [x['name'] for x in h.rep()['pts']][0]
 
     # ---- race 2 (Nieuwe race): the next track of the rotation, the leader of the standings starts last
+    # Bram's game is busy for 4.5 s just as the host starts (a slow laptop that loads the next track takes longer than
+    # the countdown): the host waits for him, so he still gets the start lights with the others
+    stall = threading.Thread(target=g1.cmd, args=('ex OS.delay_msec(4500)', 20), daemon=True)
+    stall.start()
+    time.sleep(0.2)
     check(h.cmd('again'), 'host klikt Nieuwe race')
-    rs = wait_all(P, lambda r: r.get('countdown', 0) > 0, 4)
+    rest = [p for p in P if p is not g1]
+    rs = wait_all(rest, lambda r: r.get('countdown', 0) > 0, 4)
     check(all(r.get('countdown', 0) > 0 and r.get('banner') for r in rs), 'aftellen op elk scherm (uitslag en lobby)', [(r['state'], r.get('banner')) for r in rs])
+    stall.join(15)
     rs = [p.wait(lambda r: r['state'] == 'countdown' and r['track'] == nxt, 25) for p in P]
     check(all(r.get('track') == nxt and r.get('state') == 'countdown' and len(r.get('bots', [])) == 2 for r in rs),
           'nieuwe race op de volgende baan voor iedereen (ook wie in de lobby stond)', [(r.get('state'), r.get('track'), len(r.get('bots', []))) for r in rs])
@@ -258,6 +265,8 @@ def scenario_evening():
     rs = [p.wait(lambda r: r['go_at'] > 0 and r['state'] == 'racing', 20) for p in P]
     gos = [r.get('go_at', 0) for r in rs]
     check(max(gos) - min(gos) < 0.25, 'ook op een andere baan tegelijk groen (de baan was al geladen tijdens het aftellen)', (round(max(gos) - min(gos), 3), gos))
+    gi = rs[P.index(g1)].get('go_info', {})
+    check(gi.get('cd_at', 0) > 2.0, 'wie de baan langzaam laadde, kreeg toch de hele startprocedure (de host wachtte op hem)', gi)
     # Teun comes in during the race: he waits for the next one
     g4.cmd('open')
     r = g4.wait(lambda r: len(r['lobbies']) >= 1 and r['lobbies'][0].get('race'), 10)

@@ -307,7 +307,7 @@ func _build_game() -> void:
 	start_btn = Hud.mk_button("Start race")
 	start_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	start_btn.pressed.connect(func():
-		if Net.countdown() > 0: Net.netHostCancel()
+		if Net.countdown() > 0 or Net.waitingStart(): Net.netHostCancel()
 		else: Net.netHostStart())
 	act.add_child(start_btn)
 	ready_btn = Hud.mk_button("Ik ben klaar")
@@ -690,6 +690,10 @@ func _top() -> void:
 		var c: Dictionary = n.cd
 		banner_lbl.text = "Race start over %d" % int(ceil(cd))
 		banner_sub.text = Net.trackName(c.get("track", ""), c.get("dir", "fwd"))
+	elif Net.waitingStart():
+		show = true
+		banner_lbl.text = "Even wachten…"
+		banner_sub.text = "Niet iedereen heeft de baan al geladen"
 	elif n != null and not ov.visible and (n.mig != null or n.game.is_reconnecting()):
 		show = true
 		banner_lbl.text = "Nieuwe host zoeken…" if n.mig != null else "Verbinding kwijt"
@@ -839,6 +843,7 @@ func _fill_game(w: float) -> void:
 	if host:
 		var nr := Net.notReady()
 		if cd > 0: start_btn.text = "Annuleren (start over %d)" % int(ceil(cd))
+		elif Net.waitingStart(): start_btn.text = "Annuleren (wachten op spelers)"
 		elif nr.is_empty(): start_btn.text = "Start race"
 		else: start_btn.text = "Start toch (%s niet klaar)" % (nr[0] if nr.size() == 1 else "%d spelers" % nr.size())
 	else:
