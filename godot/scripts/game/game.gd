@@ -86,6 +86,8 @@ var camY := 0.0
 var speedFx := 0.0
 var flyS := 0.0
 var camLift := 0.0
+var hoodView := false        ## the last updateCamera was the bumper view (split screen hides that player's car in its half)
+const P2_LAYER := 3          ## visual layer of player 2's car (player 1's is Fx.PLAYER_LAYER)
 const CAM_NAMES := ["Achter de auto", "Verder weg", "Bumper"]
 
 # ------------------------------------------------------------------ wind (Afsluitdijk, Zeeland)
@@ -1482,7 +1484,10 @@ func updateCamera(dt: float) -> void:
 	placeCam(c)
 	var look := lookHeld() and state != "countdown"
 	var hood := int(G.prefs.cam) == 2 and not look
-	car.g.visible = not hood
+	hoodView = hood
+	# (split screen: both halves look into the same world, so the car stays visible and each half's camera leaves out
+	# its own car instead: SplitView.tick)
+	car.g.visible = not hood or (split and p2 != null)
 	var fx := sin(player.heading); var fz := cos(player.heading)
 	if look:
 		camPos = Vector3(player.pos.x + fx * 5.5, player.y + 2.3, player.pos.z + fz * 5.5)
@@ -1875,6 +1880,9 @@ func splitSetup() -> void:
 		resetPlayer(int(round(g.s / Trk.SPC)) % Trk.NS, g.lat)
 		player.lap = 0; nextCp = 0; lapTimes = []; raceDone = false
 		snapCamera())
+	# player 2's car on a visual layer of its own: player 2's half leaves it out in the bumper view (SplitView.tick)
+	for gi in p2.car.g.find_children("*", "VisualInstance3D", true, false):
+		gi.layers = 1 << (P2_LAYER - 1)
 
 func splitTeardown() -> void:
 	if p2 != null and p2.car != null: p2.car.g.queue_free()

@@ -124,6 +124,7 @@ func tick(dt: float) -> void:
 	line.position = Vector2(0, h2 - 1.5); line.size = Vector2(vp.x, 3)
 	# player 1 looks through the main camera's pose; player 2's camera is placed by updateCamera as player 2
 	cam1.global_transform = main_cam.global_transform; cam1.fov = main_cam.fov
+	var hood1: bool = g.hoodView
 	var save_t := main_cam.global_transform
 	var save_f := main_cam.fov
 	# player 2's field of view eases on its own (it started from player 1's every frame: it followed player 1's speed)
@@ -134,6 +135,10 @@ func tick(dt: float) -> void:
 	g.asP2(func(): g.updateCamera(cdt))
 	cam2.global_transform = main_cam.global_transform; cam2.fov = main_cam.fov
 	fov2 = main_cam.fov
+	# the bumper view: each half leaves out its own car (the other half still sees it)
+	cam1.cull_mask = 0xFFFFF & ~((1 << (Fx.PLAYER_LAYER - 1)) if hood1 else 0)
+	cam2.cull_mask = 0xFFFFF & ~((1 << (g.P2_LAYER - 1)) if g.hoodView else 0)
+	g.hoodView = hood1
 	main_cam.global_transform = save_t; main_cam.fov = save_f
 	# player 2's HUD
 	if hud2.visible:

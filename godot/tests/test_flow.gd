@@ -96,6 +96,15 @@ func run(host: Node) -> TestReport:
 		sv.tick(1.0 / 60)
 	r.check(sv.cam2.fov > 68.0, "2 spelers: camera van speler 2 zoomt uit met zijn eigen snelheid", "fov %.1f (speler 1: 58)" % sv.cam2.fov)
 	Game.p2.pl.speed = sp2
+	# player 2 in the bumper view: player 2's half leaves out its own car, player 1 still sees it
+	Game.p2.cam = 2
+	sv.tick(1.0 / 60)
+	var b2 := 1 << (Game.P2_LAYER - 1)
+	var vis: bool = Game.p2.car.g.visible and Game.p2.car.g.find_children("*", "VisualInstance3D", true, false).all(func(n): return n.layers == b2)
+	r.check(vis and (sv.cam2.cull_mask & b2) == 0 and (sv.cam1.cull_mask & b2) != 0, "2 spelers: bumpercamera van speler 2 verbergt zijn auto alleen in zijn eigen helft",
+		"zichtbaar %s, camera 1 %x, camera 2 %x" % [str(vis), sv.cam1.cull_mask, sv.cam2.cull_mask])
+	Game.p2.cam = 0
+	sv.tick(1.0 / 60)
 	if sv._main_mask != 0: cam.cull_mask = sv._main_mask
 	sv.queue_free()
 	SplitView.me = svPrev
