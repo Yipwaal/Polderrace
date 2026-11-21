@@ -1003,6 +1003,11 @@ func _input(e: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		if not e.echo: bindCapture.call(code)
 		return
+	# Escape with the look tab's colour picker open closes the picker, not the garage
+	if code == "Escape" and garageUI != null and garageUI.pickerOpen():
+		get_viewport().set_input_as_handled()
+		garageUI.closePicker()
+		return
 	var f := get_viewport().gui_get_focus_owner()
 	# typing in a text field (start number): leave every key to the field; Escape and Enter leave it
 	if f is LineEdit:
@@ -1059,6 +1064,7 @@ func padNav(now: Dictionary, prev: Dictionary) -> bool:
 	var g := Game
 	if NetUi.padNav(now, prev): return true     # the online screens (lobby, watching)
 	if g.state == "menu" and menuStep < 0:
+		if garageUI != null and garageUI.padPicker(now, prev): return true   # the colour picker of the look tab
 		if edge.call("up"): padFocus(-1)
 		if edge.call("down"): padFocus(1)
 		if edge.call("a"):

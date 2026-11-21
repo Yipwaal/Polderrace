@@ -95,6 +95,7 @@ func run(host: Node) -> TestReport:
 	part_buying()
 	part_garage()
 	await part_keys(host)
+	await part_picker(host)
 	Game.toMenu(-1)
 	Menu.homePanel("main")
 	Game.set_process(true)
@@ -349,6 +350,19 @@ func part_kits() -> void:
 		if lo.shell.position.y > -0.015: flat.append("%s %.3f" % [id, lo.shell.position.y])
 		drop(lo)
 	r.check(flat.is_empty(), "Verlaagd: elke auto zakt minstens 1,5 cm (en nooit tot op de weg)", ", ".join(flat))
+	# carbon / matt black bonnet: the bonnet only, never the fender humps beside it (super, hyper, proto, ...)
+	var hoodBad := []
+	var hooded := 0
+	for id in Cars.CARS:
+		var K := CarKit.carKit(id)
+		var sp := CarParts.hoodSplit(K, false, "carbon")
+		if sp.is_empty(): continue
+		hooded += 1
+		var hump := 0
+		for p in (sp[1] as Geo).pos:
+			if p.y > K.topY(p.z, 0.0) + 0.035: hump += 1
+		if hump > 0: hoodBad.append("%s: %d punten op de spatborden" % [id, hump])
+	r.check(hoodBad.is_empty() and hooded >= 14, "carbon motorkap: alleen de kap, niet de spatborden ernaast", ", ".join(hoodBad.slice(0, 4)) if not hoodBad.is_empty() else "%d auto's" % hooded)
 	# a spoiler from the kit replaces the factory one; the kanon replaces the factory exhaust
 	var w := car("gt", {"wing": "swan", "exhaust": "big"})
 	r.check(w.stockWing.all(func(o): return not o.visible) and w.g.get_meta("exh").meshes.all(func(o): return not o.visible), "bodykit-spoiler en kanon vervangen die van de fabriek")
@@ -581,6 +595,14 @@ func part_garage() -> void:
 		ui.randomLook()
 		if not G.fit.look.is_empty() or G.garage.credits != 5000: r.check(false, "Willekeurig kost niets", str(G.fit.look))
 	r.check(G.fit.look.is_empty() and G.garage.credits == 5000, "Willekeurig: alleen wat je hebt, niets in de paskamer")
+	# with the colour mixer but without the roof and neon sets: no own colour on those (it would land in the fitting room)
+	G.garage.looks["mix"] = 1
+	var leak := []
+	for _i in 60:
+		ui.randomLook()
+		if not G.fit.look.is_empty(): leak.append(str(G.fit.look))
+	r.check(leak.is_empty(), "Willekeurig met kleurenmenger: geen eigen kleur op dak of neon zonder de set", ", ".join(leak.slice(0, 3)))
+	G.garage.looks.erase("mix")
 	var col: String = G.settings.color
 	ui.resetLook()
 	var L := G.lookOf("gt")
@@ -666,4 +688,42 @@ func part_keys(host: Node) -> void:
 	r.check(G.lookShown("gt", "rimStyle") != before, "gamepad rechts: volgende optie", "%s -> %s" % [before, G.lookShown("gt", "rimStyle")])
 	Menu.padNav({"down": true}, {})
 	r.check(focused() is UiKit.Btn and focused().radio == ui.radio("rim"), "gamepad omlaag: volgende rij")
+	Menu.homePanel("main")
+
+# ------------------------------------------------------------------ the colour picker (own colour) with gamepad and keyboard
+func part_picker(host: Node) -> void:
+	G.use_store("user://test-looks.json", {"polderrace3d-settings": {"car": "gt", "color": "#f36f21"}, "polderrace3d-garage": {"credits": 5000, "owned": {"gt": true}, "looks": {}}})
+	Game.rebuildPlayerCar()
+	Menu.homePanel("garage")
+	var ui: GarageUI = Menu.garageUI
+	ui.tabLook.press()
+	ui.lookGroup("wheel")
+	ui.rows.rim.mix.press()
+	await host.get_tree().process_frame
+	r.check(ui.pickerOpen(), "eigen kleur: de kleurenkiezer gaat open")
+	var before = G.lookShown("gt", "rim")
+	Menu.padNav({"r": true}, {})
+	Menu.padNav({"up": true}, {})
+	var after = G.lookShown("gt", "rim")
+	r.check(CarLook.isHex(after) and after != before and ui.pickerOpen() and Game.car.look.rim == after, "gamepad: links/rechts en op/neer kiezen de kleur, de auto toont hem", "%s -> %s" % [before, after])
+	Menu.padNav({"b": true}, {})
+	r.check(not ui.pickerOpen() and GarageRoom.inGarage and Menu.homeView == "garage", "gamepad B: kleurenkiezer dicht, nog in de garage")
+	r.check(focused() == ui.rows.rim.mix, "focus terug op het kleurvakje")
+	# Escape with the picker open closes the picker, not the garage
+	await host.get_tree().process_frame
+	ui.rows.rim.mix.press()
+	await host.get_tree().process_frame
+	var was: bool = ui.pickerOpen()
+	key(KEY_ESCAPE)
+	await host.get_tree().process_frame
+	r.check(was and not ui.pickerOpen() and GarageRoom.inGarage, "Esc: kleurenkiezer dicht, nog in de garage", "kiezer open: %s, garage: %s" % [ui.pickerOpen(), GarageRoom.inGarage])
+	if not GarageRoom.inGarage: Menu.homePanel("garage")
+	# leaving the garage while the picker is open: it closes, and a colour from it no longer lands on the car
+	await host.get_tree().process_frame
+	ui.rows.rim.mix.press()
+	await host.get_tree().process_frame
+	Menu.homeBack()
+	r.check(not ui.pickerOpen() and G.fit.look.is_empty(), "garage uit met de kleurenkiezer open: de kiezer gaat dicht, niets in de paskamer")
+	ui.picker.color_changed.emit(Color(0.2, 0.9, 0.3))
+	r.check(G.fit.look.is_empty() and G.lookShown("gt", "rim") == "silver", "een kleur uit een oude kiezer komt niet op de auto (en niet in een race)", str(G.fit.look))
 	Menu.homePanel("main")

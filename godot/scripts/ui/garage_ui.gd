@@ -384,11 +384,7 @@ func _build_look() -> void:
 	picker.edit_alpha = false
 	picker.presets_visible = false
 	pickPopup.add_child(picker)
-	picker.color_changed.connect(func(c: Color) -> void:
-		if mixKey == "": return
-		var hex := "#" + c.to_html(false)
-		lastMix[mixKey] = hex
-		pick(mixKey, hex))
+	picker.color_changed.connect(_mixed)
 	look.visible = false
 	content.add_child(look)
 	lookGroup("lak")
@@ -538,7 +534,50 @@ func _openPicker(k: String, b: Control) -> void:
 	if pickPopup.get_parent() == null: b.get_tree().root.add_child(pickPopup)
 	picker.color = Color(_mixColor(k))
 	var r := b.get_global_rect()
-	pickPopup.popup(Rect2i(int(r.position.x), int(r.end.y + 6), 0, 0))
+	# below the swatch, but inside the window (a small window: beside or over the swatch rather than off the screen)
+	var vs := b.get_viewport().get_visible_rect().size
+	var ps := pickPopup.get_contents_minimum_size()
+	var x := clampf(r.position.x, 0.0, maxf(0.0, vs.x - ps.x))
+	var y := clampf(r.end.y + 6, 0.0, maxf(0.0, vs.y - ps.y))
+	pickPopup.popup(Rect2i(int(x), int(y), 0, 0))
+
+## a colour from the colour picker (only while it is open for a row of the look tab)
+func _mixed(c: Color) -> void:
+	if mixKey == "" or not pickerOpen() or not GarageRoom.inGarage: return
+	var hex := "#" + c.to_html(false)
+	lastMix[mixKey] = hex
+	pick(mixKey, hex)
+
+func pickerOpen() -> bool:
+	return pickPopup != null and pickPopup.visible
+
+func closePicker() -> void:
+	if pickerOpen(): pickPopup.hide()
+	mixKey = ""
+
+## the gamepad while the colour picker is open (Menu.padNav reads the pad itself, past the popup): left/right turn the
+## hue, up/down make it lighter or darker, A or B closes it (B does not leave the garage). true = handled
+func padPicker(now: Dictionary, prev: Dictionary) -> bool:
+	if not pickerOpen(): return false
+	var edge := func(k: String) -> bool: return now.get(k, false) and not prev.get(k, false)
+	if edge.call("a") or edge.call("b") or edge.call("start"):
+		var k := mixKey
+		closePicker()
+		if rows.has(k) and rows[k].has("mix"): UiKit.focus(rows[k].mix)
+		return true
+	var c := picker.color
+	var h := c.h
+	var v := c.v
+	var sat := maxf(c.s, 0.35)
+	if edge.call("l"): h -= 1.0 / 24
+	if edge.call("r"): h += 1.0 / 24
+	if edge.call("up"): v += 0.1
+	if edge.call("down"): v -= 0.1
+	var n := Color.from_hsv(fposmod(h, 1.0), sat, clampf(v, 0.15, 1.0))
+	if not n.is_equal_approx(c):
+		picker.color = n
+		_mixed(n)
+	return true
 
 ## a choice in the look tab: on the car at once; saved when it is yours, else in the fitting room
 func pick(k: String, v) -> void:
@@ -705,6 +744,7 @@ func _syncFit() -> void:
 
 ## leaving the look tab or the garage: what is not paid for goes back
 func leaveLook() -> void:
+	closePicker()
 	if G.fitClear() and Game.car != null: Game.rebuildPlayerCar()
 	if GarageRoom.dark:
 		GarageRoom.setDark(false)
@@ -725,7 +765,9 @@ func randomLook() -> void:
 				var c: Array = it.opts.map(func(o): return o[0]).filter(func(v): return G.lookNeeds(k, v).is_empty() and CarLook.optFits(car, k, v))
 				if it.type == "color" and it.has("none"): c.append("")
 				if it.type == "color" and it.get("mix", false) and G.lookHas("mix") and randf() < 0.2:
-					c = ["#" + Color.from_hsv(randf(), 0.4 + randf() * 0.6, 0.35 + randf() * 0.65).to_html(false)]
+					# an own colour, unless the item is a set you do not have (roof, neon: that would go to the fitting room)
+					var hex := "#" + Color.from_hsv(randf(), 0.4 + randf() * 0.6, 0.35 + randf() * 0.65).to_html(false)
+					if G.lookNeeds(k, hex).is_empty(): c = [hex]
 				if not c.is_empty(): G.lookPick(car, k, c.pick_random())
 			"num":
 				G.lookPick(car, k, 0 if randf() < 0.25 else randi_range(1, 99))
