@@ -140,12 +140,14 @@ func garage(k: int) -> void:
 		for key in CarParts.PART_KEYS:
 			var opts: Array = CarLook.item(key).opts.map(func(o): return o[0])
 			G.lookPick(G.settings.car, key, opts[rng.randi() % opts.size()])
+		ui.pick("num", 1 + (i * 7 + k * 13) % 99)       # (a start number is a canvas texture, drawn anew for every car)
 		ui.pick("wsize", ["std", "m", "l"][i % 3])
 	await tick(1)
 	for i in 20:
 		ui.pick("rim", "#" + Color.from_hsv(rng.randf(), 0.8, 0.8).to_html(false))
 		ui.pick("cal", "#" + Color.from_hsv(rng.randf(), 0.8, 0.8).to_html(false))
 	await tick(1)
+	ui.pick("num", 0)
 	ui.garTab("perf")
 
 func run(h: Node) -> TestReport:
