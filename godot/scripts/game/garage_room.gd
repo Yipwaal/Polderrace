@@ -168,7 +168,7 @@ static func _light() -> void:
 ## where the garage camera stands for a part of the car (the look tab turns to what you are changing):
 ## [angle from the car's nose, height, distance]. Menu's orbit camera (Menu.orb) is eased to it; dragging still works.
 const VIEWS := {"q": [0.75, 1.9, 7.4], "front": [0.14, 1.2, 6.3], "rear": [PI - 0.2, 1.5, 6.4], "side": [PI / 2, 1.3, 6.6], "top": [0.55, 4.1, 6.6],
-	"wheel": [-1.15, 0.95, 5.6], "low": [0.95, 0.8, 7.0]}
+	"wheel": [-1.15, 0.95, 5.6], "low": [0.95, 0.8, 7.0], "nose": [0.38, 0.75, 5.7], "rearlow": [PI - 0.42, 0.8, 5.9]}
 const CAR_YAW := 0.5
 static var _tween: Tween = null
 

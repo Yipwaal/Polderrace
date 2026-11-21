@@ -587,6 +587,7 @@ func syncLook() -> void:
 					var nd := G.lookNeeds(k, b.value)
 					var tag: Label = b.get_meta("tag")
 					var lock: Control = b.get_meta("lock")
+					b.visible = CarLook.optFits(car, k, b.value)     # (a body-kit part that does not fit this model)
 					var locked: bool = nd.any(func(q): return q[3] != "")
 					var cost := 0
 					for q in nd: cost += int(q[1])
@@ -721,7 +722,7 @@ func randomLook() -> void:
 		if not CarLook.fits(car, k): continue
 		match it.type:
 			"choice", "color":
-				var c: Array = it.opts.map(func(o): return o[0]).filter(func(v): return G.lookNeeds(k, v).is_empty())
+				var c: Array = it.opts.map(func(o): return o[0]).filter(func(v): return G.lookNeeds(k, v).is_empty() and CarLook.optFits(car, k, v))
 				if it.type == "color" and it.has("none"): c.append("")
 				if it.type == "color" and it.get("mix", false) and G.lookHas("mix") and randf() < 0.2:
 					c = ["#" + Color.from_hsv(randf(), 0.4 + randf() * 0.6, 0.35 + randf() * 0.65).to_html(false)]
