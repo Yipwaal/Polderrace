@@ -784,7 +784,11 @@ func _fill_game(w: float) -> void:
 	var host: bool = n.host
 	var cf := Net.cfg()
 	var S := G.settings
-	# ---- the players
+	# ---- the players (built again every second: the keyboard focus stays on the same player's button)
+	var fo := get_viewport().gui_get_focus_owner()
+	var fpeer := ""
+	for row in players.get_children():
+		if fo != null and row.is_ancestor_of(fo): fpeer = str(row.get_meta("peer", ""))
 	_clear(players)
 	_player_row(G.prefs.nick, S.car, S.color, host, true, Net.isReady(), n.game.me, false)
 	var ids: Array = n.remotes.keys()
@@ -793,6 +797,10 @@ func _fill_game(w: float) -> void:
 		var r: Dictionary = n.remotes[id]
 		_player_row(r.name, r.carId, r.color, r.host, false, r.rdy, id, r.off)
 	players_head.text = "SPELERS · %d VAN %d" % [n.remotes.size() + 1, NetRoom.MAX_GUESTS + 1]
+	if fpeer != "":
+		for row in players.get_children():
+			if not row.is_queued_for_deletion() and str(row.get_meta("peer", "")) == fpeer and row.get_child(row.get_child_count() - 1) is Button:
+				row.get_child(row.get_child_count() - 1).grab_focus()
 	car_lbl.text = Cars.CARS[S.car].name
 	_paint(col_swatch, str(S.color))
 	var lines := []
@@ -859,6 +867,7 @@ func _fill_game(w: float) -> void:
 		pts_list.add_child(h)
 	# ---- host: the network
 	fw_btn.visible = host and (Net.fw_state == "block" or Net.fw_state == "none")
+	fw_btn.disabled = Net.fw_busy()
 	up_btn.visible = host
 	upnp_note.text = Net.upnp_status
 	upnp_note.visible = host and Net.upnp_status != ""
@@ -884,6 +893,7 @@ func _host_diag() -> String:
 	var fw := ""
 	if Net.fw_state == "block": fw = "De Windows-firewall BLOKKEERT Polderrace op deze pc: niemand kan meedoen. Klik op 'Windows-firewall openzetten'. "
 	elif Net.fw_state == "none": fw = "Windows heeft Polderrace nog niet toegelaten tot het netwerk. Klik op 'Windows-firewall openzetten', of kies Toestaan (ook voor openbare netwerken) als Windows erom vraagt; die vraag kan achter het spel staan (Alt+Tab). "
+	if Net.fw_msg != "": fw = Net.fw_msg + " " + fw
 	if not lan.is_serving():
 		return fw + addr + "Je game staat niet in de lijst van anderen; meedoen kan via je IP-adres."
 	var s := lan.searching()

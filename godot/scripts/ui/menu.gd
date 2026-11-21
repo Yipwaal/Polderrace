@@ -657,6 +657,7 @@ func setPausedUI(p: bool) -> void:
 		var t: String = TrackDefs.TRACKS[Trk.TRACK_ID].name + (" (omgekeerd)" if Trk.TRACK_DIR == "rev" else "") + " · " + Hud.lapT.text.to_lower().replace("/", " van ")
 		if g.raceMode or g.mode == "elim": t += " · plek " + Hud.big.text.replace("/", " van ")
 		elif g.mode == "time": t += " · " + G.fmtKm(g.distance)
+		if Net.inRace(): t += "\nOnline gaat de race gewoon door: je auto rolt uit."
 		overUI.pauseSub.text = t
 
 func setEarned(n: int, label := "") -> void:
