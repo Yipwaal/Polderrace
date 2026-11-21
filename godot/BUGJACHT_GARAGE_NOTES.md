@@ -21,8 +21,24 @@ Werknotities van de bugjager voor de garage, het uiterlijk van auto's en de body
 
 ## Bekeken (screenshots)
 
-- `shot_looks only=groups,cars`: alle 18 auto's met een drukke look, schuin en van opzij.
-- `shot_looks only=kits`: drie kits op alle auto's.
+- `shot_looks only=groups,cars` (1280x720): alle 18 auto's met een drukke look, schuin en van opzij (`sheet_cars_*.png`).
+- `shot_looks only=kits`: drie kits op alle 18 auto's (`sheet_kits_*.png`, `kit_<auto>_<kit>_<kant>.png`).
+- `shot_looks only=looks`: de vaste looks (front/achter/wielen/chroom/mat/metallic/neon, ook in het donker).
+- `shot_looks only=race`: race met bots overdag en 's nachts (neon, lampkleur ijs).
+- `shot_looks only=groups` op 1024x600 en 2560x1440 (Uiterlijk-tab, paskamerbalk).
+- `view_car.py` met de nieuwe sets `kita`, `kitb`, `kitc`, `lownight` (dichtbij: achter, achterkant laag `under`, links/rechts `tail`/`tailL`, boven) voor hatch, mini, wagon, coupe,
+  roadster, retro, gt, muscle, evo, hyper, fastback, sedan, rally, proto, super, v12.
 
 ## Open / niet gedaan
 
+- Online-auto met volle kit, eerste keer dat model+combinatie gebouwd wordt: ±50-110 ms voor het model plus ±45-70 ms voor de kit
+  (onderdelen ±22 ms, carbon kap ±13 ms, rest samenvoegen en meshes). Gebeurt bij binnenkomst/wijziging van de presence (lobby), daarna
+  uit de cache (±2 ms). Niet aangepakt (LAN-gebied; kan met voorbouwen in de lobby).
+- Lampgloed van Fx (koplampen 's nachts) is altijd warm wit, ook bij groene/paarse/blauwe lampen; de lampkleur verandert niet tijdens een
+  race (een nieuwe look = nieuwe auto = opnieuw gescand), dus de "scant één keer"-hint is geen bug.
+- Getinte koplampen kleuren ook de grille en de knipperlichten in de lampen-atlas een beetje mee (lampMat-kloon met albedo-tint).
+- Bandopdruk "OTTO" is spiegelsymmetrisch: of de rechterwielen goed lezen is niet te zien (flip in `tyreWallGeo` klopt in de code).
+- Proto: deurontwerp zakt onder de witte fabrieksstreep (bekend).
+- Verlaagd: de laagste onderdelen mogen tot 6,5 cm boven de wielonderkant zakken; het wegdek ligt 7 cm hoger (kerbs 9 cm), dus spatlap/
+  splitter zakken op een kerb een paar cm "in" de kerb (net als de banden, die altijd 7-9 cm in het wegdek staan). Niet aangepakt.
+- 1024x600: de Uiterlijk-lijst laat ±200 px opties zien (scrollt goed); niet veranderd.
