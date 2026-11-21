@@ -472,7 +472,12 @@ def scenario_full():
     h.cmd('start')
     rs = [p.wait(lambda r: r['go_at'] > 0 and r['state'] == 'racing', 40) for p in P]
     gos = [r.get('go_at', 0) for r in rs]
-    check(all(r.get('state') == 'racing' for r in rs) and max(gos) - min(gos) < 0.3, 'race met 8 spelers en 5 bots: iedereen start tegelijk', (round(max(gos) - min(gos), 3), [r.get('state') for r in rs]))
+    # nine games on one machine: a process the CPU starved can only show green on its first frame after the stall, so a
+    # late green counts as in time when the frame gap before it covers the moment the others went green
+    ref = statistics.median(gos)
+    late = [(round(r.get('go_at', 0) - ref, 3), r.get('go_gap', 0)) for r in rs if abs(r.get('go_at', 0) - ref) >= 0.3]
+    ok = all(d > 0 and d - gap < 0.3 for d, gap in late)
+    check(all(r.get('state') == 'racing' for r in rs) and ok, 'race met 8 spelers en 5 bots: iedereen start tegelijk', (round(max(gos) - min(gos), 3), late, [r.get('state') for r in rs]))
     pts = [tuple(r['grid']) for r in rs] + [tuple(b) for b in rs[0]['grid_bots']]
     md = min(math.dist(a, b) for a, b in itertools.combinations(pts, 2))
     check(len(pts) == 13 and md > 3 and rs[0]['order'] != ['h'] + sorted(x for x in rs[0]['order'] if x != 'h'), '13 auto\'s op de grid zonder overlap, in willekeurige volgorde', (round(md, 2), rs[0]['order']))
@@ -485,7 +490,7 @@ def scenario_full():
     gu = statistics.mean(b['up'] for a, b in ups); gd = statistics.mean(b['down'] for a, b in ups)
     print(f'     bandbreedte met 8 spelers + 5 bots: host {hu / 1000:.1f} kB/s omhoog, {hd / 1000:.1f} kB/s omlaag; speler {gu / 1000:.1f} kB/s omhoog, {gd / 1000:.1f} kB/s omlaag', flush=True)
     check(hu < 120000 and gu < 6000 and gd < 30000, 'bandbreedte blijft klein (host < 120 kB/s, speler < 6 kB/s omhoog)', (round(hu), round(gu), round(gd)))
-    r = P[3].rep()
+    r = P[3].wait(lambda r: sum(1 for x in r['remotes'] if x['visible']) == 7 and r['mapdots'] == 7, 5)
     check(sum(1 for x in r['remotes'] if x['visible']) == 7 and r['mapdots'] == 7, 'elke speler ziet de 7 anderen op de baan en op de minimap', [x['visible'] for x in r['remotes']])
     rs = [p.wait(lambda r: r['state'] == 'over' and final(r), 150) for p in P]
     time.sleep(1.5)

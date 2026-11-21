@@ -29,6 +29,9 @@ var said := []                     ## chat lines heard
 var frame_us := 0                  ## wall clock of the last frame (usec)
 var banners := []                  ## the track names of the countdown banners seen, in order
 var max_frame := 0.0               ## the longest frame since the last "frames" command (ms, wall clock)
+var gap := 0.0                     ## wall-clock time since the frame before this one (s)
+var go_gap := 0.0                  ## the gap before the frame the lights went green: a process that was stalled
+                                   ## (CPU starved) can only show green on its next frame
 
 func say(seq: String, v) -> void:
 	print("NET %s %s" % [seq, JSON.stringify(v)])
@@ -69,6 +72,7 @@ func _ready() -> void:
 func _process(dt: float) -> void:
 	var now_us := Time.get_ticks_usec()
 	if frame_us > 0: max_frame = maxf(max_frame, (now_us - frame_us) / 1000.0)
+	gap = (now_us - frame_us) / 1e6 if frame_us > 0 else 0.0
 	frame_us = now_us
 	# first what happened this frame (a report must not see "racing" before go_at is set), then the next command
 	_watch(dt)
@@ -96,7 +100,9 @@ func _watch(_dt: float) -> void:
 			grid = [snappedf(Game.player.pos.x, 0.01), snappedf(Game.player.pos.z, 0.01)]
 			grid_bots = Game.bots.map(func(b): return [snappedf(b.m.g.position.x, 0.01), snappedf(b.m.g.position.z, 0.01)])
 			bot_track = []
-		if st == "racing": go_at = Time.get_unix_time_from_system()
+		if st == "racing":
+			go_at = Time.get_unix_time_from_system()
+			go_gap = gap
 		last_state = st
 	# every countdown banner text seen (the host may start the countdown again, e.g. with another track)
 	if NetUi.banner.visible and NetUi.banner_sub.text != "" and (banners.is_empty() or banners[-1] != NetUi.banner_sub.text) and banners.size() < 40:
@@ -399,7 +405,7 @@ func report() -> Dictionary:
 		"bot_v": g.bots.map(func(b): return snappedf(b.speed, 0.1)), "bot_push": g.bots.map(func(b): return snappedf(b.pushDv + absf(b.spin) + absf(b.lp), 0.01)),
 		"me_s": snappedf(g.player.s, 0.1), "me_lap": g.player.lap, "raceDone": g.raceDone, "ft": snappedf(g.raceFinishTime, 0.01),
 		"pos": [snappedf(g.player.pos.x, 0.01), snappedf(g.player.pos.z, 0.01)], "position": g.playerPosition() if g.state != "menu" else 0,
-		"go_at": go_at, "grid": grid, "grid_bots": grid_bots, "goDelay": g.goDelay, "cd": g.cd,
+		"go_at": go_at, "go_gap": snappedf(go_gap, 0.001), "grid": grid, "grid_bots": grid_bots, "goDelay": g.goDelay, "cd": g.cd,
 		"over": Menu.overOv.visible, "again": Menu.overUI.againBtn.visible and Menu.overOv.visible,
 		"hud": Hud.hud.visible, "nodes": get_tree().get_node_count(),
 		"lobbies": Net.lobbies().map(func(l): return {"name": l.get("name"), "ip": l.get("ip"), "track": l.get("track"), "n": l.get("n"), "open": l.get("open"), "race": l.get("race"), "deaf": l.get("deaf", false), "v": l.get("v")}),
