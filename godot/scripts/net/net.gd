@@ -833,6 +833,8 @@ func netBegin(race: Dictionary) -> void:
 	net.preloaded = false
 	net.botDefs = race.bots
 	net.order = race.order
+	# a vote is for one race: the next vote starts empty (an old vote would count again for a track that comes back)
+	if not net.host and net.vote != "": vote("")
 	if net.watch: _watchEnd(false)
 	net.spec = null
 	if net.res != null and int(net.res.get("id", 0)) != int(race.id): net.res = null
@@ -1302,7 +1304,8 @@ func _judge(now: int, force := false) -> void:
 			var u: String = room.uid_at(str(a[0]))
 			if u == "": continue
 			var e: Array = net.pts.get(u, [a[1], 0, 0, 0, 0])
-			net.pts[u] = [a[1], int(e[1]) + int(a[5]), int(e[2]) + 1, int(e[3]) + (1 if first else 0), int(a[5])]
+			# (a win is a finish in first place: a race the host ended before anyone was in has no winner)
+			net.pts[u] = [a[1], int(e[1]) + int(a[5]), int(e[2]) + 1, int(e[3]) + (1 if first and a[3] else 0), int(a[5])]
 			first = false
 		_savePts()
 		_planNext()

@@ -777,6 +777,11 @@ def scenario_host_out():
     for g in (g1, g2):
         g.cmd('join 0'); g.wait(lambda r: r.get('me'), 8)     # (one after the other: Bram has the first seat)
     h.wait(lambda r: len(r['remotes']) == 2, 15)
+    # keyboard / gamepad: the host's focus on Bram's "Eruit" button stays there while the list refreshes (every second)
+    h.cmd('ex get_node("/root/NetUi").players.get_child(1).get_child(get_node("/root/NetUi").players.get_child(1).get_child_count() - 1).grab_focus()')
+    time.sleep(2.5)
+    f = h.cmd('ex [get_viewport().gui_get_focus_owner().get_parent().get_meta("nick", ""), get_viewport().gui_get_focus_owner().text]')
+    check(f == '["Bram", "Eruit"]', 'de focus blijft op de knop Eruit van Bram terwijl de lijst ververst', f)
     # race 1: the host stops at once (pause, Naar lobby); the others race on
     h.cmd('start')
     rs = [p.wait(lambda r: r['state'] == 'racing', 25) for p in P]
