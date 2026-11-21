@@ -1105,7 +1105,21 @@ func padNav(now: Dictionary, prev: Dictionary) -> bool:
 			else: g.setPaused(false)
 		return true
 	if g.state == "over" and g.overReady:
-		if edge.call("a") or edge.call("start"): g.onAgain()
+		# up/down walk the buttons of the results (Bekijk replay, Hoofdmenu, ...), A presses the one with the focus
+		if edge.call("up"): padFocus(-1, overOv)
+		if edge.call("down"): padFocus(1, overOv)
+		if edge.call("a"):
+			var f := get_viewport().gui_get_focus_owner()
+			if f is UiKit.Btn and overOv.is_ancestor_of(f): f.press()
+			else: g.onAgain()
+		elif edge.call("start"): g.onAgain()
 		if edge.call("b"): g.toCareerOr(-1)
+		return true
+	if g.state == "replay" and Rep.rp != null:
+		# the replay: left/right another car, Y the camera, B (or Start) back to the results
+		if edge.call("l"): Rep.pickCar(-1)
+		if edge.call("r"): Rep.pickCar(1)
+		if edge.call("y") or edge.call("up"): Rep.nextCam()
+		if edge.call("b") or edge.call("start"): Rep.replayClose()
 		return true
 	return false

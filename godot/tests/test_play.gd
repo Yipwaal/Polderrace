@@ -312,6 +312,22 @@ func part_replay() -> void:
 	r.check(Game.state == "over" and Menu.overOv.visible and not Rep.bar.visible and Podium.inPodium, "Esc: terug naar de uitslag met podium", Game.state)
 	await D.until(func(): return D.focused() == Menu.overUI.againBtn, 1)
 	r.check(D.focused() == Menu.overUI.againBtn, "focus op Opnieuw racen", D._name_of(D.focused()))
+	# the controller: down to "Bekijk replay", A opens it, right: the next car, Y: another camera, B: back to the results
+	for _i in 6:
+		if D.focused() == Menu.overUI.replayBtn: break
+		await pad("down")
+	r.check(D.focused() == Menu.overUI.replayBtn, "controller: omlaag tot Bekijk replay", D._name_of(D.focused()))
+	await pad("a")
+	r.check(Game.state == "replay", "controller: A opent de replay", Game.state)
+	if Game.state == "replay":
+		var cm2: int = Rep.rp.camMode
+		await pad("r")
+		r.check(Rep.rp.target == 1, "controller: rechts volgt de volgende auto", str(Rep.rp.target))
+		await pad("y")
+		r.check(Rep.rp.camMode == (cm2 + 1) % 3, "controller: Y wisselt de camera", str(Rep.rp.camMode))
+		await pad("b")
+		r.check(Game.state == "over" and Menu.overOv.visible, "controller: B terug naar de uitslag", Game.state)
+		await D.until(func(): return D.focused() == Menu.overUI.againBtn, 1)
 	await D.click(Menu.overUI.replayBtn, "Bekijk replay")
 	await D.click(D.find_btn(Rep.bar, "Terug naar uitslag"), "Terug naar uitslag")
 	r.check(Game.state == "over" and Menu.overOv.visible, "knop: terug naar de uitslag")

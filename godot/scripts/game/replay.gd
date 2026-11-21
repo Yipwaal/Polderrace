@@ -278,6 +278,16 @@ func replayUpdate(dt: float) -> void:
 		cam.look_at(Vector3(p.x, p.y + 0.8, p.z), Vector3.UP)
 	cam.fov = 40 if rp.camMode == 1 else 58
 
+## the camera follows the previous (-1) or next (1) car (buttons, gamepad left/right)
+func pickCar(d: int) -> void:
+	if rp == null: return
+	rp.target = nextTarget(d); rp.anchor = null; replayLabel()
+
+## the next camera (button, gamepad Y)
+func nextCam() -> void:
+	if rp == null: return
+	rp.camMode = (rp.camMode + 1) % 3; rp.camT = 0.0; rp.anchor = null; replayLabel()
+
 ## where the trackside camera stands: 45 m ahead of sample j, on side sd (-1 left, 1 right) of the road
 func trackCam(j: int, sd: float) -> Vector3:
 	var ta := Trk.trackAt(fmod(j * Trk.SPC + 45, Trk.TRACK_LEN))
@@ -321,17 +331,11 @@ func _ready() -> void:
 	row.add_theme_constant_override("separation", 8)
 	v.add_child(row)
 	prev_btn = Hud.mk_button("◀ Auto", false)
-	prev_btn.pressed.connect(func():
-		if rp == null: return
-		rp.target = nextTarget(-1); rp.anchor = null; replayLabel())
+	prev_btn.pressed.connect(func(): pickCar(-1))
 	next_btn = Hud.mk_button("Auto ▶", false)
-	next_btn.pressed.connect(func():
-		if rp == null: return
-		rp.target = nextTarget(1); rp.anchor = null; replayLabel())
+	next_btn.pressed.connect(func(): pickCar(1))
 	var cam := Hud.mk_button("Camera", false)
-	cam.pressed.connect(func():
-		if rp == null: return
-		rp.camMode = (rp.camMode + 1) % 3; rp.camT = 0.0; rp.anchor = null; replayLabel())
+	cam.pressed.connect(nextCam)
 	var save := Hud.mk_button("Opslaan", false)
 	save.pressed.connect(replaySave)
 	var back := Hud.mk_button("Terug naar uitslag")
