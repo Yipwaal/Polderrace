@@ -478,6 +478,8 @@ def scenario_full():
     late = [(round(r.get('go_at', 0) - ref, 3), r.get('go_gap', 0)) for r in rs if abs(r.get('go_at', 0) - ref) >= 0.3]
     ok = all(d > 0 and d - gap < 0.3 for d, gap in late)
     check(all(r.get('state') == 'racing' for r in rs) and ok, 'race met 8 spelers en 5 bots: iedereen start tegelijk', (round(max(gos) - min(gos), 3), late, [r.get('state') for r in rs]))
+    if not ok or os.environ.get('NET_DIAG'):
+        for r in rs: print('     ', round(r.get('go_at', 0) - ref, 3), r.get('go_info'), flush=True)
     pts = [tuple(r['grid']) for r in rs] + [tuple(b) for b in rs[0]['grid_bots']]
     md = min(math.dist(a, b) for a, b in itertools.combinations(pts, 2))
     check(len(pts) == 13 and md > 3 and rs[0]['order'] != ['h'] + sorted(x for x in rs[0]['order'] if x != 'h'), '13 auto\'s op de grid zonder overlap, in willekeurige volgorde', (round(md, 2), rs[0]['order']))
