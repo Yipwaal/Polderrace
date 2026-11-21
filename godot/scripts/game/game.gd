@@ -1432,7 +1432,8 @@ func syncCar(dt: float) -> void:
 func cycleCam() -> void:
 	if not (state == "racing" or state == "countdown" or state == "finished"): return
 	G.prefs.cam = (int(G.prefs.cam) + 1) % 3
-	G.savePrefs()
+	# (player 2's camera lives in the split-screen context only: saving it here stored it as player 1's preference)
+	if not inP2: G.savePrefs()
 	Hud.showToast("Camera: " + CAM_NAMES[G.prefs.cam])
 
 func camParams() -> Dictionary:

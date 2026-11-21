@@ -105,6 +105,17 @@ func run(host: Node) -> TestReport:
 		"zichtbaar %s, camera 1 %x, camera 2 %x" % [str(vis), sv.cam1.cull_mask, sv.cam2.cull_mask])
 	Game.p2.cam = 0
 	sv.tick(1.0 / 60)
+	# player 2 switches camera (Numpad1): player 1's saved camera preference stays as it was
+	var camBefore = JSON.parse_string(str(G.store_get("polderrace3d-prefs", "{}"))).get("cam", 0)
+	G.prefs.cam = 2
+	G.savePrefs()
+	Game.asP2(func(): Game.cycleCam())
+	var camAfter = JSON.parse_string(str(G.store_get("polderrace3d-prefs", "{}"))).get("cam", 0)
+	r.check(int(camAfter) == 2 and Game.p2.cam == 1 and int(G.prefs.cam) == 2, "2 spelers: camera van speler 2 wisselen bewaart niets als voorkeur van speler 1",
+		"opgeslagen %s (was %s), speler 2 %s" % [str(camAfter), str(camBefore), str(Game.p2.cam)])
+	G.prefs.cam = 0
+	G.savePrefs()
+	Game.p2.cam = 0
 	if sv._main_mask != 0: cam.cull_mask = sv._main_mask
 	sv.queue_free()
 	SplitView.me = svPrev
