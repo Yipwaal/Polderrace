@@ -39,6 +39,12 @@ func run(h: Node) -> TestReport:
 	g.player = PlayerState.new()
 	Sfx.muted = false
 	Env.me.weather = "dry"
+	# achievements unlocked by earlier tests (flow) chime one after the other every ~2.9 s (Ach.nextAch): drop the queue
+	# and let the one on screen finish, or its chime lands in a level measurement
+	Ach.achQueue.clear()
+	var t0 := Time.get_ticks_msec()
+	while Ach.achBusy and Time.get_ticks_msec() - t0 < 4000:
+		await host.get_tree().process_frame
 	Sfx.initAudio()
 	Sfx.wavesReady(true)
 	rate = AudioServer.get_mix_rate()
