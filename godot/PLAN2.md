@@ -101,6 +101,9 @@ met `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 - Overname na een gecrashte host duurt 25–28 s; firewallknop en UPnP zijn niet getest op echte Windows/router.
 - Gasten kunnen binnen de toleranties valsspelen (de host controleert grof).
+- Slechte verbinding (150 ms ping, 5 % verlies): de auto van een andere speler springt soms meters (scenario 4 van
+  `test_net_more.py`, alleen als root, niet in CI; faalt ongeveer 2 van de 3 keer, ook vóór de laatste wijzigingen).
+  Op een gewoon LAN is dit zelden te zien. Een reset op de baan telt in die check nog als sprong.
 - Muscle car en V12 belanden met toetsenbord vaak in de sloot bij vol gas door de bocht (powerslide is bewust).
 - Haven zit dicht bij het driehoekenbudget (±277k van 280k).
 - Audiotest "motor A stationair" wijkt soms 5–10 % af na andere tests in hetzelfde proces (spel zelf niet geraakt).
