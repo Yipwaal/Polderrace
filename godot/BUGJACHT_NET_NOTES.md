@@ -28,6 +28,15 @@ Bugjager voor online spelen (fase 2, ronde 3). Gevonden / opgelost / open. Tests
 8. **Focus sprong van Eruit naar Start** (lijst ververst elke seconde), **oude stem telde mee in de volgende stemronde**,
    **winst in de stand zonder finish**; het pauzescherm zegt nu dat de race online doorgaat.
 
+9. **Andere baan tijdens het aftellen**: spelers zagen en laadden de oude baan. Het aftellen begint nu opnieuw met de
+   nieuwe baan. Test: `test_net_more.py 5`.
+10. **UPnP-melding** zonder internet-adres ("bereikbaar op  (poort …)") of achter een tweede router/CGNAT; oude
+    routermelding bleef staan bij een nieuwe game. Test: `test_netunit.gd`.
+11. **README**: online-deel klopte niet met het scherm (spelers staan links), poort 47812 ontbrak.
+
+Nagelopen zonder fout: speler in de garage / autostap / replay / pauze als de host start; kick midden in de race (en
+terugkomen: geweigerd); start/annuleer snel achter elkaar; laatkomer tijdens aftellen; schermen op 1024x600 en 1920x1080.
+
 ## Bekeken (schermafdrukken)
 `tools/shot_net.py` op 1024x600 en 1920x1080 (alle 17 schermen), eigen racebeeld met een volledig aangepaste laatkomer,
 meekijken na de finish. De meekijk-camera loopt in de xvfb-test ver achter de auto (2 beelden/s; op een echte pc niet).
@@ -35,3 +44,9 @@ meekijken na de finish. De meekijk-camera loopt in de xvfb-test ver achter de au
 ## Open
 - Bouwtijd op de GPU (shaders van nieuwe materialen bij een laatkomer met chroom, neon …) niet meetbaar hier
   (software-OpenGL, basis ±450 ms per beeld; geen extra uitschieter gemeten).
+- Overname na een crash van de host duurt ±28 s (ENet-time-out + 15 s opnieuw verbinden). Sneller kan alleen als een
+  speler weet dat zijn eigen netwerk het nog doet (bv. een andere speler bereiken): protocolwijziging, niet gedaan.
+- Wat de host van gasten gelooft: tikken tegen bots (begrensd per tik, niet per seconde) en de eigen finishtijd (±6 s
+  speling). Een valsspeler kan bots wegduwen of een paar seconden winnen; op een LAN-avond met vrienden laten staan.
+- Firewall-knop en UPnP nooit tegen echte Windows / een echte router gedraaid.
+- Host in de lobby + al zijn spelers tijdelijk 'verbinding kwijt': geen scheidsrechter voor die race (zeldzaam).
