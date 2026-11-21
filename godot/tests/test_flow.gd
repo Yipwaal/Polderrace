@@ -88,6 +88,14 @@ func run(host: Node) -> TestReport:
 	var big: float = turn.call(0.05)
 	var small: float = turn.call(0.0125)
 	r.check(small > 0 and big / small > 2.5, "2 spelers: camera van speler 2 volgt met de echte frametijd", "50 ms: %.3f rad, 12,5 ms: %.3f rad" % [big, small])
+	# and its field of view widens with its own speed, not player 1's (player 1 stands still here)
+	var sp2: float = Game.p2.pl.speed
+	Game.p2.pl.speed = 80.0
+	for _i in 120:
+		cam.fov = 58.0
+		sv.tick(1.0 / 60)
+	r.check(sv.cam2.fov > 68.0, "2 spelers: camera van speler 2 zoomt uit met zijn eigen snelheid", "fov %.1f (speler 1: 58)" % sv.cam2.fov)
+	Game.p2.pl.speed = sp2
 	if sv._main_mask != 0: cam.cull_mask = sv._main_mask
 	sv.queue_free()
 	SplitView.me = svPrev

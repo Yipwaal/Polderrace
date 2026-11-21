@@ -23,6 +23,7 @@ var msg2_label: Label
 var msg2Until := 0.0
 var line: ColorRect
 var _main_mask := 0
+var fov2 := 0.0              ## player 2's camera field of view (0: not yet set)
 
 func _init() -> void:
 	me = self
@@ -105,6 +106,7 @@ func tick(dt: float) -> void:
 	vp1.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	vp2.render_target_update_mode = vp1.render_target_update_mode
 	if not on:
+		fov2 = 0.0
 		if _main_mask != 0:
 			main_cam.cull_mask = _main_mask; _main_mask = 0
 		return
@@ -124,11 +126,14 @@ func tick(dt: float) -> void:
 	cam1.global_transform = main_cam.global_transform; cam1.fov = main_cam.fov
 	var save_t := main_cam.global_transform
 	var save_f := main_cam.fov
+	# player 2's field of view eases on its own (it started from player 1's every frame: it followed player 1's speed)
+	main_cam.fov = fov2 if fov2 > 0.0 else save_f
 	# (the frame's own time step, as player 1's camera gets: with a fixed 1/60 the second camera followed twice as
 	# fast at 120 fps and half as fast at 30 fps)
 	var cdt := 0.0 if g.frozen() else dt
 	g.asP2(func(): g.updateCamera(cdt))
 	cam2.global_transform = main_cam.global_transform; cam2.fov = main_cam.fov
+	fov2 = main_cam.fov
 	main_cam.global_transform = save_t; main_cam.fov = save_f
 	# player 2's HUD
 	if hud2.visible:
