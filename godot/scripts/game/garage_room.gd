@@ -99,6 +99,10 @@ static func buildGarageRoom() -> void:
 	_box(1.2, 0.9, 0.7, Mats.M(0x5a5f66), -10.2, 0.45, 5, g)
 	var hose := O3.mesh(Geo.torus(0.5, 0.06, 6, 18), Mats.M(0x1b1b1b), -12.8, 3, 5, g)
 	O3.rot(hose, 0, PI / 2, 0)
+	# (a black ring alone read as something floating in the air: it hangs on a bracket, its end and nozzle hang down)
+	_box(0.14, 0.12, 0.16, Mats.M(0x8a8d92), -12.79, 3.5, 5, g)
+	_box(0.06, 1.4, 0.06, Mats.M(0x1b1b1b), -12.78, 2.3, 5.5, g)
+	_box(0.07, 0.2, 0.07, Mats.M(0xf2c200), -12.78, 1.5, 5.5, g)
 	var flag := Canvas2D.tex(96, 64, func(c, _w, _h):
 		var cols := ["#ae1c28", "#ffffff", "#21468b"]
 		for k in 3:

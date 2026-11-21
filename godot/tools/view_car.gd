@@ -38,6 +38,13 @@ const SETS := {
 	"look": {"up": {"tw": "letter", "cal": "blue", "rim": "#aa5500", "tint": "bronze", "lamp": "yellow", "roof": "white", "stripe": "flames", "d1": "polder",
 		"ban": "POLDERRACE", "plate": "YIP-01", "num": 7}, "views": ["f34", "side", "wheel", "front", "high"]},
 	"mirror": {"views": ["mirror", "mirrorf"]},
+	# body kits (CarParts; the kits of tools/shot_looks.gd)
+	"kita": {"up": {"wing": "rally", "splitter": "race", "canard": "on", "skirt": "black", "arch": "black", "diffuser": "on", "flap": "red", "scoop": "scoop",
+		"roofx": "bar", "tow": "on", "exhaust": "big", "wsize": "l", "track": "l", "ride": "high"}, "views": ["f34", "r34", "side", "rear", "tail", "tailL", "under", "chase"]},
+	"kitb": {"up": {"wing": "swan", "splitter": "street", "skirt": "paint", "arch": "paint", "scoop": "vents", "roofx": "rack", "wsize": "m", "track": "m", "ride": "low",
+		"stripe": "twin", "sc": "white", "rim": "black", "hood": "carbon", "tw": "letter"}, "views": ["f34", "r34", "side", "lowf", "nose", "top", "wheel", "chase"]},
+	"kitc": {"up": {"wing": "lip", "roofx": "scoop", "flap": "black", "exhaust": "big", "hood": "black"}, "views": ["r34", "rear", "tail", "tailL", "top", "chase"]},
+	"lownight": {"time": "night", "up": {"ride": "low", "glow": "pink", "splitter": "race", "skirt": "black", "flap": "black", "diffuser": "on"}, "views": ["f34", "side", "r34", "lowr"]},
 	"colors": {"colors": true, "views": ["f34"]},
 	"finishes": {"finishes": true, "views": ["f34", "r34"]},
 }
@@ -129,6 +136,8 @@ func _view(name: String, m: Dictionary) -> Array:
 		"wheel": return [Vector3(W / 2 + 1.25, 0.55, wz + 0.75), Vector3(W / 2 - 0.15, wr, wz), 34]
 		"nose": return [Vector3(1.25, 0.95, zf + 1.5), Vector3(0.35, 0.55, zf - 0.1), 36]
 		"tail", "brake", "rev": return [Vector3(-1.25, 1.0, zr - 1.5), Vector3(-0.35, 0.6, zr + 0.1), 36]
+		"tailL": return [Vector3(1.25, 1.0, zr - 1.5), Vector3(0.35, 0.6, zr + 0.1), 36]
+		"under": return [Vector3(0.0, 0.32, zr - 2.2), Vector3(0.0, 0.3, zr + 0.3), 40]
 		"cabin": return [Vector3(2.0, 1.75, 1.3), Vector3(0, 0.95, -0.35), 36]
 		"mirror", "mirrorf":   # close to the left door mirror, from behind / in front
 			var K = m.get("kit", null)
