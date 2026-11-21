@@ -21,6 +21,7 @@ auto onder de weg; schermafdrukken met `shots=`). Zie de kop van `tools/hunt.gd`
 | 11 | 2 spelers: bumpercamera verborg de auto in beide helften (de ander zag je niet meer) | `game.gd` updateCamera, `split.gd` (cull masks, `P2_LAYER`) | code lezen + screenshot | test `flow` |
 | 12 | 2 spelers: camerawissel van speler 2 werd als voorkeur van speler 1 opgeslagen | `game.gd` cycleCam | code lezen | test `flow` |
 | 13 | 2 spelers: windvlagen (Afsluitdijk, Zeeland) duwden alleen speler 1 | `game.gd` updateWind | code lezen | test `flow` |
+| 14 | Controller: in de replay deed geen knop iets (alleen Esc op het toetsenbord sloot hem), op de uitslag was Bekijk replay niet te bereiken | `menu.gd` padNav, `replay.gd` pickCar/nextCam | code lezen | test `play` (replay) |
 
 ## Open / gemeld
 
@@ -28,7 +29,7 @@ auto onder de weg; schermafdrukken met `shots=`). Zie de kop van `tools/hunt.gd`
 - Windturbines Afsluitdijk staan met `randf()` (JS Math.random) een paar meter anders: alleen beeld, online niet gelijk. Gelaten (portregel).
 - Glow/lichtvlekken 's nachts op 'laag': veel overdraw op software-OpenGL; op een echte GPU klein. Niet veranderd.
 - 'Auto onderaan het beeld' (hint): in echt rijden niet gezien (tools/hunt meet de plek: mediaan 0,64, max 0,72 van de vensterhoogte op alle banen); wel in de screenshot-tools die de camera pas bij de foto bijwerken.
-- Audio-test 'motor A stationair' en 'noise() uitsterven' wiebelen als de machine druk is (audiothread); stil: groen.
+- Audio-test 'motor A stationair': alleen gedraaid exact (0,02002 tegen 0,01997); ná andere tests in hetzelfde proces (flow, of track build laps cars flow) 2-10 % luider, soms boven de 5 %-marge. Geluidsniveaus (motor, wind, piepen, regen, bot) zijn dan gelijk; de oorzaak zit in wat eerdere tests in de geluidsmotor achterlaten (niet gevonden). Spel zelf niet geraakt. 'noise() uitsterven' wiebelde eenmaal op een drukke machine.
 
 ## Bekeken schermafdrukken
 
