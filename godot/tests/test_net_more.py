@@ -152,6 +152,9 @@ def scenario_evening():
     rs = [p.wait(lambda r: r['go_at'] > 0, 15) for p in P]
     gos = [r.get('go_at', 0) for r in rs]
     check(max(gos) - min(gos) < 0.25, 'groen licht op elke pc tegelijk', round(max(gos) - min(gos), 3))
+    # name tags show within 110 m of the camera: look right after green, while everyone is still near the grid (two
+    # seconds later a fast host can be more than 110 m ahead of the others)
+    rt = h.rep()
     g2.cmd('drive off')          # Lotte waits a moment: she is last, the others can watch her after their finish
     time.sleep(2)
     g2.cmd('drive on')
@@ -159,7 +162,7 @@ def scenario_evening():
     st = steps(r2.get('bot_track', []))
     moving = [s for s in st if s > 0.0005]
     check(len(st) > 60 and len(moving) > 0.8 * len(st), 'bots rijden vloeiend bij een speler (elk beeld een stukje)', (len(moving), len(st)))
-    check(rh.get('mapdots') == 3 and sum(1 for x in rh['remotes'] if x['tag']) >= 2, 'de andere spelers staan op de minimap, met hun naam boven de auto (dichtbij)', (rh.get('mapdots'), [x['tag'] for x in rh['remotes']]))
+    check(rh.get('mapdots') == 3 and sum(1 for x in rt['remotes'] if x['tag']) >= 2, 'de andere spelers staan op de minimap, met hun naam boven de auto (dichtbij)', (rh.get('mapdots'), [x['tag'] for x in rt['remotes']]))
     for g, nm in ((g1, 'Bram'), (g2, 'Lotte')):
         rg = g.rep(); rh = h.rep()
         x = remote(rh, nm)
