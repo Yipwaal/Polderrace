@@ -111,6 +111,10 @@ Mogelijke volgende stappen (nog niet gedaan): menu's meeschalen op hoge-DPI-sche
 
 ## Online (G6) — ontwerp (fase 2: LAN-avond met 8 spelers, protocol 4)
 
+- **De host is scheidsrechter** (bugjacht fase 2): ook als hij midden in de race naar de lobby gaat, bepaalt hij de uitslag
+  en de punten (hij onthoudt de baan van die race; zijn eigen finish houdt zijn plek). *Nieuwe race* sluit een lopende race
+  eerst af (wie nog rijdt, krijgt zijn plek van dat moment). Krijgt een speler geen botposities meer van de host
+  (`Net.hostBots()` onwaar, ook tijdens een hostwissel), dan rijden de bots bij hem zelf door.
 - **Games vinden** (`net/lan.gd`): elke seconde "wie host?" (UDP `POLDERRACE?1`, poort 47811) naar 255.255.255.255,
   127.0.0.1, per netwerkkaart het broadcastadres van /24, /23, /22, /16 (10.x ook /8) en rechtstreeks naar onthouden
   IP-adressen; vindt dat na een paar seconden niets, dan vraagt hij alle adressen van de eigen /24 één voor één (sweep).

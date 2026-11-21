@@ -117,7 +117,7 @@ func _lobby_info() -> Dictionary:
 	var S := G.settings
 	var n: int = 1 + (net.remotes.size() if net != null else 0)
 	return {"pr": 1, "v": NetRoom.PROTO, "id": _game_id, "name": gameName(str(G.prefs.nick)), "track": trackName(S.track, S.dir), "laps": int(S.laps),
-		"n": n, "max": NetRoom.MAX_GUESTS + 1, "open": net != null and net.open and n <= NetRoom.MAX_GUESTS, "race": net != null and net.inRace, "port": NetRoom.PORT}
+		"n": n, "max": NetRoom.MAX_GUESTS + 1, "open": net != null and net.open and n <= NetRoom.MAX_GUESTS, "race": net != null and (net.inRace or net.ref), "port": NetRoom.PORT}
 
 func netCreate() -> void:
 	if net != null: return
@@ -134,6 +134,8 @@ func netCreate() -> void:
 		return
 	var listed := lan.serve(_lobby_info)
 	netEnter(room, true)
+	fw_msg = ""
+	if _mapped == null and _upnp == null: upnp_status = ""     # (what the router said about an earlier game)
 	firewall_check()
 	# an evening goes on: the standings of a game this player was in less than three hours ago
 	var o := onl()
@@ -183,7 +185,8 @@ func netEnter(room: NetRoom, host: bool) -> void:
 		"cfg": {}, "cd": null, "cdN": 0, "cdAt": 0, "cdSeen": -1, "pts": {}, "res": null, "resSent": "", "resAt": 0, "q": {}, "seats": {}, "open": true,
 		"rdy": host, "vote": "", "eSeq": 0, "race": null, "raced": false, "firstFin": 0, "final": false, "forced": false, "warned": 0,
 		"spec": null, "watch": false, "wspd": {}, "mig": null, "prevS": null, "chat": [], "joinedOnce": host, "nt": "", "cands": [],
-		"clock": 0.0, "lookAt": 0, "seatsSent": "", "reconn": false, "preloaded": false, "noRoad": 0, "probe": null, "lostIps": [], "clockAt": Time.get_ticks_msec()}
+		"clock": 0.0, "lookAt": 0, "seatsSent": "", "reconn": false, "preloaded": false, "noRoad": 0, "probe": null, "lostIps": [], "clockAt": Time.get_ticks_msec(),
+		"ref": false, "raceL": 0.0, "raceS0": 0.0, "raceLaps": 1, "meRow": null, "botRows": []}
 	# the host's races use this player's settings for a while: they come back when he leaves the game
 	# (the host keeps what he picked in the online screen; only the mode and the grid place are the game's)
 	net.prevS = G.settings.duplicate(true) if not host else {"mode": G.settings.mode, "grid": G.settings.grid}
@@ -357,7 +360,9 @@ func cycleCar(d: int) -> void:
 	var ids: Array = Cars.CARS.keys().filter(func(id): return Career.owns(id))
 	if ids.is_empty(): return
 	var i := ids.find(G.settings.car)
-	G.settings.car = ids[(i + d + ids.size()) % ids.size()]
+	var nc: String = ids[(i + d + ids.size()) % ids.size()]
+	G.carPicked(G.settings.car, nc)    # the paint colour belongs to the car
+	G.settings.car = nc
 	G.saveSettings()
 	Game.rebuildPlayerCar()
 	_sendCar()
@@ -645,6 +650,15 @@ func _myCfg() -> Dictionary:
 func pushCfg() -> void:
 	if net == null or not net.host: return
 	net.game.presence({"cfg": _myCfg()})
+	var S := G.settings
+	if int(net.cdAt) > 0 and net.cd is Dictionary and (str(net.cd.track) != str(S.track) or str(net.cd.dir) != str(S.dir)):
+		# another track during the countdown: the countdown starts again with it (the others see the right track in the
+		# banner and load it in time, instead of loading the old one and then the new one at the start)
+		net.cdN = int(net.cdN) + 1
+		net.cdAt = Time.get_ticks_msec() + int(START_SECS * 1000)
+		net.cd = {"until": net.cdAt, "track": S.track, "dir": S.dir}
+		net.game.presence({"cd": {"n": net.cdN, "s": START_SECS, "track": S.track, "dir": S.dir}})
+		_preload.call_deferred(S.track, S.dir)
 	changed.emit()
 
 func setNextMode(m: String) -> void:
@@ -717,6 +731,8 @@ func _applyNext() -> void:
 ## the host starts a race for everyone in the game (JS netHostStart): first a short countdown everyone sees
 func netHostStart() -> void:
 	if net == null or not net.host or int(net.cdAt) > 0: return
+	# the last race is not over for everyone yet: it ends now, with the places as they are (else it never counted)
+	if (net.inRace or net.ref) and net.raced and not net.final: _judge(Time.get_ticks_msec(), true)
 	_applyNext()
 	var S := G.settings
 	net.cdN = int(net.cdN) + 1
@@ -829,6 +845,8 @@ func netBegin(race: Dictionary) -> void:
 	net.preloaded = false
 	net.botDefs = race.bots
 	net.order = race.order
+	# a vote is for one race: the next vote starts empty (an old vote would count again for a track that comes back)
+	if not net.host and net.vote != "": vote("")
 	if net.watch: _watchEnd(false)
 	net.spec = null
 	if net.res != null and int(net.res.get("id", 0)) != int(race.id): net.res = null
@@ -861,6 +879,12 @@ func netBegin(race: Dictionary) -> void:
 		Game.overReady = true
 	Game.startRace()
 	if net.host: S.bots = race.bots.size()      # (the host's own setting: 0 bots stays 0)
+	# the race's own track: the host goes on judging it from the lobby, where he may load another track (see netAfterRace)
+	net.ref = false
+	net.raceL = Trk.TRACK_LEN
+	net.raceS0 = Trk.S_START
+	net.raceLaps = Game.raceLaps
+	net.botAt = Time.get_ticks_msec()     # (the host's bots count as live until his snapshots stop, see hostBots)
 	# the same wait for green on every PC (the lights follow the time since the start, see netTick)
 	Game.goDelay = 0.4 + float(int(race.id) % 800) / 1000.0
 	_sendCar()
@@ -883,6 +907,23 @@ func netKick(i: int, x: float, z: float, s: float) -> void:
 ## guests: the host's latest bot positions are recent (in between, Game lets the bots roll on)
 func botsFresh() -> bool:
 	return net != null and Time.get_ticks_msec() - int(net.botAt) < 300
+
+## guests: the host drives the bots. When his positions stop coming (he went back to the lobby, or he fell away and a
+## new host is being found) each game drives them itself, instead of leaving them standing on the road.
+func hostBots() -> bool:
+	return net != null and not net.host and Time.get_ticks_msec() - int(net.botAt) < 2000
+
+## how far a car is in this race (Game.progressOf on the race's own track: the host may have loaded another one)
+func _prog(lap: int, s: float, finished: bool, ft: float) -> float:
+	var L: float = net.raceL if float(net.raceL) > 0 else Trk.TRACK_LEN
+	if finished: return (int(net.raceLaps) + 2) * L + 100000 - ft * 10
+	var rel := fposmod(s - float(net.raceS0), L)
+	if lap <= 0: return -fmod(L - rel, L)
+	return (lap - 1) * L + rel
+
+func _wrapL(d: float) -> float:
+	var L: float = net.raceL if float(net.raceL) > 0 else Trk.TRACK_LEN
+	return d - L if d > L / 2.0 else (d + L if d < -L / 2.0 else d)
 
 ## a remote car on the road: in this race, not gone back to the menu, and heard from lately (not closed or hanging)
 func _onRoad(r: Dictionary, now: int) -> bool:
@@ -916,7 +957,7 @@ func netTick(dt: float) -> void:
 	var rid := int(net.raceId)
 	var live: bool = net.inRace or net.watch
 	# the race clock for the results: real time since green (as fast as the game runs), whatever the frame rate
-	if net.inRace and Game.state != "countdown" and Game.state != "menu":
+	if (net.inRace and Game.state != "countdown" and Game.state != "menu") or net.ref:
 		net.clock += minf(2.0, (now - int(net.clockAt)) / 1000.0) * Engine.time_scale
 	net.clockAt = now
 	for p in room.peers():
@@ -963,14 +1004,14 @@ func netTick(dt: float) -> void:
 					if r.velOk: r.vel = mv
 				r.prev = r.st; r.st = st; r.t = now; r.lap = int(st[6])
 				# can it be true? the distance it covered at a speed a car can have (the host's results go by this)
-				if Trk.NS > 1:
+				if float(net.raceL) > 0:
 					if float(r.vs) < 0: r.vdist = 0.0
 					else:
 						var cap := 130.0 * (now - int(r.vt)) / 1000.0 * Engine.time_scale + 6.0
-						r.vdist += clampf(Trk.wrapD(float(st[5]) - float(r.vs)), -cap, cap)
+						r.vdist += clampf(_wrapL(float(st[5]) - float(r.vs)), -cap, cap)
 					r.vs = float(st[5]); r.vt = now
 				if st[7] and not r.done:
-					if r.vdist >= Game.raceLaps * Trk.TRACK_LEN - 60.0:
+					if r.vdist >= int(net.raceLaps) * float(net.raceL) - 60.0:
 						r.done = true
 						var ft := float(st[8])
 						# its own time, when that can be right by the clock here (else the moment it came in)
@@ -981,8 +1022,9 @@ func netTick(dt: float) -> void:
 				if r.host and st.size() > 10:
 					# how long ago the host started this race (a start message that had to be sent again came late)
 					net.hostGo = float(st[10]) * 1000.0 - now
-		elif st == null and r.st != null and live and not r.out:
+		elif st == null and r.st != null and not r.out:
 			# back to the menu during the race: the car goes; who finished keeps his place in the results
+			# (also seen by who is not in the race himself: a host change picks the racers first, see _migStart)
 			r.out = true
 			if not r.done: r.st = null
 		var b = pr.get("b")
@@ -1038,7 +1080,10 @@ func netTick(dt: float) -> void:
 	if net.host and net.probe != null: _probeTick(now)
 	if net == null: return
 	if net.watch: _watchTick(dt, now)
-	if net == null or not (net.inRace or net.watch):
+	if net == null: return
+	# host back in the lobby while the others still race: he is still the referee of their race
+	if net.host and net.ref and not net.inRace: _judge(now)
+	if not (net.inRace or net.watch):
 		return
 	if not net.host and botsFresh() and not net.watch:
 		# the rest of the difference with the host's bot positions: a part every frame (gone in about 0.1 s)
@@ -1131,8 +1176,8 @@ func mapDots() -> Array:
 	return out
 
 func netRemoteProg(r: Dictionary) -> float:
-	if r.done: return (Game.raceLaps + 2) * Trk.TRACK_LEN + 100000 - r.ft * 10
-	return Game.progressOf(r.lap, r.st[5], false, 0) if r.st != null else -1e9
+	if r.done: return _prog(0, 0.0, true, r.ft)
+	return _prog(r.lap, r.st[5], false, 0) if r.st != null else -1e9
 
 ## bump into the other players' cars (each player handles his own side of a hit)
 func netCollide() -> void:
@@ -1171,23 +1216,58 @@ func netAfterRace() -> void:
 	for r in net.remotes.values():
 		if r.car != null: r.car.g.visible = false
 		r.shown = false
-	# (the host's race is over: who comes in now does not wait for it)
-	net.game.presence({"st": null, "b": null, "race": null} if net.host else {"st": null, "b": null})
+	if net.host and net.raced and not net.final and not net.ref and _othersRacing():
+		# the host goes back to the lobby while the others still race: he stays the referee of their race (results,
+		# points); his own finish keeps its place, and the bots stay where they were in his results (from now on each
+		# player's game drives them, see hostBots)
+		net.ref = true
+		net.meRow = null
+		if Game.raceDone and not Game.playerOut:
+			net.meRow = {"p": net.game.me, "n": _dispName(net.game.me, str(G.prefs.nick)), "c": G.settings.car, "f": true, "t": Game.raceFinishTime,
+				"g": _prog(0, 0.0, true, Game.raceFinishTime), "b": false}
+		net.botRows = []
+		for bot in Game.bots:
+			net.botRows.append({"p": "", "n": bot.name, "c": bot.type, "f": bot.finished, "t": bot.finishTime if bot.finished else 0.0,
+				"g": -1e9 if bot.out else _prog(bot.lap, bot.s, bot.finished, bot.finishTime), "b": true})
+		net.game.presence({"st": null, "b": null})
+	else:
+		# (the host's race is over: who comes in now does not wait for it)
+		net.game.presence({"st": null, "b": null, "race": null} if net.host else {"st": null, "b": null})
+	changed.emit()
+
+## host: another player is still on the road in this race
+func _othersRacing() -> bool:
+	for id in net.order:
+		var r = net.remotes.get(id)
+		if r != null and r.st != null and not r.done and not r.out and not r.off: return true
+	return false
+
+## host, refereeing from the lobby: the race is over (final, or nobody left in it)
+func _refEnd() -> void:
+	net.ref = false
+	net.meRow = null
+	net.botRows = []
+	net.game.presence({"race": null})
 	changed.emit()
 
 # ------------------------------------------------------------------ the results: the host decides
 ## host: the official order of this race. A player counts as finished when the host saw him cover the distance; the
 ## race is final when every player is in or gone, or FINISH_WAIT after the first one; then come the points.
-func _judge(now: int) -> void:
-	if net.final or now - int(net.resAt) < 250: return
+## force: final now (the host starts the next race before everyone is in: who is still driving gets the place he has)
+func _judge(now: int, force := false) -> void:
+	if net.final or (now - int(net.resAt) < 250 and not force): return
 	var room: NetRoom = net.game
 	var rows := []
 	var open := 0
 	var humans := 0
-	if Game.state != "menu":
+	if not net.inRace and net.ref and net.meRow != null:
+		rows.append(net.meRow)
+		humans += 1
+		net.firstFin = now if int(net.firstFin) == 0 else net.firstFin
+	if net.inRace and Game.state != "menu":
 		var fin: bool = Game.raceDone and not Game.playerOut
 		rows.append({"p": room.me, "n": _dispName(room.me, str(G.prefs.nick)), "c": G.settings.car, "f": fin, "t": Game.raceFinishTime if fin else 0.0,
-			"g": Game.progressOf(Game.player.lap, Game.player.s, fin, Game.raceFinishTime), "b": false})
+			"g": _prog(Game.player.lap, Game.player.s, fin, Game.raceFinishTime), "b": false})
 		humans += 1
 		if fin: net.firstFin = now if int(net.firstFin) == 0 else net.firstFin
 		else: open += 1
@@ -1198,14 +1278,20 @@ func _judge(now: int) -> void:
 		humans += 1
 		if r.done: net.firstFin = now if int(net.firstFin) == 0 else net.firstFin
 		elif not r.out: open += 1
-	for bot in Game.bots:
-		rows.append({"p": "", "n": bot.name, "c": bot.type, "f": bot.finished, "t": bot.finishTime if bot.finished else 0.0,
-			"g": -1e9 if bot.out else Game.progressOf(bot.lap, bot.s, bot.finished, bot.finishTime), "b": true})
+	if net.inRace:
+		for bot in Game.bots:
+			rows.append({"p": "", "n": bot.name, "c": bot.type, "f": bot.finished, "t": bot.finishTime if bot.finished else 0.0,
+				"g": -1e9 if bot.out else _prog(bot.lap, bot.s, bot.finished, bot.finishTime), "b": true})
+	elif net.ref:
+		if humans == 0:
+			_refEnd()      # everyone went: no results, no points
+			return
+		rows.append_array(net.botRows)
 	rows.sort_custom(func(a, b): return a.g > b.g)
 	var left := -1.0
 	if int(net.firstFin) > 0: left = maxf(0.0, FINISH_WAIT - (now - int(net.firstFin)) / 1000.0)
-	var final: bool = humans > 0 and (open == 0 or (int(net.firstFin) > 0 and left <= 0.0))
-	if Game.state == "countdown": final = false
+	var final: bool = humans > 0 and (open == 0 or (int(net.firstFin) > 0 and left <= 0.0) or force)
+	if Game.state == "countdown" and net.inRace and not force: final = false
 	var out := []
 	var place := 0
 	for x in rows:
@@ -1230,11 +1316,13 @@ func _judge(now: int) -> void:
 			var u: String = room.uid_at(str(a[0]))
 			if u == "": continue
 			var e: Array = net.pts.get(u, [a[1], 0, 0, 0, 0])
-			net.pts[u] = [a[1], int(e[1]) + int(a[5]), int(e[2]) + 1, int(e[3]) + (1 if first else 0), int(a[5])]
+			# (a win is a finish in first place: a race the host ended before anyone was in has no winner)
+			net.pts[u] = [a[1], int(e[1]) + int(a[5]), int(e[2]) + 1, int(e[3]) + (1 if first and a[3] else 0), int(a[5])]
 			first = false
 		_savePts()
 		_planNext()
 		room.presence({"res": res, "pts": net.pts, "cfg": _myCfg()})
+		if net.ref: _refEnd()
 	else:
 		room.presence({"res": res})
 	changed.emit()
@@ -1438,8 +1526,12 @@ func watchStart() -> void:
 	if Env.me != null: Env.me.apply(race.time, race.weather)
 	if net == null: return
 	Game.clearTraffic()
-	Game.setupBots(0, race.bots)
+	# (the host watching the race he left: his bots are driven by each player's own game now, he has no positions of them)
+	Game.setupBots(0, [] if net.host else race.bots)
 	Game.raceLaps = clampi(int(race.laps), 1, 9)
+	net.raceL = Trk.TRACK_LEN
+	net.raceS0 = Trk.S_START
+	net.raceLaps = Game.raceLaps
 	net.watch = true
 	net.wspd = {}
 	net.botErr = {}
@@ -1502,11 +1594,12 @@ func _migStart(reason: String) -> bool:
 	var cands := []
 	var ids: Array = net.remotes.keys().filter(func(k): return not net.remotes[k].host and not net.remotes[k].off)
 	ids.append(me)
+	# (what every PC knows alike: who sends positions of the current race. Not whether this PC itself is in the race: a
+	# player in the lobby would put the racers last and pick another host than the racers do)
 	var racing := func(id) -> bool:
-		if not net.inRace: return false
-		if id == me: return Game.state != "menu"
+		if id == me: return net.inRace and Game.state != "menu"
 		var r: Dictionary = net.remotes[id]
-		return r.st != null and not r.out
+		return r.st != null and not r.out and int(r.st[9]) == int(net.raceId)
 	ids.sort_custom(func(a, b):
 		var ra: bool = racing.call(a); var rb: bool = racing.call(b)
 		if ra != rb: return ra
@@ -1549,9 +1642,8 @@ func _migNext() -> void:
 		return
 	var c: Dictionary = m.cands[int(m.i)]
 	if c.id == m.me:
-		if old != null and is_instance_valid(old):
-			old.leave()
-			get_tree().create_timer(0.6, true, false, true).timeout.connect(old.queue_free)
+		# (the old room stays net.game until the new one is open: the screens still look at it in between)
+		if old != null and is_instance_valid(old): old.leave()
 		m.hostAt = Time.get_ticks_msec()
 		m.tries = 0
 		_migHost()
@@ -1594,12 +1686,14 @@ func _migHost() -> void:
 		room.queue_free()
 		m.tries = int(m.tries) + 1
 		if int(m.tries) > 16:
-			net.mig = null
-			_leaveToList("De host is weggevallen. Overnemen lukte niet: poort %d is bezet op deze pc." % NetRoom.PORT, "De host is weggevallen.")
+			# the port stays busy: another game on this PC hosts already (maybe the new host): try the next one in line
+			_migNext()
 			return
 		get_tree().create_timer(0.3, true, false, true).timeout.connect(_migHost)
 		return
 	room.adopt(m.seats, m.known)
+	var prev: NetRoom = net.game
+	if prev != null and is_instance_valid(prev) and prev != room: get_tree().create_timer(0.6, true, false, true).timeout.connect(prev.queue_free)
 	net.game = room
 	net.host = true
 	net.rdy = true
@@ -1747,10 +1841,21 @@ func open_internet() -> void:
 		elif u.add_port_mapping(NetRoom.PORT, NetRoom.PORT, "Polderrace", "UDP") != UPNP.UPNP_RESULT_SUCCESS:
 			msg = "De router wilde poort %d niet openzetten. Zet hem zelf open (UDP)." % NetRoom.PORT
 		else:
-			msg = "Via internet bereikbaar op %s (poort %d)." % [u.query_external_address(), NetRoom.PORT]
+			msg = upnpMsg(u.query_external_address())
 			call_deferred("_upnp_done", msg, u)
 			return
 		call_deferred("_upnp_done", msg, null))
+
+## what the host reads when the router opened the port: its internet address, unless the router does not know one or
+## only has an address that is not on the internet itself (a second router, or the provider shares one address: CGNAT)
+static func upnpMsg(ext: String) -> String:
+	var p := ext.split(".")
+	if not ext.is_valid_ip_address() or p.size() != 4:
+		return "Poort %d staat open in je router. Je internet-adres staat bij 'wat is mijn IP' op internet; dat geef je aan de anderen." % NetRoom.PORT
+	var a := int(p[0]); var b := int(p[1])
+	if a == 10 or (a == 192 and b == 168) or (a == 172 and b >= 16 and b < 32) or (a == 100 and b >= 64 and b < 128) or a == 0:
+		return "Poort %d staat open in je router, maar die zit zelf niet direct aan internet (adres %s: een tweede router of je provider deelt het adres). Via internet meedoen lukt dan waarschijnlijk niet." % [NetRoom.PORT, ext]
+	return "Via internet bereikbaar op %s (poort %d)." % [ext, NetRoom.PORT]
 
 ## the router keeps a mapping until it is removed: it is closed again when the host leaves the game or quits
 var _mapped: UPNP = null
@@ -1782,43 +1887,92 @@ func close_internet(wait := false) -> void:
 ## "" unknown / not Windows, "ok" an allow rule for this game, "block" a block rule (Windows makes one when the
 ## question "allow access?" is answered with Cancel), "none" no rule yet (Windows will ask)
 var fw_state := ""
+var fw_msg := ""                   ## what came of the last "open the firewall" (shown in the host's screen; "" = nothing to say)
 var _fw: Thread = null
+
+## A PowerShell script for OS.execute, as -EncodedCommand (base64 of UTF-16LE): Godot puts an argument with spaces between
+## double quotes but does not escape the double quotes inside it, so a script handed over as text with "…" in it (the
+## program path for netsh) arrives cut up. This way the script itself never passes the command line.
+static func psArgs(script: String) -> PackedStringArray:
+	var u := PackedByteArray()
+	for i in script.length():
+		var c := script.unicode_at(i)
+		if c > 0xFFFF:      # (outside the BMP: a surrogate pair)
+			c -= 0x10000
+			var hi := 0xD800 + (c >> 10); var lo := 0xDC00 + (c & 0x3FF)
+			u.append_array([hi & 255, hi >> 8, lo & 255, lo >> 8])
+		else:
+			u.append_array([c & 255, c >> 8])
+	return PackedStringArray(["-NoProfile", "-NonInteractive", "-EncodedCommand", Marshalls.raw_to_base64(u)])
+
+## the path of this game's .exe as a PowerShell text between single quotes
+static func _psExe() -> String:
+	return "'" + OS.get_executable_path().replace("/", "\\").replace("'", "''") + "'"
+
+## the check (no admin rights needed): this game's own inbound rules
+static func fwCheckScript(exe: String) -> String:
+	return ("$r = Get-NetFirewallApplicationFilter -Program %s -ErrorAction SilentlyContinue | Get-NetFirewallRule -ErrorAction SilentlyContinue | " +
+		"Where-Object { $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' }\n" +
+		"if (-not $r) { 'none' } elseif ($r | Where-Object { $_.Action -eq 'Block' }) { 'block' } else { 'ok' }") % exe
+
+## opening it: netsh as administrator (Windows asks the player), first this game's own rules away (a block rule wins from
+## an allow rule), then one allow rule for every kind of network. Says "exit:N" (netsh's answer) or "denied" (no permission).
+static func fwOpenScript(exe: String) -> String:
+	return ("$e = %s\n" +
+		"$a = '/c netsh advfirewall firewall delete rule name=all program=\"' + $e + '\" & netsh advfirewall firewall add rule name=\"Polderrace 3D\" dir=in action=allow program=\"' + $e + '\" enable=yes profile=any'\n" +
+		"try { $p = Start-Process -FilePath cmd.exe -ArgumentList $a -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop; 'exit:' + $p.ExitCode } catch { 'denied' }") % exe
 
 func firewall_check() -> void:
 	if OS.get_name() != "Windows" or _fw != null: return
 	_fw = Thread.new()
 	_fw.start(func():
-		var exe := OS.get_executable_path().replace("/", "\\").replace("'", "''")
 		var out := []
-		var cmd := "$r = Get-NetFirewallApplicationFilter -Program '%s' -ErrorAction SilentlyContinue | Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' }; if (-not $r) { 'none' } elseif ($r | Where-Object { $_.Action -eq 'Block' }) { 'block' } else { 'ok' }" % exe
-		var code := OS.execute("powershell", ["-NoProfile", "-NonInteractive", "-Command", cmd], out, false, false)
+		var code := OS.execute("powershell", psArgs(fwCheckScript(_psExe())), out, false, false)
 		var s := "".join(out).strip_edges().to_lower() if code == 0 else ""
 		call_deferred("_fw_done", s if s in ["ok", "block", "none"] else ""))
 
 func _fw_done(s: String) -> void:
 	_fw.wait_to_finish()
 	_fw = null
-	if s != fw_state:
+	if s == "ok" and fw_msg != "": fw_msg = "De Windows-firewall laat Polderrace nu door."
+	if s != fw_state or fw_msg != "":
 		fw_state = s
 		changed.emit()
 
 ## Windows: ask (with the Windows permission question) to let this game through the firewall on every kind of network.
-## Removes this game's own block rules first: a block rule wins from an allow rule.
+## Whatever happens (no permission, netsh fails, no PowerShell) the player reads what happened; nothing else changes.
 func firewall_open() -> void:
 	if OS.get_name() != "Windows" or _fw != null: return
+	fw_msg = "Windows vraagt om toestemming (staat het venster achter het spel? Alt+Tab)…"
+	changed.emit()
 	_fw = Thread.new()
 	_fw.start(func():
-		var exe := OS.get_executable_path().replace("/", "\\")
-		var inner := "netsh advfirewall firewall delete rule name=all program=\"%s\" & netsh advfirewall firewall add rule name=\"Polderrace 3D\" dir=in action=allow program=\"%s\" enable=yes profile=any" % [exe, exe]
-		var cmd := "Start-Process -FilePath cmd.exe -Verb RunAs -WindowStyle Hidden -Wait -ArgumentList '/c', '%s'" % inner.replace("'", "''")
-		OS.execute("powershell", ["-NoProfile", "-NonInteractive", "-Command", cmd], [], false, false)
-		call_deferred("_fw_reopen"))
+		var out := []
+		var code := OS.execute("powershell", psArgs(fwOpenScript(_psExe())), out, false, false)
+		call_deferred("_fw_reopen", code, "".join(out).strip_edges()))
 
-func _fw_reopen() -> void:
+func fw_busy() -> bool:
+	return _fw != null
+
+func _fw_reopen(code: int, out: String) -> void:
 	_fw.wait_to_finish()
 	_fw = null
+	fw_msg = fwResult(code, out)
 	fw_state = ""
+	changed.emit()
 	firewall_check()
+
+## what the player reads after "open the firewall"
+static func fwResult(code: int, out: String) -> String:
+	var hlp := " Je kunt het ook zelf doen: Windows-beveiliging → Firewall en netwerkbeveiliging → Een app toestaan via de firewall → Polderrace, vink Privé en Openbaar aan."
+	if out.ends_with("denied"): return "De firewall is niet veranderd: Windows kreeg geen toestemming (Nee geklikt, of geen beheerder)." + hlp
+	if out.ends_with("exit:0"): return "De firewall is opengezet voor Polderrace."
+	if out.contains("exit:"):
+		var n := out.get_slice("exit:", 1).strip_edges()
+		if n == "": return "Klaar. Hieronder staat of de firewall Polderrace nu doorlaat."
+		return "Openzetten lukte niet (netsh gaf fout %s)." % n + hlp
+	if code == -1: return "Openzetten lukte niet: PowerShell is niet gevonden op deze pc." + hlp
+	return "Openzetten lukte niet." + hlp
 
 func _exit_tree() -> void:
 	if _upnp != null: _upnp.wait_to_finish()

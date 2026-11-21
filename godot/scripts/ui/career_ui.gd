@@ -202,6 +202,7 @@ func openCareer() -> void:
 		var cid: String = id
 		b.pressed.connect(func() -> void:
 			if mine:
+				G.carPicked(G.settings.car, cid)    # the paint colour belongs to the car
 				G.settings.car = cid
 				Game.rebuildPlayerCar()
 				openCareer()

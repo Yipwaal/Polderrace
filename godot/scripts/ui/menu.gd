@@ -425,7 +425,9 @@ func homePanel(v: String) -> void:
 	# browsing the garage can show cars you have not bought: leaving it puts you back in a car you own
 	if v == "garage" and from != "garage": garageCar = S.car
 	if from == "garage" and v != "garage" and not Career.owns(S.car):
-		S.car = garageCar if garageCar != null and Career.owns(garageCar) else Career.ownedCar(S.car)
+		var own: String = garageCar if garageCar != null and Career.owns(garageCar) else Career.ownedCar(S.car)
+		G.carPicked(S.car, own)    # (your car gets its own paint back, not the colour of the car you were looking at)
+		S.car = own
 		G.saveSettings()
 		if Game.car != null and v != "main": Game.rebuildPlayerCar()
 	if v == "main" and Game.car != null: Game.rebuildPlayerCar()
@@ -655,6 +657,7 @@ func setPausedUI(p: bool) -> void:
 		var t: String = TrackDefs.TRACKS[Trk.TRACK_ID].name + (" (omgekeerd)" if Trk.TRACK_DIR == "rev" else "") + " · " + Hud.lapT.text.to_lower().replace("/", " van ")
 		if g.raceMode or g.mode == "elim": t += " · plek " + Hud.big.text.replace("/", " van ")
 		elif g.mode == "time": t += " · " + G.fmtKm(g.distance)
+		if Net.inRace(): t += "\nOnline gaat de race gewoon door: je auto rolt uit."
 		overUI.pauseSub.text = t
 
 func setEarned(n: int, label := "") -> void:
@@ -1003,6 +1006,11 @@ func _input(e: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		if not e.echo: bindCapture.call(code)
 		return
+	# Escape with the look tab's colour picker open closes the picker, not the garage
+	if code == "Escape" and garageUI != null and garageUI.pickerOpen():
+		get_viewport().set_input_as_handled()
+		garageUI.closePicker()
+		return
 	var f := get_viewport().gui_get_focus_owner()
 	# typing in a text field (start number): leave every key to the field; Escape and Enter leave it
 	if f is LineEdit:
@@ -1059,6 +1067,7 @@ func padNav(now: Dictionary, prev: Dictionary) -> bool:
 	var g := Game
 	if NetUi.padNav(now, prev): return true     # the online screens (lobby, watching)
 	if g.state == "menu" and menuStep < 0:
+		if garageUI != null and garageUI.padPicker(now, prev): return true   # the colour picker of the look tab
 		if edge.call("up"): padFocus(-1)
 		if edge.call("down"): padFocus(1)
 		if edge.call("a"):

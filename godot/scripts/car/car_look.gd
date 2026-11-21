@@ -360,7 +360,7 @@ const GLASS := {"clear": [0x44566a, 0.3], "black": [0x07080a, 0.9], "blue": [0x0
 static func _swap(m: Dictionary, L: Dictionary, all: Array) -> void:
 	# calipers and tyres are vertex-coloured parts of the wheels (CarKit): recolour / add a sidewall ring
 	if L.cal != "red":
-		CarKit.setCalipers(m, colorOf("cal", L.cal))
+		CarKit.setCalipers(m, colorOf("cal", L.cal), option("cal", L.cal) == null)
 	if L.tw != "std":
 		if not _tyreMats.has(L.tw):
 			var tx := CarDecal.tyre(L.tw)
@@ -403,7 +403,7 @@ static func _rims(m: Dictionary, L: Dictionary) -> void:
 	if STD_RIMS.has(L.rim): return
 	var ws: Array = m.get("wheels", [])
 	if ws.is_empty(): return
-	CarKit.setRims(m, ws[0].style, colorOf("rim", L.rim))   # the rim colour is in the wheel's vertex colours
+	CarKit.setRims(m, ws[0].style, colorOf("rim", L.rim), 0.72, option("rim", L.rim) == null)   # the rim colour is in the wheel's vertex colours
 
 # ---- start numbers: the standard styling placed them (doors or fin, and roof); here their style and which ones show
 static func _numMeshes(m: Dictionary) -> Array:
@@ -683,6 +683,8 @@ static func _glow(m: Dictionary, L: Dictionary) -> void:
 	var mat := _cached("glow" + c.to_html(false), func():
 		var mt := Mats.basic(0xffffff, {"map": glowTex(), "transparent": true, "depthWrite": false, "blending": "add", "opacity": 1.0})
 		mt.albedo_color = Color(c.r, c.g, c.b, _glowLevel)
+		# after the car's contact shadow (Fx, sorted by distance otherwise: the shadow darkened the neon from some angles)
+		mt.render_priority = 1
 		_glows.append(weakref(mt))
 		return mt)
 	if _glowGeo == null:

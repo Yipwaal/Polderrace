@@ -68,6 +68,10 @@ static var up_of: Callable = Callable()
 
 static var KITS := {}
 static var WGEO := {}
+## wheels and calipers in a colour of the player's own mixing: the garage's colour picker makes a new colour every time it
+## moves, so these get a small cache of their own that forgets the oldest (a live car keeps its own mesh)
+const WGEO_MIX_MAX := 16
+static var WGEO_MIX := {}
 static var PLATES := {}
 static var GLASS := {}
 static var _beamGeo: Geo = null
@@ -201,11 +205,11 @@ static func tyreWallGeo(r: float, w: float, style: String, big := 0.0, flip := f
 	WGEO[key] = g
 	return g
 
-## colour of the brake calipers (Color or hex int)
-static func setCalipers(m: Dictionary, color) -> void:
+## colour of the brake calipers (Color or hex int); own: a colour of the player's own mixing (kept in a small cache)
+static func setCalipers(m: Dictionary, color, own := false) -> void:
 	for wh in m.wheels:
 		var c = wh.get("cal", null)
-		if c != null: set_geo(c, _calGeo(wheelGeos(wh.r, wh.w, wh.style, null, 0.72, wh.get("big", 0.0)).rb, _col(color)))
+		if c != null: set_geo(c, _calGeo(wheelGeos(wh.r, wh.w, wh.style, null, 0.72, wh.get("big", 0.0)).rb, _col(color), own))
 
 ## show or hide the driver (the garage shows an empty car)
 static func setDriver(m: Dictionary, on: bool) -> void:
@@ -328,12 +332,14 @@ static func uvCell(A: CarAcc, n0: int, name: String, flat := false) -> void:
 # brake disc; the caliper sits on the pivot so it does not roll
 
 ## big: a larger rim in the same tyre (lower profile): the rim radius is r * (0.7 + big) (CarLook's wheel size, 0 .. 0.12)
-static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine := 0.72, big := 0.0) -> Dictionary:
+static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine := 0.72, big := 0.0, own := false) -> Dictionary:
 	var rc: Color = sc(RIM_SILVER, shine) if rimCol == null else _col(rimCol)
 	rc.a = shine
 	var key := "%.3f/%.3f/%s/%s/%.2f/%.2f" % [r, w, style, rc.to_html(false), shine, big]
 	if WGEO.has(key):
 		return WGEO[key]
+	if own and WGEO_MIX.has(key):
+		return _mixGet(key)
 	var hw := w / 2.0
 	var rb := r * (0.64 if style == "steel" else (0.58 if style == "tractor" else 0.7 + big))
 	var ro := r - (0.04 if style == "tractor" else 0.0)   # lugs stand on a tractor tyre
@@ -410,8 +416,20 @@ static func wheelGeos(r: float, w: float, style: String, rimCol = null, shine :=
 			var a := (k + 0.5) / 5.0 * PI * 2
 			var nut := Geo.box(0.012, 0.02, 0.02); nut.rotate_x(a); nut.translate(face + 0.008, cos(a) * rb * 0.14, sin(a) * rb * 0.14); A.geo(nut)
 	var o := {"all": A.build(), "rb": rb, "face": face}
-	WGEO[key] = o
+	if own: _mixPut(key, o)
+	else: WGEO[key] = o
 	return o
+
+## the own-colour cache: the most recently used last, the oldest dropped past WGEO_MIX_MAX
+static func _mixGet(key: String):
+	var v = WGEO_MIX[key]
+	WGEO_MIX.erase(key)
+	WGEO_MIX[key] = v
+	return v
+
+static func _mixPut(key: String, v) -> void:
+	WGEO_MIX[key] = v
+	while WGEO_MIX.size() > WGEO_MIX_MAX: WGEO_MIX.erase(WGEO_MIX.keys()[0])
 
 static func _flip(idx: PackedInt32Array) -> PackedInt32Array:
 	var o := PackedInt32Array()
@@ -419,13 +437,16 @@ static func _flip(idx: PackedInt32Array) -> PackedInt32Array:
 		o.append(idx[i]); o.append(idx[i + 2]); o.append(idx[i + 1])
 	return o
 
-static func _calGeo(rb: float, col) -> Geo:
+static func _calGeo(rb: float, col, own := false) -> Geo:
 	var c: Color = sc(0xc8302a, 0.5) if (col == null or col is String) else _col(col.albedo_color if col is LMat else col)
 	c.a = 0.5
 	var key := "cal/%.3f/%s" % [rb, c.to_html(false)]
-	if not WGEO.has(key):
-		WGEO[key] = CarAcc.new().color(c).geo(Geo.box(0.07, 0.1, rb * 0.55)).build()
-	return WGEO[key]
+	if WGEO.has(key): return WGEO[key]
+	if own and WGEO_MIX.has(key): return _mixGet(key)
+	var g := CarAcc.new().color(c).geo(Geo.box(0.07, 0.1, rb * 0.55)).build()
+	if own: _mixPut(key, g)
+	else: WGEO[key] = g
+	return g
 
 ## pivot (steers) > spin (rolls). Built for the right side; the spin group is mirrored on the left. The caliper sits on the
 ## pivot so it does not roll. cal: "default" = the red caliper, null = none (traffic), or a colour / material
@@ -456,11 +477,12 @@ static func addWheel(parent: Node3D, x: float, y: float, z: float, r: float, w: 
 
 ## rim style and colour of a car's wheels (col: Color, hex int, or a material whose colour is taken); shine 0..1. The rim
 ## size is the wheel's "big" (set by CarLook before styling)
-static func setRims(m: Dictionary, style: String, col = null, shine := 0.72) -> void:
+## own: a colour of the player's own mixing (kept in a small cache)
+static func setRims(m: Dictionary, style: String, col = null, shine := 0.72, own := false) -> void:
 	if col is LMat: col = col.albedo_color
 	for wh in m.wheels:
 		if wh.style == "steel" or wh.style == "tractor": continue
-		var G := wheelGeos(wh.r, wh.w, style, col, shine, wh.get("big", 0.0))
+		var G := wheelGeos(wh.r, wh.w, style, col, shine, wh.get("big", 0.0), own)
 		wh.style = style
 		set_geo(wh.mesh, G.all)
 

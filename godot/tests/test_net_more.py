@@ -11,7 +11,9 @@
      broadcast geblokkeerd (gevonden via de sweep), firewall van een host dicht (de lijst zegt het), een speler via een
      slechte verbinding (net_lossy.py: 5% verlies, 150 ms heen en terug, door elkaar): hoe vloeiend en hoe waar zijn auto
      bij de host rijdt, 5 s en 12 s geen verbinding (blijft / komt vanzelf terug), host crasht (overname op een andere pc).
-usage: python godot/tests/test_net_more.py [1] [2] [3] [4]   (about 7 minutes: 1 ±2, 2 ±1-3, 3 ±0,5, 4 ±4; 4 only as root on Linux)"""
+  5. de host stapt uit de race (Naar lobby) terwijl de anderen nog rijden: de bots rijden door, de race krijgt toch een
+     uitslag en punten; de host start een nieuwe race voor iedereen binnen is: de lopende race telt mee.
+usage: python godot/tests/test_net_more.py [1] [2] [3] [4] [5]   (about 8 minutes: 1 ±2, 2 ±1-3, 3 ±0,5, 4 ±4, 5 ±1; 4 only as root on Linux)"""
 import sys, os, time, math, itertools, shutil, subprocess, pathlib, json, socket, random, statistics
 import net_players
 net_players.isolate()
@@ -80,10 +82,13 @@ def scenario_evening():
     check(all(len(r.get('lobbies', [])) == 1 and r['lobbies'][0]['name'] == 'Yips game' for r in rs), 'iedereen ziet "Yips game" in de lijst', rs[0].get('cards'))
     r = h.wait(lambda r: r['searching'] >= 1, 5)
     check(r.get('searching', 0) >= 1 and 'zien de jouwe' in r.get('diag', '') or 'ziet de jouwe' in r.get('diag', ''), 'de host ziet dat spelers zijn game vinden', (r.get('searching'), r.get('diag')))
-    for g in (g1, g2, g3): g.cmd('join 0')
+    for g in (g1, g2, g3):
+        # one after the other: the seats (and with them who takes over from the host later) are then Bram, Lotte, Mira
+        g.cmd('join 0'); g.wait(lambda r: r.get('me'), 8)
     r = g1.wait(lambda r: r.get('net') and 'game van' in r['status'], 8)
     check('NetUi' in r.get('focus', ''), 'na Meedoen staat de focus op een knop van het online-scherm', r.get('focus'))
     r = h.wait(lambda r: len(r['remotes']) == 3, 15)
+    seat = {x['name']: x['peer'] for x in r.get('remotes', [])}      # (the three joined at once: seats by who came in first)
     check(sorted((x['name'], x['car']) for x in r.get('remotes', [])) == [('Bram', 'hatch'), ('Lotte', 'evo'), ('Mira', 'super')],
           'host ziet de drie spelers met hun auto', r.get('remotes'))
     check(r.get('players_ui', [None])[0] == 'Yip (jij) | host' and len(r.get('players_ui', [])) == 4, 'spelerslijst bij de host', r.get('players_ui'))
@@ -162,13 +167,14 @@ def scenario_evening():
     # Bram rams bot 0 of the host: the host applies his kick, the bot does not jump (at real speed: a faster game
     # time makes every correction between two network updates bigger)
     for p in (h, g1): p.cmd('ts 1')
-    seen0 = h.rep().get('seen', {}).get('g1', 0)
+    bram = seat.get('Bram', 'g1')
+    seen0 = h.rep().get('seen', {}).get(bram, 0)
     for _ in range(3):      # (a bot that just changed lanes can be missed: try again)
         h.cmd('track')
         g1.cmd('ram')
-        r = h.wait(lambda r: r.get('seen', {}).get('g1', 0) > seen0, 3)
-        if r.get('seen', {}).get('g1', 0) > seen0: break
-    check(r.get('seen', {}).get('g1', 0) > seen0, 'host krijgt de botsing van Bram met zijn bot', (seen0, r.get('seen')))
+        r = h.wait(lambda r: r.get('seen', {}).get(bram, 0) > seen0, 3)
+        if r.get('seen', {}).get(bram, 0) > seen0: break
+    check(r.get('seen', {}).get(bram, 0) > seen0, 'host krijgt de botsing van Bram met zijn bot', (seen0, r.get('seen')))
     time.sleep(1.5)
     sp = speeds(h.rep().get('bot_track', []))
     check(sp and max(sp) < 110, 'bot springt niet bij de host na de botsing (snelheid van beeld tot beeld)', [round(x) for x in sp])
@@ -242,8 +248,8 @@ def scenario_evening():
           'nieuwe race op de volgende baan voor iedereen (ook wie in de lobby stond)', [(r.get('state'), r.get('track'), len(r.get('bots', []))) for r in rs])
     check(len({int(r.get('raceId', 0)) for r in rs}) == 1, 'zelfde race-id')
     order = rs[0].get('order', [])
-    ids = {'Yip': 'h', 'Bram': 'g1', 'Lotte': 'g2', 'Mira B': 'g3'}
-    check(len(order) == 4 and order[-1] == ids[leader] and order[0] == 'g3', 'startvolgorde naar de stand: de leider achteraan, wie nog geen punten heeft vooraan', (leader, order, h.cmd('ex [get_node("/root/Net").onl().get("grid"), get_node("/root/Net").net.pts, get_node("/root/Net").net.seats]')))
+    ids = {'Yip': 'h', 'Bram': seat.get('Bram'), 'Lotte': seat.get('Lotte'), 'Mira B': seat.get('Mira')}
+    check(len(order) == 4 and order[-1] == ids[leader] and order[0] == ids['Mira B'], 'startvolgorde naar de stand: de leider achteraan, wie nog geen punten heeft vooraan', (leader, order, h.cmd('ex [get_node("/root/Net").onl().get("grid"), get_node("/root/Net").net.pts, get_node("/root/Net").net.seats]')))
     check(not any(x['done'] for r in rs for x in r.get('remotes', [])), 'niemand staat al gefinisht aan de start (geen oude pakketjes)',
           [[(x['name'], x['done']) for x in r.get('remotes', [])] for r in rs])
     rs = [p.wait(lambda r: r['go_at'] > 0 and r['state'] == 'racing', 20) for p in P]
@@ -285,7 +291,7 @@ def scenario_evening():
     g1.cmd('open'); g1.cmd('join 0')
     r = g1.wait(lambda r: r.get('net') and r.get('me'), 10)
     rh = h.wait(lambda r: remote(r, 'Bram') and not remote(r, 'Bram')['off'], 6)
-    check(r.get('me') == 'g1' and remote(rh, 'Bram') and remote(rh, 'Bram')['peer'] == 'g1' and not remote(rh, 'Bram')['off'] and
+    check(r.get('me') == seat.get('Bram') and remote(rh, 'Bram') and remote(rh, 'Bram')['peer'] == seat.get('Bram') and not remote(rh, 'Bram')['off'] and
           any(x['name'] == 'Bram' and x['me'] and x['pts'] > 0 for x in r.get('pts', [])), 'hij komt terug op zijn eigen plek, met zijn punten', (r.get('me'), remote(rh, 'Bram'), r.get('pts')))
     rs = [p.wait(lambda r: r['state'] == 'over' and final(r), 120) for p in (h, g3)]
     time.sleep(1)
@@ -755,13 +761,103 @@ def scenario_lan():
         if px is not None: px.kill()
         lan.close()
 
-which = sys.argv[1:] or ['1', '2', '3', '4']
+# ---------------------------------------------------------------------------------------------------------------- 5
+def scenario_host_out():
+    print('== online: de host stapt uit de race terwijl de anderen nog rijden')
+    TS = 4
+    h = Player('host', nick='Yip', car='gt', ts=TS)
+    g1 = Player('g1', nick='Bram', car='hatch', ts=TS)
+    g2 = Player('g2', nick='Lotte', car='evo', ts=TS)
+    g3 = Player('g3', nick='Teun', car='super', ts=TS)     # comes later
+    P = [h, g1, g2]
+    check(all(p.ready() for p in P + [g3]), 'vier spellen gestart')
+    h.cmd('open'); h.cmd('press Nieuwe game maken')
+    h.cmd('set laps 2'); h.cmd('set bots 2')
+    for g in (g1, g2): g.cmd('open')
+    for g in (g1, g2):
+        g.cmd('join 0'); g.wait(lambda r: r.get('me'), 8)     # (one after the other: Bram has the first seat)
+    h.wait(lambda r: len(r['remotes']) == 2, 15)
+    # keyboard / gamepad: the host's focus on Bram's "Eruit" button stays there while the list refreshes (every second)
+    h.cmd('ex get_node("/root/NetUi").players.get_child(1).get_child(get_node("/root/NetUi").players.get_child(1).get_child_count() - 1).grab_focus()')
+    time.sleep(2.5)
+    f = h.cmd('ex [get_viewport().gui_get_focus_owner().get_parent().get_meta("nick", ""), get_viewport().gui_get_focus_owner().text]')
+    check(f == '["Bram", "Eruit"]', 'de focus blijft op de knop Eruit van Bram terwijl de lijst ververst', f)
+    # race 1: the host changes the track during the countdown (the countdown starts again with the new one); then he
+    # stops at once (pause, Naar lobby) and the others race on
+    h.cmd('start')
+    g1.wait(lambda r: r.get('countdown', 0) > 0, 4)
+    h.cmd('ex get_node("/root/NetUi").cyc.track.get_parent().get_child(3).pressed.emit()')
+    newt = h.rep().get('settings', {}).get('track')
+    nm = h.cmd('ex get_node("/root/Net").trackName("%s", "fwd")' % newt)
+    r = g1.wait(lambda r: nm in r.get('banners', []), 8)
+    check(newt != 'dorp' and nm in r.get('banners', []), 'de host kiest een andere baan tijdens het aftellen: het aftellen begint opnieuw met die baan', (newt, r.get('banners')))
+    rs = [p.wait(lambda r: r['state'] == 'racing', 25) for p in P]
+    check(all(r.get('state') == 'racing' for r in rs), 'iedereen in de race', [r.get('state') for r in rs])
+    check(all(r.get('track') == newt for r in rs), 'op de nieuwe baan', [r.get('track') for r in rs])
+    time.sleep(1.5)
+    check(h.cmd('quitrace'), 'de host stopt met de race (pauze, Naar lobby)')
+    time.sleep(3)
+    b0 = g1.rep().get('bot_s', []); time.sleep(1.0); b1 = g1.rep().get('bot_s', [])
+    check(len(b0) == 2 and all(abs(a - b) > 0.5 for a, b in zip(b0, b1)) and max(abs(a - b) for a, b in zip(b0, b1)) > 20, 'de bots blijven rijden bij de anderen (ze staan niet stil op de weg)', (b0, b1))
+    rs = [p.wait(lambda r: r['state'] == 'over' and final(r), 90) for p in (g1, g2)]
+    check(all(final(r) for r in rs), 'de race krijgt een officiele uitslag, ook al staat de host in de lobby', [(r.get('state'), r.get('res')) for r in rs])
+    time.sleep(1)
+    ps = [pts_of(p.rep()) for p in P]
+    check(ps[0] == ps[1] == ps[2] and sorted(x[1] for x in ps[0]) == [8, 10], 'en punten voor wie de race uitreed, bij iedereen gelijk', ps)
+    r = h.rep()
+    check(r.get('state') == 'menu' and not h.errors(), 'de host stond al die tijd in de lobby', r.get('state'))
+    # race 2: Lotte stands still; Yip and Bram finish, and Yip starts the next race before she is in
+    for p in (g1, g2): p.cmd('press Lobby')
+    h.cmd('set laps 1')
+    h.cmd('start')
+    rs = [p.wait(lambda r: r['state'] == 'racing', 25) for p in P]
+    g2.cmd('drive off')
+    rid = rs[0].get('raceId')
+    g3.cmd('open'); g3.cmd('join 0'); g3.wait(lambda r: r.get('me'), 8)       # Teun comes in: he races from the next race on
+    r = h.wait(lambda r: r['state'] == 'over' and r.get('again'), 90)
+    g1.wait(lambda r: r['state'] in ('finished', 'over'), 60)
+    check(h.cmd('again'), 'de host klikt Nieuwe race terwijl Lotte nog rijdt')
+    rs = [p.wait(lambda r: r.get('countdown', 0) > 0 or r['state'] == 'countdown', 6) for p in P]
+    ps = [pts_of(p.rep()) for p in P]
+    check(ps[0] == ps[1] == ps[2] and all(x[2] == 2 for x in ps[0] if x[0] in ('Bram', 'Lotte')),
+          'de race die nog liep telt mee in de stand (wie nog reed, krijgt de plek die hij had)', ps)
+    P = [h, g1, g2, g3]
+    rs = [p.wait(lambda r: r['state'] in ('countdown', 'racing') and r.get('raceId') != rid, 25) for p in P]
+    check(all(r.get('state') in ('countdown', 'racing') for r in rs) and len({r.get('raceId') for r in rs}) == 1, 'en de volgende race start bij iedereen (ook bij wie later kwam)', [r.get('state') for r in rs])
+    # race 3: Bram (first seat) stops and stands in the lobby; then the host closes his game. Bram and Lotte must pick the
+    # same new host without talking: the one still racing (Lotte), not Bram for being first in line
+    g2.cmd('drive on')
+    for p in P: p.wait(lambda r: r['state'] == 'racing', 20)
+    time.sleep(1)
+    check(g1.cmd('quitrace'), 'Bram stopt en staat in de lobby')
+    g1.wait(lambda r: r['state'] == 'menu', 5)
+    h.cmd('close')
+    t0 = time.time()
+    one_host = lambda r: r.get('net') and not r.get('mig') and len(r.get('remotes', [])) == 2 and not any(x['off'] for x in r['remotes']) and (r.get('host') or any(x['host'] for x in r['remotes']))
+    rs = [p.wait(one_host, 15) for p in (g1, g2, g3)]
+    check(rs[1].get('host') and not rs[0].get('host') and not rs[2].get('host') and remote(rs[0], 'Lotte') and remote(rs[0], 'Lotte')['host'] and rs[1].get('state') == 'racing',
+          'iedereen kiest dezelfde nieuwe host: wie nog racet (Lotte), ook al staat Bram eerder in de rij', ([(r.get('host'), r.get('state'), r.get('status')) for r in rs], round(time.time() - t0, 1)))
+    # and when two players do pick themselves (here: Bram thinks Teun stopped too) on one PC, the second cannot open the
+    # port: he goes to the other one instead of falling out of the game (and his screen never looks at a closed game)
+    g1.cmd('ex get_node("/root/Net").net.remotes["%s"].merge({"out": true}, true)' % rs[2].get('me', 'g3'))
+    g2.cmd('close')
+    t0 = time.time()
+    one = lambda r: r.get('net') and not r.get('mig') and len(r.get('remotes', [])) == 1 and not r['remotes'][0]['off'] and (r.get('host') or r['remotes'][0]['host'])
+    rs = [p.wait(one, 25) for p in (g1, g3)]
+    check(all(one(r) for r in rs) and sum(1 for r in rs if r.get('host')) == 1, 'twee spelers kiezen zichzelf: het eindigt toch met een host en iedereen erin',
+          ([(r.get('host'), r.get('status')) for r in rs], round(time.time() - t0, 1)))
+    P = [h, g1, g2, g3]
+    no_errors(P)
+    kill_all()
+
+which = sys.argv[1:] or ['1', '2', '3', '4', '5']
 t0 = time.time()
 try:
     if '1' in which: scenario_evening()
     if '2' in which: scenario_full()
     if '3' in which: scenario_car()
     if '4' in which: scenario_lan()
+    if '5' in which: scenario_host_out()
 finally:
     kill_all()
 print(f'-- online (meer spelers): {"alles geslaagd" if not bad else str(len(bad)) + " mislukt: " + ", ".join(bad)}  ({round(time.time() - t0)} s)')

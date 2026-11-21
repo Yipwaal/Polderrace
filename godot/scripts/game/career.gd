@@ -133,6 +133,7 @@ func ensureOwnedCars() -> bool:
 	var a := ownedCar(G.settings.car)
 	var b := ownedCar(G.settings.p2car)
 	if a == G.settings.car and b == G.settings.p2car: return false
+	G.carPicked(G.settings.car, a)    # the paint colour belongs to the car
 	G.settings.car = a
 	G.settings.p2car = b
 	G.saveSettings()

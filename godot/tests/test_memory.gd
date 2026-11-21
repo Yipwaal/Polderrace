@@ -107,6 +107,7 @@ func round_(k: int) -> void:
 	# the garage room and back, the other home panels, the setup steps, the pause screen
 	Menu.homePanel("garage")
 	await tick()
+	await garage(k)
 	Menu.homeBack()
 	await tick()
 	for v in ["play", "records", "settings", "ach", "career", "main"]:
@@ -127,6 +128,27 @@ func round_(k: int) -> void:
 	Game.toMenu(-1)
 	await tick()
 	await frames(4)
+
+## trying things on in the garage like a player does: many body-kit combinations, rim and caliper colours from the colour
+## picker (a new colour every time it moves), new ones every round; the car is rebuilt for each
+func garage(k: int) -> void:
+	var ui: GarageUI = Menu.garageUI
+	ui.garTab("look")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7000 + k
+	for i in 30:
+		for key in CarParts.PART_KEYS:
+			var opts: Array = CarLook.item(key).opts.map(func(o): return o[0])
+			G.lookPick(G.settings.car, key, opts[rng.randi() % opts.size()])
+		ui.pick("num", 1 + (i * 7 + k * 13) % 99)       # (a start number is a canvas texture, drawn anew for every car)
+		ui.pick("wsize", ["std", "m", "l"][i % 3])
+	await tick(1)
+	for i in 20:
+		ui.pick("rim", "#" + Color.from_hsv(rng.randf(), 0.8, 0.8).to_html(false))
+		ui.pick("cal", "#" + Color.from_hsv(rng.randf(), 0.8, 0.8).to_html(false))
+	await tick(1)
+	ui.pick("num", 0)
+	ui.garTab("perf")
 
 func run(h: Node) -> TestReport:
 	r = TestReport.new("geheugen (geen lekken)")
@@ -163,6 +185,9 @@ func run(h: Node) -> TestReport:
 	r.check(Fx.me.parts.multimesh.instance_count == Fx.PART_MAX and Fx.me.skids.multimesh.instance_count == Fx.SKID_MAX, "rook en remsporen: vaste pool", "%d rookwolkjes, %d remsporen" % [Fx.me.parts.multimesh.instance_count, Fx.me.skids.multimesh.instance_count])
 	r.check(Sfx._tones.size() <= 64 and Sfx._bursts.size() <= 64 and Sfx.get_child_count() <= 6, "geluid: begrensde caches, vaste spelers", "%d tonen, %d klappen, %d spelers" % [Sfx._tones.size(), Sfx._bursts.size(), Sfx.get_child_count()])
 	r.check(Canvas2D._specs.size() < 64, "lettertypecache begrensd", str(Canvas2D._specs.size()))
+	var combos: int = CarKit.carKit(G.settings.car).get_meta("partCombos", {}).size()
+	r.check(combos <= CarParts.COMBO_MAX and CarKit.WGEO_MIX.size() <= CarKit.WGEO_MIX_MAX, "garage: passen bouwt geen onbeperkte voorraad bodykits en velgen in eigen kleur op",
+		"%d bodykit-combinaties, %d wielen/remklauwen in eigen kleur, %d wielvormen" % [combos, CarKit.WGEO_MIX.size(), CarKit.WGEO.size()])
 	main.queue_free()
 	await frames(2)
 	Fx.me = null; SplitView.me = null; Env.me = null; Game.camera = null; Game.fx_overlay = null

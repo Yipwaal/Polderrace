@@ -95,6 +95,7 @@ func run(host: Node) -> TestReport:
 	part_buying()
 	part_garage()
 	await part_keys(host)
+	await part_picker(host)
 	Game.toMenu(-1)
 	Menu.homePanel("main")
 	Game.set_process(true)
@@ -349,6 +350,49 @@ func part_kits() -> void:
 		if lo.shell.position.y > -0.015: flat.append("%s %.3f" % [id, lo.shell.position.y])
 		drop(lo)
 	r.check(flat.is_empty(), "Verlaagd: elke auto zakt minstens 1,5 cm (en nooit tot op de weg)", ", ".join(flat))
+	# the diffuser stays clear of every exhaust the model can wear (stock, sport, dual, centre, kanon)
+	var hitEx := []
+	for id in Cars.CARS:
+		if not CarLook.fits(id, "diffuser"): continue
+		var K := CarKit.carKit(id)
+		var P := CarParts.part(K, "diffuser", "on")
+		if P.d == null: continue
+		var tri: PackedVector3Array = P.d.P
+		for t in CarParts.exhaustTips(K):
+			var hit := false
+			for i in range(0, tri.size() - 2, 3):
+				if hit: break
+				for ia in 31:
+					if hit: break
+					for ib in 31 - ia:
+						var q: Vector3 = tri[i] + (tri[i + 1] - tri[i]) * (ia / 30.0) + (tri[i + 2] - tri[i]) * (ib / 30.0)
+						if q.z > t[3] - 0.03 and q.z < t[3] + 0.17 and Vector2(q.x - t[0], q.y - t[1]).length() < t[2] - 0.004:
+							hit = true
+							break
+			if hit: hitEx.append("%s: uitlaat x %.2f r %.3f" % [id, t[0], t[2]])
+	r.check(hitEx.is_empty(), "diffuser: geen uitlaat (af fabriek, sport, dubbel, centraal, kanon) door de vinnen of de plaat", ", ".join(hitEx.slice(0, 6)))
+	# carbon / matt black bonnet: the bonnet only, never the fender humps beside it (super, hyper, proto, ...)
+	var hoodBad := []
+	var hooded := 0
+	for id in Cars.CARS:
+		var K := CarKit.carKit(id)
+		var sp := CarParts.hoodSplit(K, false, "carbon")
+		if sp.is_empty(): continue
+		hooded += 1
+		var hump := 0
+		var memo := {}
+		var maxRise := 0.0
+		var zA: float = (K.C.z0 + 0.02) if K.C != null else float(K.S.wz[0]) - 0.75
+		var wideBack := 0.0      ## how wide the bonnet is just in front of the windscreen
+		for p in (sp[1] as Geo).pos:
+			var rise := CarParts._hump(K, p.z, memo)
+			maxRise = maxf(maxRise, rise)
+			if p.y > K.topY(p.z, 0.0) + 0.035 and rise >= 0.1: hump += 1
+			if p.z < zA + 0.25: wideBack = maxf(wideBack, absf(p.x))
+		if hump > 0: hoodBad.append("%s: %d punten op de spatborden" % [id, hump])
+		# a bonnet without humps stays whole (the evo's curves up towards the wings: all of it, up to the windscreen)
+		if maxRise < 0.1 and wideBack < 0.5: hoodBad.append("%s: kap bij de voorruit maar %.2f m breed" % [id, wideBack * 2])
+	r.check(hoodBad.is_empty() and hooded >= 14, "carbon motorkap: alleen de kap, niet de spatborden ernaast", ", ".join(hoodBad.slice(0, 4)) if not hoodBad.is_empty() else "%d auto's" % hooded)
 	# a spoiler from the kit replaces the factory one; the kanon replaces the factory exhaust
 	var w := car("gt", {"wing": "swan", "exhaust": "big"})
 	r.check(w.stockWing.all(func(o): return not o.visible) and w.g.get_meta("exh").meshes.all(func(o): return not o.visible), "bodykit-spoiler en kanon vervangen die van de fabriek")
@@ -543,6 +587,7 @@ func part_garage() -> void:
 	var ui: GarageUI = Menu.garageUI
 	ui.tabLook.press()
 	r.check(ui.look.visible and ui.lookTools.visible and not ui.fitBar.visible, "tab Uiterlijk open, paskamer leeg")
+	r.check(Game.car.driver != null and not Game.car.driver.visible, "de garage toont een lege auto (geen coureur)")
 	ui.lookGroup("lak")
 	ui.radio("finish").find("matte").press()
 	r.check(ui.fitBar.visible and ui.fitBuy.visible and not ui.fitBuy.disabled and Game.car.look.finish == "matte", "mat gepast: te zien op de auto, balk met Kopen")
@@ -561,6 +606,32 @@ func part_garage() -> void:
 	Menu.homeBack()
 	r.check(not GarageRoom.inGarage and G.fit.look.is_empty() and Game.car.look.finish == "matte" and Game.car.look.stripe == "std", "garage uit: niets onbetaalds op de auto", str(CarLook.compact(Game.car.look)))
 	r.check(not saved("polderrace3d-garage").looks.has("finish:chrome") and G.garage.credits == 4500, "niets betaald, niets gekregen")
+	r.check(Game.car.driver.visible, "garage uit: de coureur zit er weer in")
+	# browsing a car you do not own (that has a colour of its own) and leaving: your own car keeps its colour
+	var colBefore: String = G.settings.color
+	G.garage.cars["super"] = {"col": "#00ff00"}
+	Menu.homePanel("garage")
+	ui.tabPerf.press()
+	ui.classRadio.find("S").press()
+	ui.carRadio.find("super").press()
+	var browsing: bool = G.settings.car == "super" and G.settings.color == "#00ff00"
+	Menu.homeBack()
+	r.check(browsing and G.settings.car == "hatch" and G.settings.color == colBefore and G.lookOf("hatch").paint == colBefore, "andere auto bekeken die je niet hebt: je eigen auto houdt zijn kleur", "%s %s (was %s)" % [G.settings.car, G.settings.color, colBefore])
+	Menu.homePanel("garage")
+	ui.tabLook.press()
+	Menu.homeBack()
+	# the career screen's car cards: your other car gets its own colour (it took the colour of the car you sat in)
+	G.garage.owned["rally"] = true
+	G.carUp("rally").col = "#00aa00"
+	Menu.homePanel("career")
+	var card = null
+	for b in Menu.careerUI.cars.get_children():
+		for l in b.find_children("*", "Label", true, false):
+			if l.text == Cars.CARS.rally.name: card = b
+	if card != null: card.press()
+	r.check(card != null and G.settings.car == "rally" and G.settings.color == "#00aa00" and G.carUp("hatch").col == colBefore, "carrière: andere eigen auto kiezen geeft zijn eigen kleur (de hatch houdt de zijne)", "%s %s" % [G.settings.car, G.settings.color])
+	Menu.homePanel("main")
+	Menu.pickCar("hatch")
 	Menu.homePanel("garage")
 	r.check(ui.tab == "look" and not ui.fitBar.visible, "garage weer open op Uiterlijk, paskamer leeg")
 	ui.lookGroup("lak")
@@ -581,10 +652,28 @@ func part_garage() -> void:
 		ui.randomLook()
 		if not G.fit.look.is_empty() or G.garage.credits != 5000: r.check(false, "Willekeurig kost niets", str(G.fit.look))
 	r.check(G.fit.look.is_empty() and G.garage.credits == 5000, "Willekeurig: alleen wat je hebt, niets in de paskamer")
+	# with the colour mixer but without the roof and neon sets: no own colour on those (it would land in the fitting room)
+	G.garage.looks["mix"] = 1
+	var leak := []
+	for _i in 60:
+		ui.randomLook()
+		if not G.fit.look.is_empty(): leak.append(str(G.fit.look))
+	r.check(leak.is_empty(), "Willekeurig met kleurenmenger: geen eigen kleur op dak of neon zonder de set", ", ".join(leak.slice(0, 3)))
+	G.garage.looks.erase("mix")
 	var col: String = G.settings.color
 	ui.resetLook()
 	var L := G.lookOf("gt")
 	r.check(L.size() == 1 and L.paint == col, "Standaard: fabriekslook, de lakkleur blijft", str(L))
+	# a colour in the fitting room for a row that no longer applies is not paid for (sc2 of a one-colour design)
+	G.garage.credits = 5000
+	ui.lookGroup("stripe")
+	ui.pick("stripe", "triple")
+	ui.pick("sc2", "#123456")
+	var had: bool = G.fit.look.has("sc2") and G.fitCost().total == 250 + CarLook.MIX_PRICE
+	ui.pick("stripe", "twin")
+	r.check(had and not G.fit.look.has("sc2") and G.fitCost().total == 0 and not ui.fitBar.visible, "tweede kleur van een ontwerp met één kleur: niet meer in de paskamer, niets te betalen", str(G.fit.look))
+	ui.fitUndo.press()
+	ui.resetLook()
 	# the start number: stepper and field
 	ui.lookGroup("num")
 	rows_press(ui, "num", 1)
@@ -666,4 +755,53 @@ func part_keys(host: Node) -> void:
 	r.check(G.lookShown("gt", "rimStyle") != before, "gamepad rechts: volgende optie", "%s -> %s" % [before, G.lookShown("gt", "rimStyle")])
 	Menu.padNav({"down": true}, {})
 	r.check(focused() is UiKit.Btn and focused().radio == ui.radio("rim"), "gamepad omlaag: volgende rij")
+	Menu.homePanel("main")
+
+# ------------------------------------------------------------------ the colour picker (own colour) with gamepad and keyboard
+func part_picker(host: Node) -> void:
+	G.use_store("user://test-looks.json", {"polderrace3d-settings": {"car": "gt", "color": "#f36f21"}, "polderrace3d-garage": {"credits": 5000, "owned": {"gt": true}, "looks": {}}})
+	Game.rebuildPlayerCar()
+	Menu.homePanel("garage")
+	var ui: GarageUI = Menu.garageUI
+	ui.tabLook.press()
+	ui.lookGroup("wheel")
+	ui.rows.rim.mix.press()
+	await host.get_tree().process_frame
+	r.check(ui.pickerOpen(), "eigen kleur: de kleurenkiezer gaat open")
+	var before = G.lookShown("gt", "rim")
+	Menu.padNav({"r": true}, {})
+	Menu.padNav({"up": true}, {})
+	var after = G.lookShown("gt", "rim")
+	r.check(CarLook.isHex(after) and after != before and ui.pickerOpen() and Game.car.look.rim == after, "gamepad: links/rechts en op/neer kiezen de kleur, de auto toont hem", "%s -> %s" % [before, after])
+	Menu.padNav({"b": true}, {})
+	r.check(not ui.pickerOpen() and GarageRoom.inGarage and Menu.homeView == "garage", "gamepad B: kleurenkiezer dicht, nog in de garage")
+	r.check(focused() == ui.rows.rim.mix, "focus terug op het kleurvakje")
+	# Escape with the picker open closes the picker, not the garage
+	await host.get_tree().process_frame
+	ui.rows.rim.mix.press()
+	await host.get_tree().process_frame
+	var was: bool = ui.pickerOpen()
+	key(KEY_ESCAPE)
+	await host.get_tree().process_frame
+	r.check(was and not ui.pickerOpen() and GarageRoom.inGarage, "Esc: kleurenkiezer dicht, nog in de garage", "kiezer open: %s, garage: %s" % [ui.pickerOpen(), GarageRoom.inGarage])
+	if not GarageRoom.inGarage: Menu.homePanel("garage")
+	# leaving the garage while the picker is open: it closes, and a colour from it no longer lands on the car
+	await host.get_tree().process_frame
+	ui.rows.rim.mix.press()
+	await host.get_tree().process_frame
+	Menu.homeBack()
+	r.check(not ui.pickerOpen() and G.fit.look.is_empty(), "garage uit met de kleurenkiezer open: de kiezer gaat dicht, niets in de paskamer")
+	ui.picker.color_changed.emit(Color(0.2, 0.9, 0.3))
+	r.check(G.fit.look.is_empty() and G.lookShown("gt", "rim") == "silver", "een kleur uit een oude kiezer komt niet op de auto (en niet in een race)", str(G.fit.look))
+	# typing a plate (not owned) and leaving with Terug while the field still has the focus: the field commits when it is
+	# hidden, after the fitting room was emptied; that must not put the plate in the fitting room outside the garage
+	Menu.homePanel("garage")
+	ui.tabLook.press()
+	ui.lookGroup("num")
+	var pf: LineEdit = ui.texts.plate
+	pf.grab_focus()
+	pf.text = "SNEL-1"
+	Menu.homeBack()
+	await host.get_tree().process_frame
+	r.check(G.fit.look.is_empty() and str(G.lookShown("gt", "plate")) == "", "kenteken getypt, garage uit met de focus in het veld: niets in de paskamer", str(G.fit.look))
 	Menu.homePanel("main")

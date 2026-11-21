@@ -357,9 +357,15 @@ func _carfx_mesh(c: Dictionary) -> MeshInstance3D:
 	quad.call([Vector3(-hw, 0.1, off - hl), Vector3(hw, 0.1, off - hl), Vector3(hw, 0.1, off + hl), Vector3(-hw, 0.1, off + hl)], Vector3.UP, 0.0, 2.0, Color(0, 0, 0, 0.5))
 	var sp := _lamp_spots(c)
 	var big := len > 6.0
+	# the head lamps glow in the colour of their glass (CarLook: yellow, green, purple, xenon blue, smoked)
+	var hc := Color(1.0, 0.93, 0.74)
+	var lk = c.look.get("lamp", "std") if c.get("look") is Dictionary else "std"
+	if CarLook.LAMPS.has(lk):
+		var k: Vector3 = CarLook.LAMPS[lk][1]
+		hc = Color(minf(1.0, hc.r * k.x), minf(1.0, hc.g * k.y), minf(1.0, hc.b * k.z))
 	for p in sp.head:
-		quad.call([p, p, p, p], Vector3(0, 0, 1), 1.9 if big else 1.5, 0.0, Color(1.0, 0.93, 0.74, 0.8))
-		quad.call([Vector3(p.x, 0.1, p.z), Vector3(p.x, 0.1, p.z), Vector3(p.x, 0.1, p.z), Vector3(p.x, 0.1, p.z)], Vector3(0, 0, 1), 9.0, 1.0, Color(1.0, 0.93, 0.74, 0.3))
+		quad.call([p, p, p, p], Vector3(0, 0, 1), 1.9 if big else 1.5, 0.0, Color(hc.r, hc.g, hc.b, 0.8))
+		quad.call([Vector3(p.x, 0.1, p.z), Vector3(p.x, 0.1, p.z), Vector3(p.x, 0.1, p.z), Vector3(p.x, 0.1, p.z)], Vector3(0, 0, 1), 9.0, 1.0, Color(hc.r, hc.g, hc.b, 0.3))
 	for p in sp.tail:
 		quad.call([p, p, p, p], Vector3(0, 0, -1), 1.05, 0.0, Color(1.0, 0.12, 0.06, 0.85))
 		quad.call([Vector3(p.x, 0.1, p.z), Vector3(p.x, 0.1, p.z), Vector3(p.x, 0.1, p.z), Vector3(p.x, 0.1, p.z)], Vector3(0, 0, -1), 6.5, 1.0, Color(1.0, 0.1, 0.05, 0.45))

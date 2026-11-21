@@ -142,6 +142,7 @@ func rebuildPlayerCar(pid := "", pcol := "") -> void:
 	get_tree().current_scene.add_child(car.g)
 	if car.get("beam") != null:
 		car.beam.visible = false
+	if GarageRoom.inGarage: CarKit.setDriver(car, false)   # (the garage shows an empty car)
 	# the headlight is player 1's (JS: if(activeP===1)attachHeadlights()): player 2's car in split screen has none
 	if Fx.me != null and activeP == 1: Fx.me.attachCar(car)
 	var c := G.effStats(id)
@@ -363,7 +364,7 @@ func updateBots(dt: float) -> void:
 			for k in 2: b.m.wheels[k].pivot.rotation.y = 0.0
 			poseOnTrack(b.m.g, b.s, b.lat)
 			continue
-		if netInRace() and not netIsHost():
+		if netInRace() and not netIsHost() and Net.hostBots():
 			# the host drives the bots (Net applies its positions, 20 times a second); in between they roll on smoothly
 			if Net.botsFresh():
 				var rel := fposmod(b.s - Trk.S_START, Trk.TRACK_LEN)
@@ -1177,7 +1178,7 @@ func collide() -> void:
 		hitFx(im.j, true)
 
 func botCollisions() -> void:
-	if netInRace() and not netIsHost(): return
+	if netInRace() and not netIsHost() and Net.hostBots(): return
 	for a in bots.size():
 		for k in range(a + 1, bots.size()):
 			var X: Mover = bots[a]
