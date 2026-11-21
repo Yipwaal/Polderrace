@@ -9,6 +9,9 @@ var r: TestReport
 func run(_host: Node) -> TestReport:
 	r = TestReport.new("online zonder netwerk (firewall-knop, controles)")
 	_firewall()
+	var up := [Net.upnpMsg("84.12.3.4"), Net.upnpMsg(""), Net.upnpMsg("100.72.1.9"), Net.upnpMsg("192.168.2.1")]
+	r.check(up[0].contains("84.12.3.4") and up[1].contains("wat is mijn IP") and not up[1].contains("  ") and up[2].contains("waarschijnlijk niet") and up[3].contains("waarschijnlijk niet"),
+		"UPnP: internet-adres, geen adres bekend, of een router achter een andere router / CGNAT", str(up))
 	_looks()
 	_build(_host)
 	return r

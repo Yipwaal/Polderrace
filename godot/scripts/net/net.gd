@@ -1839,10 +1839,21 @@ func open_internet() -> void:
 		elif u.add_port_mapping(NetRoom.PORT, NetRoom.PORT, "Polderrace", "UDP") != UPNP.UPNP_RESULT_SUCCESS:
 			msg = "De router wilde poort %d niet openzetten. Zet hem zelf open (UDP)." % NetRoom.PORT
 		else:
-			msg = "Via internet bereikbaar op %s (poort %d)." % [u.query_external_address(), NetRoom.PORT]
+			msg = upnpMsg(u.query_external_address())
 			call_deferred("_upnp_done", msg, u)
 			return
 		call_deferred("_upnp_done", msg, null))
+
+## what the host reads when the router opened the port: its internet address, unless the router does not know one or
+## only has an address that is not on the internet itself (a second router, or the provider shares one address: CGNAT)
+static func upnpMsg(ext: String) -> String:
+	var p := ext.split(".")
+	if not ext.is_valid_ip_address() or p.size() != 4:
+		return "Poort %d staat open in je router. Je internet-adres staat bij 'wat is mijn IP' op internet; dat geef je aan de anderen." % NetRoom.PORT
+	var a := int(p[0]); var b := int(p[1])
+	if a == 10 or (a == 192 and b == 168) or (a == 172 and b >= 16 and b < 32) or (a == 100 and b >= 64 and b < 128) or a == 0:
+		return "Poort %d staat open in je router, maar die zit zelf niet direct aan internet (adres %s: een tweede router of je provider deelt het adres). Via internet meedoen lukt dan waarschijnlijk niet." % [NetRoom.PORT, ext]
+	return "Via internet bereikbaar op %s (poort %d)." % [ext, NetRoom.PORT]
 
 ## the router keeps a mapping until it is removed: it is closed again when the host leaves the game or quits
 var _mapped: UPNP = null
