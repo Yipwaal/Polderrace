@@ -169,6 +169,15 @@ func run(host: Node) -> TestReport:
 	Game.showResults()
 	r.check(not Game.paused and not Menu.pauseOv.visible and Menu.overOv.visible, "uitslag sluit het pauzescherm", "pauze %s" % str(Game.paused))
 	Game.toMenu(-1)
+	# the replay's trackside camera in a town stands over the pavement, not inside the houses beyond the shoulder
+	TrackLoader.load_track("dorp", "fwd")
+	var far := 0.0
+	for k in 8:
+		var j := k * Trk.NS / 8
+		var c: Vector3 = Rep.trackCam(j, 1.0 if k % 2 else -1.0)
+		far = maxf(far, Vector2(c.x, c.z).distance_to(_nearest(c)))
+	r.check(far < Trk.SHOULDER - 0.5, "replay: camera langs de baan in het dorp staat op de stoep, niet in de huizen", "%.1f m van de weg (huizen vanaf %.1f m)" % [far, Trk.SHOULDER])
+	TrackLoader.load_track("polder", "fwd")
 	Game.set_process(true)
 	Game.set_process_input(true)
 	return r
@@ -178,3 +187,12 @@ func _drive_until(cond: Callable, max_s: float) -> void:
 	while t < max_s and not cond.call():
 		L.step(1.0)
 		t += 1.0
+
+## the centre line point nearest to c (x, z)
+func _nearest(c: Vector3) -> Vector2:
+	var best := Vector2.ZERO
+	var bd := INF
+	for p in Trk.P:
+		var d := Vector2(p.x - c.x, p.z - c.z).length_squared()
+		if d < bd: bd = d; best = Vector2(p.x, p.z)
+	return best

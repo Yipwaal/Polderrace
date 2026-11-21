@@ -5,6 +5,8 @@ extends CanvasLayer
 ## three cameras (behind, along the track, helicopter) and can save it as JSON.
 
 const REP_CAMS := ["Achter de auto", "Langs de baan", "Helikopter"]
+## tracks with buildings or trees right beyond the shoulder: the trackside camera stands over the pavement
+const CLOSE_CAM := ["dorp", "grachten", "rotterdam"]
 
 # ------------------------------------------------------------------ ghost
 var ghostBest = null
@@ -271,13 +273,18 @@ func replayUpdate(dt: float) -> void:
 		cam.look_at(p, Vector3.UP)
 	else:
 		if rp.anchor == null or rp.anchor.distance_to(p) > 70:
-			var j := nearestIdx(p.x, p.z)
-			var ta := Trk.trackAt(fmod(j * Trk.SPC + 45, Trk.TRACK_LEN))
-			var sd := -1.0 if randf() < 0.5 else 1.0
-			rp.anchor = Vector3(ta.px + ta.rx * sd * (Trk.SHOULDER + 4), Trk.HT[ta.i] + 3.2, ta.pz + ta.rz * sd * (Trk.SHOULDER + 4))
+			rp.anchor = trackCam(nearestIdx(p.x, p.z), -1.0 if randf() < 0.5 else 1.0)
 		cam.position = rp.anchor
 		cam.look_at(Vector3(p.x, p.y + 0.8, p.z), Vector3.UP)
 	cam.fov = 40 if rp.camMode == 1 else 58
+
+## where the trackside camera stands: 45 m ahead of sample j, on side sd (-1 left, 1 right) of the road
+func trackCam(j: int, sd: float) -> Vector3:
+	var ta := Trk.trackAt(fmod(j * Trk.SPC + 45, Trk.TRACK_LEN))
+	# beside the shoulder; in the towns the houses (and the trees along Rotterdam's roads) stand there, so over the
+	# pavement right next to the road instead (it looked at the inside of a wall)
+	var lat: float = Trk.ROAD_HALF + 1.0 if Trk.TRACK_ID in CLOSE_CAM else Trk.SHOULDER + 4
+	return Vector3(ta.px + ta.rx * sd * lat, Trk.HT[ta.i] + 3.2, ta.pz + ta.rz * sd * lat)
 
 func replaySave() -> void:
 	if replay == null: return
