@@ -155,6 +155,7 @@ static func enterGarageScene() -> void:
 	inGarage = true
 	garageRoom.visible = true
 	Game.clearBots(); Game.clearTraffic()
+	if Game.car != null: CarKit.setDriver(Game.car, false)   # the garage shows an empty car (CarKit.setDriver)
 	dark = false
 	_light()
 
@@ -207,6 +208,7 @@ static func leaveGarageScene() -> void:
 	Menu.orb.r = 7.4
 	Menu.orb.idle = maxf(Menu.orb.idle, 0.0)
 	if garageRoom != null and is_instance_valid(garageRoom): garageRoom.visible = false
+	if Game.car != null: CarKit.setDriver(Game.car, true)
 	World.root.visible = true
 	if Env.me != null:
 		Env.me.sky_dome.visible = true

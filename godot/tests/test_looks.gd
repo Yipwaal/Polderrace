@@ -587,6 +587,7 @@ func part_garage() -> void:
 	var ui: GarageUI = Menu.garageUI
 	ui.tabLook.press()
 	r.check(ui.look.visible and ui.lookTools.visible and not ui.fitBar.visible, "tab Uiterlijk open, paskamer leeg")
+	r.check(Game.car.driver != null and not Game.car.driver.visible, "de garage toont een lege auto (geen coureur)")
 	ui.lookGroup("lak")
 	ui.radio("finish").find("matte").press()
 	r.check(ui.fitBar.visible and ui.fitBuy.visible and not ui.fitBuy.disabled and Game.car.look.finish == "matte", "mat gepast: te zien op de auto, balk met Kopen")
@@ -605,6 +606,7 @@ func part_garage() -> void:
 	Menu.homeBack()
 	r.check(not GarageRoom.inGarage and G.fit.look.is_empty() and Game.car.look.finish == "matte" and Game.car.look.stripe == "std", "garage uit: niets onbetaalds op de auto", str(CarLook.compact(Game.car.look)))
 	r.check(not saved("polderrace3d-garage").looks.has("finish:chrome") and G.garage.credits == 4500, "niets betaald, niets gekregen")
+	r.check(Game.car.driver.visible, "garage uit: de coureur zit er weer in")
 	Menu.homePanel("garage")
 	r.check(ui.tab == "look" and not ui.fitBar.visible, "garage weer open op Uiterlijk, paskamer leeg")
 	ui.lookGroup("lak")

@@ -140,6 +140,7 @@ func rebuildPlayerCar(pid := "", pcol := "") -> void:
 	get_tree().current_scene.add_child(car.g)
 	if car.get("beam") != null:
 		car.beam.visible = false
+	if GarageRoom.inGarage: CarKit.setDriver(car, false)   # (the garage shows an empty car)
 	# the headlight is player 1's (JS: if(activeP===1)attachHeadlights()): player 2's car in split screen has none
 	if Fx.me != null and activeP == 1: Fx.me.attachCar(car)
 	var c := G.effStats(id)
